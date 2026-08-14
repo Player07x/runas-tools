@@ -30,12 +30,12 @@ export function QuickDamageInput({ onParsed }: Props) {
             if (e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229) fill()
           }}
           placeholder="3D+2 queimadura (+poder)"
-          className="w-full rounded-lg border border-input bg-background px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/70 outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40"
+          className="h-12 w-full rounded-xl border border-input bg-background/70 px-4 text-base text-foreground placeholder:text-muted-foreground/70 outline-none transition-all focus-visible:border-ring focus-visible:bg-background focus-visible:ring-3 focus-visible:ring-ring/25"
           aria-label="Escreva o dano"
         />
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <p className="text-xs text-muted-foreground">{"Exemplo: 3D+2 queimadura (+poder)"}</p>
-          <Button size="lg" onClick={fill}>
+          <Button className="w-full sm:w-auto" onClick={fill}>
             <Wand2 />
             Preencher campos
           </Button>

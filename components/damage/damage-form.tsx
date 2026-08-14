@@ -59,7 +59,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-3">
+        <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/45 p-4">
           <SegmentedToggle
             label="Aplicar MT?"
             value={config.mtEnabled ? "yes" : "no"}
@@ -73,7 +73,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
             <NumberInput label="Bônus de MT" value={config.mtValue} onChange={(v) => onUpdate("mtValue", v)} />
           )}
         </div>
-        <div className="rounded-lg border border-border bg-muted/40 p-3">
+        <div className="rounded-xl border border-border bg-muted/45 p-4">
           <TextField
             label="Outro Multiplicador (opcional)"
             value={config.otherMultiplier}
@@ -86,7 +86,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
 
       <div className="mt-4">
         <span className="mb-2 block text-xs font-medium text-muted-foreground">Redução de Dano do alvo (opcional)</span>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <NumberInput label="RDF (físico)" value={config.rdf} onChange={(v) => onUpdate("rdf", v)} min={0} />
             {usesRdf && <span className="text-[0.7rem] text-primary">Aplicada a este dano</span>}

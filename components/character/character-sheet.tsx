@@ -69,31 +69,18 @@ export function CharacterSheet() {
   }
 
   if (!isReady) {
-    return <p className="px-4 py-8 text-sm text-[#acbfd1]">Carregando ficha…</p>
+    return <p className="px-4 py-8 text-sm text-panel-muted">Carregando ficha…</p>
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <section className="rounded-[27px] bg-[#4c587b] px-5 py-4 sm:px-7">
+    <div className="flex flex-col gap-5">
+      <section className="rounded-2xl border border-panel-border/50 bg-panel-elevated px-4 py-4 shadow-lg sm:px-5">
         <SaveIndicator />
         <CharacterActions />
       </section>
 
-      <div>
-        <div className="grid grid-cols-2 gap-x-1 sm:grid-cols-4">
-          {unavailableTabs.map((label) => (
-            <button
-              key={label}
-              type="button"
-              disabled
-              title="Ainda não disponível"
-              className="h-12 rounded-t-[27px] bg-[#313a53] px-2 text-base font-bold text-[#b6b2b2] disabled:cursor-not-allowed"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-x-1 sm:grid-cols-4">
+      <div className="min-w-0">
+        <div role="tablist" aria-label="Seções da ficha" className="scrollbar-none flex gap-1.5 overflow-x-auto rounded-2xl border border-panel-border/45 bg-panel-input/55 p-1.5">
           {availableTabs.map((tab) => {
             const isAvailable = tab.id !== "abilities"
             const isActive = tab.id === activeTab
@@ -106,18 +93,29 @@ export function CharacterSheet() {
                 aria-selected={isActive}
                 role="tab"
                 className={cn(
-                  "h-12 rounded-t-[27px] px-2 text-base font-bold transition-colors",
-                  isActive ? "bg-[#4c587b] text-white" : "bg-[#394362] text-[#d1c9c9] hover:bg-[#414c6e]",
-                  !isAvailable && "cursor-not-allowed opacity-80 hover:bg-[#394362]",
+                  "h-10 shrink-0 rounded-xl px-4 text-sm font-bold transition-all",
+                  isActive ? "bg-panel-elevated text-white shadow-md" : "text-panel-muted hover:bg-panel-elevated/60 hover:text-white",
+                  !isAvailable && "cursor-not-allowed opacity-45 hover:bg-transparent",
                 )}
               >
                 {tab.label}
               </button>
             )
           })}
+          {unavailableTabs.map((label) => (
+            <button
+              key={label}
+              type="button"
+              disabled
+              title="Ainda não disponível"
+              className="h-10 shrink-0 cursor-not-allowed rounded-xl px-4 text-sm font-bold text-panel-muted opacity-45"
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        <div role="tabpanel">
+        <div role="tabpanel" className="mt-3">
           {activeTab === "information" && (
             <CharacterInfo name={character.name} info={character.info} onNameChange={setName} onInfoChange={setInfo} />
           )}
@@ -132,8 +130,8 @@ export function CharacterSheet() {
             />
           )}
           {activeTab === "skills" && (
-            <section className="min-h-[32rem] rounded-[27px] bg-[#4c587b] p-5 sm:p-7">
-              <p className="text-lg text-[#acbfd1]">Perícias e testes do personagem.</p>
+            <section className="min-h-[32rem] rounded-2xl border border-panel-border/45 bg-panel-elevated p-5 sm:p-7">
+              <p className="text-base text-panel-muted">Perícias e testes do personagem.</p>
             </section>
           )}
         </div>

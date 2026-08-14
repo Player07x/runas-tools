@@ -45,9 +45,9 @@ function Field({
   const type = inputMode === "text" ? "text" : "number"
   return (
     <label className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="px-2 text-[clamp(0.82rem,2vw,1rem)] leading-tight text-[#acbfd1]">
+      <span className="px-1 text-sm font-medium leading-tight text-panel-muted">
         {label}
-        {required && <span className="ml-1 text-[#f0f0b2]" aria-label="obrigatório">*</span>}
+        {required && <span className="ml-1 text-highlight" aria-label="obrigatório">*</span>}
       </span>
       <input
         type={type}
@@ -62,7 +62,7 @@ function Field({
         readOnly={readOnly}
         placeholder={placeholder}
         className={cn(
-          "h-11 min-w-0 rounded-[18px] border border-transparent bg-[#383e4e] px-4 text-base text-white outline-none transition focus:border-[#d3cdff] focus:ring-2 focus:ring-[#d3cdff]/30 read-only:cursor-default read-only:bg-[#2e323f] read-only:text-[#c8ceda]",
+          "h-11 min-w-0 rounded-xl border border-panel-border/35 bg-panel-input px-3.5 text-sm text-white outline-none transition focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15 read-only:cursor-default read-only:bg-panel-input/65 read-only:text-panel-muted",
           inputClassName,
         )}
       />
@@ -87,22 +87,22 @@ function Select({
 }) {
   return (
     <label className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="px-2 text-[clamp(0.82rem,2vw,1rem)] leading-tight text-[#acbfd1]">
+      <span className="px-1 text-sm font-medium leading-tight text-panel-muted">
         {label}
-        {required && <span className="ml-1 text-[#f0f0b2]" aria-label="obrigatório">*</span>}
+        {required && <span className="ml-1 text-highlight" aria-label="obrigatório">*</span>}
       </span>
       <span className="relative">
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
           required={required}
-          className="h-11 w-full appearance-none rounded-[18px] border border-transparent bg-[#383e4e] px-4 pr-10 text-base text-white outline-none transition focus:border-[#d3cdff] focus:ring-2 focus:ring-[#d3cdff]/30"
+          className="h-11 w-full appearance-none rounded-xl border border-panel-border/35 bg-panel-input px-3.5 pr-10 text-sm text-white outline-none transition focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-[#acbfd1]" />
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-panel-muted" />
       </span>
     </label>
   )
@@ -115,30 +115,33 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
   ]
 
   return (
-    <section aria-labelledby="character-information-title" className="rounded-[27px] bg-[#4c587b] p-5 sm:p-7">
+    <section aria-labelledby="character-information-title" className="rounded-2xl border border-panel-border/45 bg-panel-elevated p-4 shadow-lg sm:p-6">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <p id="character-information-title" className="text-lg text-[#acbfd1]">Dados gerais do personagem.</p>
+        <div>
+          <h3 id="character-information-title" className="text-base font-bold text-white">Informações gerais</h3>
+          <p className="mt-1 text-sm text-panel-muted">Dados gerais do personagem.</p>
+        </div>
         <div className="flex items-center justify-end gap-3">
-          <span className="text-right text-base leading-tight text-[#acbfd1]">Ano<br />Atual</span>
+          <span className="text-right text-xs font-semibold uppercase leading-tight tracking-wide text-panel-muted">Ano<br />Atual</span>
           <input
             aria-label="Ano atual"
             type="number"
             inputMode="numeric"
             value={info.currentYear}
             onChange={(event) => onInfoChange("currentYear", event.target.value)}
-            className="size-16 rounded-full border-2 border-transparent bg-[#f0f0b2] text-center text-xl font-bold text-[#5b492d] outline-none focus:border-white"
+            className="size-14 rounded-full border-2 border-transparent bg-highlight text-center text-lg font-bold text-highlight-foreground outline-none shadow-md focus:border-white"
           />
           <span className="relative">
             <select
               aria-label="Calendário"
               value={info.calendar}
               onChange={(event) => onInfoChange("calendar", event.target.value)}
-              className="h-11 appearance-none rounded-[18px] bg-[#2e323f] pl-4 pr-10 text-base text-[#acbfd1] outline-none focus:ring-2 focus:ring-[#d3cdff]/40"
+              className="h-11 appearance-none rounded-xl border border-panel-border/35 bg-panel-input pl-3.5 pr-9 text-sm text-panel-muted outline-none focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15"
             >
               <option value="logi">Logi</option>
               <option value="ce">C.E.</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-[#acbfd1]" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-panel-muted" />
           </span>
         </div>
       </div>
@@ -146,25 +149,25 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
       <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
         <Field label="Nome" value={name} onChange={onNameChange} maxLength={80} required className="sm:col-span-2" />
 
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,0.65fr)] gap-0">
+        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_minmax(8rem,0.65fr)] min-[480px]:gap-0">
           <Select label="Raça" value={info.race} onChange={(value) => onInfoChange("race", value)} options={raceOptions} required />
-          <Field label="Espécie" value={info.species} onChange={(value) => onInfoChange("species", value)} maxLength={20} inputClassName="rounded-l-none" />
+          <Field label="Espécie" value={info.species} onChange={(value) => onInfoChange("species", value)} maxLength={20} inputClassName="min-[480px]:rounded-l-none" />
         </div>
         <Field label="Ofício" value={info.profession} onChange={(value) => onInfoChange("profession", value)} maxLength={30} />
 
         <Field label="Tamanho (m)" value={info.size} onChange={(value) => onInfoChange("size", value)} inputMode="decimal" min={0.01} step={0.01} required />
-        <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
           <Field label="Modificador de Tamanho (MT)" value={info.sizeModifier} readOnly />
           <Field label="Bônus" value={info.sizeModifierBonus} onChange={(value) => onInfoChange("sizeModifierBonus", value)} inputMode="numeric" step={1} />
         </div>
 
         <Field label="Peso (kg)" value={info.weight} onChange={(value) => onInfoChange("weight", value)} inputMode="decimal" min={0.01} step={0.01} required />
-        <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
           <Field label="Multiplicador de Peso (MP)" value={info.weightMultiplier} readOnly placeholder="Tabela não fornecida" />
           <Field label="Bônus" value={info.weightMultiplierBonus} onChange={(value) => onInfoChange("weightMultiplierBonus", value)} inputMode="decimal" step={0.1} />
         </div>
 
-        <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
           <Field label="Nascimento" value={info.birthDate} onChange={(value) => onInfoChange("birthDate", value)} maxLength={20} required placeholder="400/12/01 Logi" />
           <Field label="Idade" value={info.age} readOnly />
         </div>
@@ -184,24 +187,24 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
         <Field label="Arquétipo" value={info.archetype} onChange={(value) => onInfoChange("archetype", value)} maxLength={40} />
 
         <Field label="Afinidade" value={info.affinity} readOnly />
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,0.85fr)] gap-3">
+        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_minmax(8rem,0.85fr)]">
           <Field label="Eficiência (%)" value={info.efficiency} readOnly />
           <Field label="Essências" value={info.essences} onChange={(value) => onInfoChange("essences", value)} inputMode="numeric" min={0} step={1} required />
         </div>
 
         <Field label="Divindade" value={info.deity} onChange={(value) => onInfoChange("deity", value)} maxLength={40} />
-        <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
           <Field label="Alinhamento" value={info.alignment} readOnly />
           <Field label="Carma" value={info.karma} onChange={(value) => onInfoChange("karma", value)} inputMode="numeric" min={-60} max={60} step={1} required />
         </div>
 
         <Field label="Legado" value={info.legacy} onChange={(value) => onInfoChange("legacy", value)} maxLength={40} required />
-        <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
           <Field label="Raridade" value={info.legacyRarity} readOnly />
           <Field label="Pontos" value={info.legacyPoints} onChange={(value) => onInfoChange("legacyPoints", value)} inputMode="numeric" min={0} step={1} required />
         </div>
       </div>
-      <p className="mt-5 text-xs text-[#acbfd1]"><span className="text-[#f0f0b2]">*</span> Campo obrigatório</p>
+      <p className="mt-5 text-xs text-panel-muted"><span className="text-highlight">*</span> Campo obrigatório</p>
     </section>
   )
 }

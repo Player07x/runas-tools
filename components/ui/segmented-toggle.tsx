@@ -25,7 +25,7 @@ export function SegmentedToggle<T extends string>({
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && <span className="text-xs font-medium text-muted-foreground">{label}</span>}
-      <div className="inline-flex rounded-lg border border-input bg-muted/50 p-0.5">
+      <div className="inline-flex rounded-xl border border-input bg-muted/60 p-1">
         {options.map((opt) => {
           const active = opt.value === value
           return (
@@ -35,7 +35,7 @@ export function SegmentedToggle<T extends string>({
               onClick={() => onChange(opt.value)}
               aria-pressed={active}
               className={cn(
-                "flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition-colors",
+                "flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all",
                 active
                   ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
                   : "text-muted-foreground hover:text-foreground",

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react"
+import { Dices, PanelLeftClose, PanelLeftOpen, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { CharacterSheet } from "./character-sheet"
 
@@ -61,7 +61,7 @@ function CharacterPanel() {
       <div
         onClick={close}
         className={cn(
-          "absolute inset-0 bg-[#151923]/70 backdrop-blur-sm transition-opacity duration-300",
+          "absolute inset-0 bg-[#151923]/65 backdrop-blur-[3px] transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0",
         )}
       />
@@ -73,20 +73,25 @@ function CharacterPanel() {
         aria-label="Ficha do Personagem"
         style={{ width: `min(${panelWidth}px, 92vw)` }}
         className={cn(
-          "absolute inset-y-0 right-0 flex max-w-none flex-col border-l border-[#d3cdff] bg-[#383e4e] shadow-2xl transition-transform duration-300 ease-out max-sm:!w-full",
+          "absolute inset-y-0 right-0 flex max-w-none flex-col border-l border-panel-border bg-panel shadow-[0_0_70px_rgba(13,17,27,0.4)] transition-transform duration-300 ease-out max-sm:!w-full",
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex min-h-20 items-center justify-between border-b border-[#d3cdff] px-7 py-3">
-          <div className="flex items-center gap-4">
-            <span className="size-12 rounded-full bg-[#b1b2b5]" aria-hidden="true" />
-            <h2 className="text-xl font-bold tracking-wide text-white">FICHA</h2>
+        <div className="flex min-h-20 items-center justify-between border-b border-panel-border/70 px-5 py-3 sm:px-7">
+          <div className="flex items-center gap-3.5">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-panel-elevated text-white shadow-lg" aria-hidden="true">
+              <Dices className="size-5" />
+            </span>
+            <div>
+              <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-panel-muted">Runas · Livro Azul</p>
+              <h2 className="text-lg font-bold tracking-tight text-white">Ficha do personagem</h2>
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setPanelWidth((width) => Math.max(680, width - 120))}
-              className="hidden size-9 items-center justify-center rounded-lg text-[#7486b8] hover:bg-[#313a53] hover:text-[#d3cdff] sm:flex"
+              className="hidden size-9 items-center justify-center rounded-xl text-panel-muted transition hover:bg-panel-input hover:text-white sm:flex"
               aria-label="Diminuir painel"
               title="Diminuir painel"
             >
@@ -95,7 +100,7 @@ function CharacterPanel() {
             <button
               type="button"
               onClick={() => setPanelWidth((width) => Math.min(960, width + 120))}
-              className="hidden size-9 items-center justify-center rounded-lg text-[#7486b8] hover:bg-[#313a53] hover:text-[#d3cdff] sm:flex"
+              className="hidden size-9 items-center justify-center rounded-xl text-panel-muted transition hover:bg-panel-input hover:text-white sm:flex"
               aria-label="Ampliar painel"
               title="Ampliar painel"
             >
@@ -103,15 +108,15 @@ function CharacterPanel() {
             </button>
             <button
               onClick={close}
-              className="flex size-11 items-center justify-center rounded-lg text-[#7486b8] transition-colors hover:bg-[#313a53] hover:text-[#d3cdff]"
+              className="flex size-10 items-center justify-center rounded-xl text-panel-muted transition-colors hover:bg-panel-input hover:text-white"
               aria-label="Fechar ficha"
             >
-              <X className="size-9" strokeWidth={3} />
+              <X className="size-5.5" strokeWidth={2.25} />
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-7">{isOpen && <CharacterSheet />}</div>
+        <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-7 sm:py-6">{isOpen && <CharacterSheet />}</div>
       </aside>
     </div>
   )

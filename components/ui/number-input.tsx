@@ -60,7 +60,7 @@ export function NumberInput({
         step={step}
         onChange={(e) => handleChange(e.target.value)}
         className={cn(
-          "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40",
+          "h-11 w-full rounded-xl border border-input bg-background/70 px-3.5 text-sm text-foreground outline-none transition-all focus-visible:border-ring focus-visible:bg-background focus-visible:ring-3 focus-visible:ring-ring/25",
           inputClassName,
         )}
       />

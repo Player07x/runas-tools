@@ -1,0 +1,186 @@
+import type { CharacterCalendar, CharacterInfo } from "@/types/character"
+
+const CALENDAR_OFFSET = 4027
+
+const SIZE_MODIFIER_LIMITS = [
+  [0.02, -11],
+  [0.03, -10],
+  [0.05, -9],
+  [0.07, -8],
+  [0.09, -7],
+  [0.19, -6],
+  [0.29, -5],
+  [0.39, -4],
+  [0.49, -3],
+  [0.99, -2],
+  [1.49, -1],
+  [2, 0],
+  [3, 1],
+  [5, 2],
+  [8, 3],
+  [12, 4],
+  [18, 5],
+  [27, 6],
+  [40, 7],
+  [60, 8],
+  [90, 9],
+  [150, 10],
+  [200, 11],
+  [300, 12],
+  [500, 13],
+  [800, 14],
+  [1200, 15],
+  [1800, 16],
+  [2700, 17],
+  [4000, 18],
+  [6000, 19],
+  [9000, 20],
+] as const
+
+const ESSENCE_THRESHOLDS = [
+  [0, 10, 30, 60, 100, 150, 210, 280, 360, 450],
+  [560, 690, 840, 1010, 1200, 1410, 1640, 1890, 2160, 2450],
+  [2770, 3120, 3500, 3910, 4350, 4820, 5320, 5850, 6410, 7000],
+  [7630, 8300, 9010, 9760, 10550, 11380, 12250, 13160, 14110, 15100],
+  [16140, 17230, 18370, 19560, 20800, 22090, 23430, 24820, 26260, 27750],
+] as const
+
+const AFFINITY_NAMES = ["Ordinário", "Notável", "Impressionante", "Excepcional", "Extraordinário"] as const
+
+function parseNumber(value: string): number | null {
+  const parsed = Number(value.trim().replace(",", "."))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function formatSigned(value: number): string {
+  return value > 0 ? `+${value}` : String(value)
+}
+
+export function calculateSizeModifier(sizeValue: string, bonusValue: string): string {
+  const size = parseNumber(sizeValue)
+  if (size === null || size <= 0) return ""
+
+  let baseModifier = 20
+  for (const [upperLimit, modifier] of SIZE_MODIFIER_LIMITS) {
+    if (size <= upperLimit) {
+      baseModifier = modifier
+      break
+    }
+  }
+  if (size >= 9000) {
+    baseModifier = 20 + Math.floor((size - 6000) / 3000)
+  }
+
+  const bonus = Math.trunc(parseNumber(bonusValue) ?? 0)
+  return formatSigned(baseModifier + bonus)
+}
+
+export function calculateAffinity(essenceValue: string): { affinity: string; efficiency: string } {
+  const essences = Math.max(0, Math.trunc(parseNumber(essenceValue) ?? 0))
+  let affinityLevel = 0
+  let efficiency = 0
+
+  for (let level = 0; level < ESSENCE_THRESHOLDS.length; level += 1) {
+    for (let step = 0; step < ESSENCE_THRESHOLDS[level].length; step += 1) {
+      if (essences >= ESSENCE_THRESHOLDS[level][step]) {
+        affinityLevel = level
+        efficiency = step * 10
+      }
+    }
+  }
+
+  return {
+    affinity: `${AFFINITY_NAMES[affinityLevel]} (${affinityLevel})`,
+    efficiency: String(efficiency),
+  }
+}
+
+export function calculateAlignment(karmaValue: string): string {
+  const karma = Math.max(-60, Math.min(60, Math.trunc(parseNumber(karmaValue) ?? 0)))
+  if (karma >= 41) return "Ascendido (4)"
+  if (karma >= 25) return "Iluminado (3)"
+  if (karma >= 13) return "Seguidor (2)"
+  if (karma >= 5) return "Leal (1)"
+  if (karma <= -41) return "Soberano (4)"
+  if (karma <= -25) return "Indômito (3)"
+  if (karma <= -13) return "Pactário (2)"
+  if (karma <= -5) return "Caótico (1)"
+  return "Neutro (0)"
+}
+
+export function calculateLegacyRarity(pointsValue: string): string {
+  const points = Math.max(0, Math.trunc(parseNumber(pointsValue) ?? 0))
+  if (points >= 160) return "Lendário (+5)"
+  if (points >= 80) return "Místico (+4)"
+  if (points >= 40) return "Épico (+3)"
+  if (points >= 20) return "Raro (+2)"
+  if (points >= 10) return "Incomum (+1)"
+  return "Comum (+0)"
+}
+
+export function convertCalendarYear(yearValue: string, from: CharacterCalendar, to: CharacterCalendar): string {
+  const year = Math.trunc(parseNumber(yearValue) ?? 424)
+  if (from === to) return String(year)
+  return String(to === "ce" ? year + CALENDAR_OFFSET : year - CALENDAR_OFFSET)
+}
+
+function normalizeText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
+
+function parseBirthYear(value: string): { year: number; calendar: CharacterCalendar } | null {
+  const normalized = normalizeText(value)
+  const calendar: CharacterCalendar | null = normalized.includes("logi")
+    ? "logi"
+    : /(^|\s)(c\s*\.?\s*e\.?|calendario elfico|calendario elfo|elfico|elfo)(\s|$)/.test(normalized)
+      ? "ce"
+      : null
+  if (!calendar) return null
+
+  const numbers = normalized.match(/\d+/g)?.map(Number) ?? []
+  if (numbers.length !== 1 && numbers.length !== 3) return null
+
+  if (numbers.length === 3) {
+    const month = numbers[1]
+    const day = calendar === "logi" ? numbers[2] : numbers[0]
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  }
+
+  return { year: numbers.length === 1 ? numbers[0] : calendar === "logi" ? numbers[0] : numbers[2], calendar }
+}
+
+export function calculateAge(
+  birthDate: string,
+  currentYearValue: string,
+  currentCalendar: CharacterCalendar,
+): string {
+  const birth = parseBirthYear(birthDate)
+  const currentYear = parseNumber(currentYearValue)
+  if (!birth || currentYear === null) return ""
+
+  const birthYearLogi = birth.calendar === "logi" ? birth.year : birth.year - CALENDAR_OFFSET
+  const currentYearLogi = currentCalendar === "logi" ? currentYear : currentYear - CALENDAR_OFFSET
+  const age = Math.trunc(currentYearLogi - birthYearLogi)
+  return age >= 0 ? String(age) : ""
+}
+
+export function deriveCharacterInfo(info: CharacterInfo): CharacterInfo {
+  const essenceResult = calculateAffinity(info.essences)
+  return {
+    ...info,
+    sizeModifier: calculateSizeModifier(info.size, info.sizeModifierBonus),
+    weightMultiplier: "",
+    age: calculateAge(info.birthDate, info.currentYear, info.calendar),
+    affinity: essenceResult.affinity,
+    efficiency: essenceResult.efficiency,
+    alignment: calculateAlignment(info.karma),
+    legacyRarity: calculateLegacyRarity(info.legacyPoints),
+  }
+}
+
+export function modifierToNumber(value: string): number {
+  return Math.trunc(parseNumber(value) ?? 0)
+}

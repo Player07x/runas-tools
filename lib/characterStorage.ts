@@ -1,0 +1,145 @@
+import type { Character, CharacterSaveFile } from "@/types/character"
+import { CHARACTER_VERSION } from "@/types/character"
+import { deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
+
+export const STORAGE_KEY = "runas.character.v1"
+
+/** Ficha em branco usada como estado inicial. */
+export function createEmptyCharacter(): Character {
+  return {
+    version: CHARACTER_VERSION,
+    name: "",
+    info: {
+      currentYear: "424",
+      calendar: "logi",
+      race: "Personalizado",
+      species: "",
+      profession: "",
+      size: "1.70",
+      sizeModifier: "0",
+      sizeModifierBonus: "0",
+      weight: "60",
+      weightMultiplier: "",
+      weightMultiplierBonus: "0",
+      birthDate: "",
+      age: "",
+      region: "",
+      characterClass: "",
+      archetype: "",
+      essences: "0",
+      karma: "0",
+      deity: "",
+      legacy: "",
+      legacyPoints: "0",
+      affinity: "Ordinário (0)",
+      efficiency: "0",
+      alignment: "Neutro (0)",
+      legacyRarity: "Comum (+0)",
+      loadBase: "",
+    },
+    attributes: {
+      physical: 7,
+      mental: 7,
+      mystic: 7,
+      strength: 0,
+      dexterity: 0,
+      vitality: 0,
+      intelligence: 0,
+      knowledge: 0,
+      social: 0,
+      faith: 0,
+      power: 0,
+      luck: 0,
+    },
+    stats: {
+      pv: 0,
+      pa: 0,
+      pe: 0,
+      mt: 0,
+    },
+  }
+}
+
+/**
+ * Faz merge da ficha carregada com a estrutura padrão.
+ * Garante que campos novos (adicionados em versões futuras) sempre existam.
+ */
+function normalizeCharacter(partial: Partial<Character> | undefined): Character {
+  const base = createEmptyCharacter()
+  if (!partial) return base
+  const attributes = { ...base.attributes, ...(partial.attributes ?? {}) }
+  if ((partial.version ?? 1) < 2) {
+    for (const key of [
+      "strength",
+      "dexterity",
+      "vitality",
+      "intelligence",
+      "knowledge",
+      "social",
+      "faith",
+      "power",
+      "luck",
+    ] as const) {
+      attributes[key] = 0
+    }
+  }
+  const groups = [
+    ["physical", ["strength", "dexterity", "vitality"]],
+    ["mental", ["intelligence", "knowledge", "social"]],
+    ["mystic", ["faith", "power", "luck"]],
+  ] as const
+  for (const [primaryKey, secondaryKeys] of groups) {
+    const primary = Math.max(0, Math.floor(Number(attributes[primaryKey]) || 0))
+    attributes[primaryKey] = primary
+    for (const key of secondaryKeys) {
+      attributes[key] = Math.min(primary, Math.max(0, Math.floor(Number(attributes[key]) || 0)))
+    }
+  }
+  const mergedInfo = { ...base.info, ...(partial.info ?? {}) }
+  if (mergedInfo.calendar !== "logi" && mergedInfo.calendar !== "ce") mergedInfo.calendar = "logi"
+  const info = deriveCharacterInfo(mergedInfo)
+  return {
+    ...base,
+    ...partial,
+    version: CHARACTER_VERSION,
+    info,
+    attributes,
+    stats: { ...base.stats, ...(partial.stats ?? {}), mt: modifierToNumber(info.sizeModifier) },
+  }
+}
+
+export function loadCharacter(): Character | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as CharacterSaveFile
+    return normalizeCharacter(parsed.character)
+  } catch {
+    return null
+  }
+}
+
+export function saveCharacter(character: Character): void {
+  if (typeof window === "undefined") return
+  try {
+    const file: CharacterSaveFile = {
+      version: CHARACTER_VERSION,
+      character,
+    }
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(file))
+  } catch {
+    // Ignora falhas de escrita (ex: modo privado / cota cheia).
+  }
+}
+
+/** Valida e normaliza uma ficha importada de arquivo .json. */
+export function parseCharacterFile(jsonText: string): Character {
+  const data = JSON.parse(jsonText) as Partial<CharacterSaveFile> & Partial<Character>
+  // Aceita tanto o formato { version, character } quanto uma ficha "crua".
+  const candidate = (data as CharacterSaveFile).character ?? (data as Character)
+  if (!candidate || typeof candidate !== "object") {
+    throw new Error("Arquivo inválido: estrutura da ficha não encontrada.")
+  }
+  return normalizeCharacter(candidate)
+}

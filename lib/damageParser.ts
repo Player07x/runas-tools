@@ -1,7 +1,7 @@
 import type { AttributeKey } from "@/types/character"
 import type { ParsedDamage } from "@/types/damage"
 import { damageTypes } from "@/data/damageTypes"
-import { allAttributes } from "@/data/attributes"
+import { damageAttributes } from "@/data/attributes"
 
 /** Remove acentos e caracteres especiais, retornando minúsculas. */
 function normalize(text: string): string {
@@ -39,16 +39,16 @@ function matchDamageType(word: string): string | null {
 
 /**
  * Tenta casar uma palavra com um atributo.
- * Aceita nome completo, abreviação ou alias (mínimo 3 caracteres).
+ * Aceita nome completo, abreviação ou alias (mínimo 2 caracteres).
  */
 function matchAttribute(word: string): AttributeKey | null {
   const w = lettersOnly(word)
-  if (w.length < 3) return null
+  if (w.length < 2) return null
 
-  for (const attr of allAttributes) {
+  for (const attr of damageAttributes) {
     const candidates = [lettersOnly(attr.name), lettersOnly(attr.abbr), ...attr.aliases.map(lettersOnly)]
     for (const c of candidates) {
-      if (c.length >= 3 && (c === w || c.startsWith(w) || w.startsWith(c))) {
+      if (c.length >= 2 && (c === w || c.startsWith(w) || w.startsWith(c))) {
         return attr.key
       }
     }
@@ -65,11 +65,13 @@ function matchAttribute(word: string): AttributeKey | null {
  *   3d + 2 queim (+pod)
  *   3D queimadura poder
  *   3D-1 queimadura (pod)
+ *   20 queimadura
  */
 export function parseDamageExpression(input: string): ParsedDamage {
   const result: ParsedDamage = {
     numDice: 0,
     bonus: 0,
+    hasDamageValue: false,
     damageTypeId: null,
     attributeKey: null,
   }
@@ -82,6 +84,7 @@ export function parseDamageExpression(input: string): ParsedDamage {
   const diceMatch = normalized.match(/(\d+)\s*d/)
   if (diceMatch) {
     result.numDice = Number.parseInt(diceMatch[1], 10)
+    result.hasDamageValue = true
   }
 
   // 2. Bônus: primeiro número (com sinal opcional) após o "D".
@@ -90,6 +93,13 @@ export function parseDamageExpression(input: string): ParsedDamage {
     const bonusMatch = afterDice.match(/^\s*([+-]?\s*\d+)/)
     if (bonusMatch) {
       result.bonus = Number.parseInt(bonusMatch[1].replace(/\s+/g, ""), 10)
+    }
+  } else {
+    // Sem "D", um número inicial representa dano fixo já rolado em outro lugar.
+    const flatDamageMatch = normalized.match(/^\s*([+-]?\s*\d+)/)
+    if (flatDamageMatch) {
+      result.bonus = Number.parseInt(flatDamageMatch[1].replace(/\s+/g, ""), 10)
+      result.hasDamageValue = true
     }
   }
 

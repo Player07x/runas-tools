@@ -138,4 +138,31 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Remove os controles nativos de incremento dos campos numéricos. */
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+  /*
+   * Compartilha a altura do maior rótulo entre os campos da mesma linha.
+   * A linha cresce apenas quando o conteúdo quebra, mantendo inputs alinhados.
+   */
+  .character-field {
+    grid-template-rows: minmax(1.5rem, auto) auto;
+  }
+
+  .aligned-field-grid > .character-field {
+    grid-row: span 2;
+    grid-template-rows: subgrid;
+  }
 }

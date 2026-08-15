@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { AttributeKey, CharacterCalendar, CharacterInfo as InfoType, CharacterStats as StatsType } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
-import { convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
+import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterInfo } from "./character-info"
@@ -40,6 +40,7 @@ export function CharacterSheet() {
         }
       }
       nextInfo = deriveCharacterInfo(nextInfo)
+      nextInfo.loadBase = calculateLoadBase(prev.attributes.physical, prev.attributes.strength, nextInfo.scaleMultiplier)
       return {
         ...prev,
         info: nextInfo,
@@ -60,7 +61,14 @@ export function CharacterSheet() {
       } else {
         attributes[key] = Math.min(attributes[group.primary.key], Math.max(0, Math.floor(value || 0)))
       }
-      return { ...prev, attributes }
+      return {
+        ...prev,
+        attributes,
+        info: {
+          ...prev.info,
+          loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
+        },
+      }
     })
   }
 
@@ -69,55 +77,57 @@ export function CharacterSheet() {
   }
 
   if (!isReady) {
-    return <p className="px-4 py-8 text-sm text-[#acbfd1]">Carregando ficha…</p>
+    return <p className="px-4 py-8 text-sm text-muted-foreground">Carregando ficha…</p>
   }
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="rounded-[27px] bg-[#4c587b] px-5 py-4 sm:px-7">
+      <section className="rounded-[27px] border border-border bg-card px-5 py-4 shadow-sm sm:px-7">
         <SaveIndicator />
         <CharacterActions />
       </section>
 
-      <div>
-        <div className="grid grid-cols-2 gap-x-1 sm:grid-cols-4">
+      <div className="relative">
+        <div className="relative z-0 -mb-px grid grid-cols-2 gap-x-px sm:grid-cols-4">
           {unavailableTabs.map((label) => (
             <button
               key={label}
               type="button"
               disabled
               title="Ainda não disponível"
-              className="h-12 rounded-t-[27px] bg-[#313a53] px-2 text-base font-bold text-[#b6b2b2] disabled:cursor-not-allowed"
+              className="h-14 rounded-t-[20px] border-t border-border bg-muted px-3 pb-px text-base font-bold text-muted-foreground disabled:cursor-not-allowed sm:h-12 sm:rounded-t-[27px] sm:px-2"
             >
               {label}
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-2 gap-x-1 sm:grid-cols-4">
-          {availableTabs.map((tab) => {
-            const isAvailable = tab.id !== "abilities"
-            const isActive = tab.id === activeTab
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                disabled={!isAvailable}
-                onClick={isAvailable ? () => setActiveTab(tab.id as CharacterTab) : undefined}
-                aria-selected={isActive}
-                role="tab"
-                className={cn(
-                  "h-12 rounded-t-[27px] px-2 text-base font-bold transition-colors",
-                  isActive ? "bg-[#4c587b] text-white" : "bg-[#394362] text-[#d1c9c9] hover:bg-[#414c6e]",
-                  !isAvailable && "cursor-not-allowed opacity-80 hover:bg-[#394362]",
-                )}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
+        <div className="relative z-20 grid grid-cols-2 gap-x-px bg-muted sm:grid-cols-4" role="tablist" aria-label="Seções da ficha">
+            {availableTabs.map((tab) => {
+              const isAvailable = tab.id !== "abilities"
+              const isActive = tab.id === activeTab
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  disabled={!isAvailable}
+                  onClick={isAvailable ? () => setActiveTab(tab.id as CharacterTab) : undefined}
+                  aria-selected={isActive}
+                  role="tab"
+                  className={cn(
+                    "relative h-14 rounded-t-[20px] border-x border-t border-transparent px-3 text-base font-bold transition-colors sm:h-12 sm:rounded-t-[27px] sm:px-2",
+                    isActive
+                      ? "z-10 border-border bg-card text-foreground shadow-sm after:absolute after:-bottom-0.5 after:inset-x-0 after:h-1 after:bg-card"
+                      : "bg-secondary text-secondary-foreground hover:bg-accent",
+                    !isAvailable && "cursor-not-allowed opacity-60 hover:bg-secondary",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
         </div>
 
-        <div role="tabpanel">
+        <div role="tabpanel" className="relative z-10 -mt-px">
           {activeTab === "information" && (
             <CharacterInfo name={character.name} info={character.info} onNameChange={setName} onInfoChange={setInfo} />
           )}
@@ -128,12 +138,11 @@ export function CharacterSheet() {
               loadBase={character.info.loadBase}
               onAttributeChange={setAttribute}
               onStatChange={setStat}
-              onLoadBaseChange={(value) => setInfo("loadBase", value)}
             />
           )}
           {activeTab === "skills" && (
-            <section className="min-h-[32rem] rounded-[27px] bg-[#4c587b] p-5 sm:p-7">
-              <p className="text-lg text-[#acbfd1]">Perícias e testes do personagem.</p>
+            <section className="min-h-[32rem] rounded-b-[27px] rounded-t-none border border-border bg-card p-5 shadow-sm sm:p-7">
+              <p className="text-lg text-muted-foreground">Perícias e testes do personagem.</p>
             </section>
           )}
         </div>

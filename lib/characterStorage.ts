@@ -1,6 +1,6 @@
 import type { Character, CharacterSaveFile } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
-import { deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
+import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 
 export const STORAGE_KEY = "runas.character.v1"
 
@@ -15,12 +15,14 @@ export function createEmptyCharacter(): Character {
       race: "Personalizado",
       species: "",
       profession: "",
-      size: "1.70",
+      sizeBase: "2.00",
+      sizeReal: "2.00",
       sizeModifier: "0",
       sizeModifierBonus: "0",
-      weight: "60",
-      weightMultiplier: "",
-      weightMultiplierBonus: "0",
+      weightBase: "100",
+      weightBonus: "0",
+      weightReal: "100",
+      scaleMultiplier: "1.0x",
       birthDate: "",
       age: "",
       region: "",
@@ -35,7 +37,7 @@ export function createEmptyCharacter(): Character {
       efficiency: "0",
       alignment: "Neutro (0)",
       legacyRarity: "Comum (+0)",
-      loadBase: "",
+      loadBase: "7",
     },
     attributes: {
       physical: 7,
@@ -95,9 +97,28 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
       attributes[key] = Math.min(primary, Math.max(0, Math.floor(Number(attributes[key]) || 0)))
     }
   }
-  const mergedInfo = { ...base.info, ...(partial.info ?? {}) }
+  const legacyInfo = (partial.info ?? {}) as Partial<Character["info"]> & {
+    size?: string
+    weight?: string
+  }
+  const mergedInfo = { ...base.info, ...legacyInfo }
+  if ((partial.version ?? 1) < 4) {
+    mergedInfo.sizeReal = legacyInfo.size || base.info.sizeReal
+    mergedInfo.weightReal = legacyInfo.weight || base.info.weightReal
+  }
+  if ((partial.version ?? 1) < 5) {
+    const previousWeightReal = Number(mergedInfo.weightReal.replace(",", "."))
+    const scaleMultiplier = Number(
+      deriveCharacterInfo({ ...mergedInfo, weightBonus: "0" }).scaleMultiplier.replace(/x/gi, ""),
+    )
+    const baseWeight = Number(mergedInfo.weightBase.replace(",", "."))
+    if (Number.isFinite(previousWeightReal) && Number.isFinite(scaleMultiplier) && Number.isFinite(baseWeight)) {
+      mergedInfo.weightBonus = String(Number((previousWeightReal - baseWeight * scaleMultiplier ** 3).toFixed(3)))
+    }
+  }
   if (mergedInfo.calendar !== "logi" && mergedInfo.calendar !== "ce") mergedInfo.calendar = "logi"
   const info = deriveCharacterInfo(mergedInfo)
+  info.loadBase = calculateLoadBase(attributes.physical, attributes.strength, info.scaleMultiplier)
   return {
     ...base,
     ...partial,

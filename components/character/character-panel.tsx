@@ -61,7 +61,7 @@ function CharacterPanel() {
       <div
         onClick={close}
         className={cn(
-          "absolute inset-0 bg-[#151923]/70 backdrop-blur-sm transition-opacity duration-300",
+          "absolute inset-0 bg-foreground/35 backdrop-blur-sm transition-opacity duration-300",
           isOpen ? "opacity-100" : "opacity-0",
         )}
       />
@@ -73,20 +73,20 @@ function CharacterPanel() {
         aria-label="Ficha do Personagem"
         style={{ width: `min(${panelWidth}px, 92vw)` }}
         className={cn(
-          "absolute inset-y-0 right-0 flex max-w-none flex-col border-l border-[#d3cdff] bg-[#383e4e] shadow-2xl transition-transform duration-300 ease-out max-sm:!w-full",
+          "absolute inset-y-0 right-0 flex max-w-none flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300 ease-out max-sm:!w-full",
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex min-h-20 items-center justify-between border-b border-[#d3cdff] px-7 py-3">
+        <div className="flex min-h-20 items-center justify-between border-b border-border bg-card px-5 py-3 sm:px-7">
           <div className="flex items-center gap-4">
-            <span className="size-12 rounded-full bg-[#b1b2b5]" aria-hidden="true" />
-            <h2 className="text-xl font-bold tracking-wide text-white">FICHA</h2>
+            <span className="size-12 rounded-full bg-muted" aria-hidden="true" />
+            <h2 className="text-xl font-bold tracking-wide text-foreground">FICHA</h2>
           </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setPanelWidth((width) => Math.max(680, width - 120))}
-              className="hidden size-9 items-center justify-center rounded-lg text-[#7486b8] hover:bg-[#313a53] hover:text-[#d3cdff] sm:flex"
+              className="hidden size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
               aria-label="Diminuir painel"
               title="Diminuir painel"
             >
@@ -95,7 +95,7 @@ function CharacterPanel() {
             <button
               type="button"
               onClick={() => setPanelWidth((width) => Math.min(960, width + 120))}
-              className="hidden size-9 items-center justify-center rounded-lg text-[#7486b8] hover:bg-[#313a53] hover:text-[#d3cdff] sm:flex"
+              className="hidden size-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
               aria-label="Ampliar painel"
               title="Ampliar painel"
             >
@@ -103,7 +103,7 @@ function CharacterPanel() {
             </button>
             <button
               onClick={close}
-              className="flex size-11 items-center justify-center rounded-lg text-[#7486b8] transition-colors hover:bg-[#313a53] hover:text-[#d3cdff]"
+              className="flex size-12 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               aria-label="Fechar ficha"
             >
               <X className="size-9" strokeWidth={3} />
@@ -111,7 +111,7 @@ function CharacterPanel() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-7">{isOpen && <CharacterSheet />}</div>
+        <div className="flex-1 overflow-y-auto px-3 py-5 sm:px-7">{isOpen && <CharacterSheet />}</div>
       </aside>
     </div>
   )

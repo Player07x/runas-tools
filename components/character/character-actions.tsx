@@ -35,21 +35,21 @@ export function CharacterActions() {
   return (
     <div className="mt-2 flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2.5">
-        <button type="button" onClick={() => exportCharacterJSON(character)} className="h-11 rounded-[24px] bg-[#5d6a91] px-5 text-base text-white transition hover:bg-[#6b789f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3cdff]">
+        <button type="button" onClick={() => exportCharacterJSON(character)} className="h-12 rounded-[24px] bg-primary px-5 text-base text-primary-foreground transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
           Exportar JSON
         </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="h-11 rounded-[24px] bg-[#5d6a91] px-5 text-base text-white transition hover:bg-[#6b789f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3cdff]">
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="h-12 rounded-[24px] bg-primary px-5 text-base text-primary-foreground transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
           Importar JSON
         </button>
-        <button type="button" onClick={() => exportCharacterMarkdown(character)} className="h-11 rounded-[24px] bg-[#5d6a91] px-5 text-base text-white transition hover:bg-[#6b789f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3cdff]">
+        <button type="button" onClick={() => exportCharacterMarkdown(character)} className="h-12 rounded-[24px] bg-primary px-5 text-base text-primary-foreground transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
           Baixar Markdown
         </button>
-        <button type="button" onClick={handleReset} className="h-11 px-2 text-base text-[#acbfd1] transition hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d3cdff]">
+        <button type="button" onClick={handleReset} className="h-12 px-2 text-base text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
           Limpar ficha
         </button>
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} className="hidden" />
       </div>
-      {error && <p role="alert" className="text-xs text-[#ffb4b4]">{error}</p>}
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

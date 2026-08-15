@@ -1,6 +1,5 @@
 import type { DamageBreakdownItem, DamageConfig, DamageResult } from "@/types/damage"
 import { getDamageType } from "@/data/damageTypes"
-import { getAttributeDef } from "@/data/attributes"
 
 /** Rola N dados de 6 faces no navegador. */
 export function rollDice(numDice: number): number[] {
@@ -10,6 +9,43 @@ export function rollDice(numDice: number): number[] {
     rolls.push(Math.floor(Math.random() * 6) + 1)
   }
   return rolls
+}
+
+export interface DamageBonusConversion {
+  numDice: number
+  modifier: number
+  convertedDice: number
+}
+
+/** Converte cada +4 acumulado entre os bônus positivos em +1D. */
+export function convertDamageBonusesToDice(baseDice: number, modifiers: number[]): DamageBonusConversion {
+  const normalizedBaseDice = Math.max(0, Math.floor(baseDice) || 0)
+  const combinedModifier = modifiers.reduce(
+    (total, modifier) => total + (Number.isFinite(modifier) ? modifier : 0),
+    0,
+  )
+
+  // Com 0D, o valor é dano já rolado e não deve gerar novos dados.
+  if (normalizedBaseDice === 0) {
+    return { numDice: 0, modifier: combinedModifier, convertedDice: 0 }
+  }
+
+  const positiveBonus = modifiers.reduce(
+    (total, modifier) => total + (Number.isFinite(modifier) ? Math.max(0, modifier) : 0),
+    0,
+  )
+  const penalties = modifiers.reduce(
+    (total, modifier) => total + (Number.isFinite(modifier) ? Math.min(0, modifier) : 0),
+    0,
+  )
+  const convertedDice = Math.floor(positiveBonus / 4)
+  const remainingBonus = positiveBonus - convertedDice * 4
+
+  return {
+    numDice: normalizedBaseDice + convertedDice,
+    modifier: remainingBonus + penalties,
+    convertedDice,
+  }
 }
 
 /**
@@ -39,36 +75,44 @@ interface CalculateArgs {
 
 /**
  * Aplica a fórmula de dano:
- * ( dados + atributo + outroModificador - reduçãoDeDano ) * MT * outroMultiplicador
+ * ( dados + bônus restante - reduçãoDeDano ) * MT * outroMultiplicador
+ * Cada +4 acumulado entre atributo e outro modificador é convertido em +1D.
+ * Danos especiais não recebem redução. MT +1 corresponde a 1,5x.
  */
 export function calculateDamage({ config, diceRolls, attributeValue }: CalculateArgs): DamageResult {
   const diceSum = diceRolls.reduce((acc, n) => acc + n, 0)
 
   const damageType = getDamageType(config.damageTypeId)
-  const isPhysical = damageType?.category === "physical"
-  const reduction = isPhysical ? config.rdf : config.rdm
+  const category = damageType?.category
+  const isPhysical = category === "physical"
+  const reduction = category === "special" ? 0 : isPhysical ? config.rdf : config.rdm
 
-  const mtMultiplier = config.mtEnabled ? config.mtValue || 0 : 1
+  const mtMultiplier = config.mtEnabled
+    ? config.mtValue === 1
+      ? 1.5
+      : config.mtValue || 1
+    : 1
   const otherMultiplier = normalizeMultiplier(config.otherMultiplier)
 
   const attr = config.attributeKey !== "none" ? attributeValue || 0 : 0
   const modifier = config.otherModifier || 0
+  const bonusConversion = convertDamageBonusesToDice(config.numDice, [attr, modifier])
+  const remainingModifier = bonusConversion.modifier
 
-  const base = diceSum + attr + modifier - (reduction || 0)
+  const base = diceSum + remainingModifier - (reduction || 0)
   const rawTotal = base * mtMultiplier * otherMultiplier
   const total = Number.isFinite(rawTotal) ? Math.round(rawTotal) : 0
 
-  const breakdown: DamageBreakdownItem[] = [{ label: `${diceRolls.length} dados`, operator: "+", value: diceSum }]
+  const diceLabel = bonusConversion.convertedDice > 0
+    ? `${diceRolls.length} dados (${bonusConversion.convertedDice} de bônus)`
+    : `${diceRolls.length} dados`
+  const breakdown: DamageBreakdownItem[] = [{ label: diceLabel, operator: "+", value: diceSum }]
 
-  if (config.attributeKey !== "none" && attr !== 0) {
-    const def = getAttributeDef(config.attributeKey)
-    breakdown.push({ label: def?.name ?? "Atributo", operator: "+", value: attr })
-  }
-  if (modifier !== 0) {
+  if (remainingModifier !== 0) {
     breakdown.push({
-      label: "modificador",
-      operator: modifier < 0 ? "-" : "+",
-      value: Math.abs(modifier),
+      label: "modificador restante",
+      operator: remainingModifier < 0 ? "-" : "+",
+      value: Math.abs(remainingModifier),
     })
   }
   if ((reduction || 0) !== 0) {

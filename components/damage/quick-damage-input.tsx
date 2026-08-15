@@ -34,7 +34,7 @@ export function QuickDamageInput({ onParsed }: Props) {
           aria-label="Escreva o dano"
         />
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">{"Exemplo: 3D+2 queimadura (+poder)"}</p>
+          <p className="text-xs text-muted-foreground">{"Exemplos: 3D+2 queimadura (+poder) ou 20 queimadura"}</p>
           <Button size="lg" onClick={fill}>
             <Wand2 />
             Preencher campos

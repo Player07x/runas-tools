@@ -77,53 +77,57 @@ export function CharacterSheet() {
   }
 
   if (!isReady) {
-    return <p className="px-4 py-8 text-sm text-panel-muted">Carregando ficha…</p>
+    return <p className="px-4 py-8 text-sm text-muted-foreground">Carregando ficha…</p>
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="rounded-2xl border border-panel-border/50 bg-panel-elevated px-4 py-4 shadow-lg sm:px-5">
+    <div className="flex flex-col gap-8">
+      <section className="rounded-[27px] border border-border bg-card px-5 py-4 shadow-sm sm:px-7">
         <SaveIndicator />
         <CharacterActions />
       </section>
 
-      <div className="min-w-0">
-        <div role="tablist" aria-label="Seções da ficha" className="scrollbar-none flex gap-1.5 overflow-x-auto rounded-2xl border border-panel-border/45 bg-panel-input/55 p-1.5">
-          {availableTabs.map((tab) => {
-            const isAvailable = tab.id !== "abilities"
-            const isActive = tab.id === activeTab
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                disabled={!isAvailable}
-                onClick={isAvailable ? () => setActiveTab(tab.id as CharacterTab) : undefined}
-                aria-selected={isActive}
-                role="tab"
-                className={cn(
-                  "h-10 shrink-0 rounded-xl px-4 text-sm font-bold transition-all",
-                  isActive ? "bg-panel-elevated text-white shadow-md" : "text-panel-muted hover:bg-panel-elevated/60 hover:text-white",
-                  !isAvailable && "cursor-not-allowed opacity-45 hover:bg-transparent",
-                )}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
+      <div className="relative">
+        <div className="relative z-0 -mb-px grid grid-cols-2 gap-x-px sm:grid-cols-4">
           {unavailableTabs.map((label) => (
             <button
               key={label}
               type="button"
               disabled
               title="Ainda não disponível"
-              className="h-10 shrink-0 cursor-not-allowed rounded-xl px-4 text-sm font-bold text-panel-muted opacity-45"
+              className="h-14 rounded-t-[20px] border-t border-border bg-muted px-3 pb-px text-base font-bold text-muted-foreground disabled:cursor-not-allowed sm:h-12 sm:rounded-t-[27px] sm:px-2"
             >
               {label}
             </button>
           ))}
         </div>
+        <div className="relative z-20 grid grid-cols-2 gap-x-px bg-muted sm:grid-cols-4" role="tablist" aria-label="Seções da ficha">
+            {availableTabs.map((tab) => {
+              const isAvailable = tab.id !== "abilities"
+              const isActive = tab.id === activeTab
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  disabled={!isAvailable}
+                  onClick={isAvailable ? () => setActiveTab(tab.id as CharacterTab) : undefined}
+                  aria-selected={isActive}
+                  role="tab"
+                  className={cn(
+                    "relative h-14 rounded-t-[20px] border-x border-t border-transparent px-3 text-base font-bold transition-colors sm:h-12 sm:rounded-t-[27px] sm:px-2",
+                    isActive
+                      ? "z-10 border-border bg-card text-foreground shadow-sm after:absolute after:-bottom-0.5 after:inset-x-0 after:h-1 after:bg-card"
+                      : "bg-secondary text-secondary-foreground hover:bg-accent",
+                    !isAvailable && "cursor-not-allowed opacity-60 hover:bg-secondary",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+        </div>
 
-        <div role="tabpanel" className="mt-3">
+        <div role="tabpanel" className="relative z-10 -mt-px">
           {activeTab === "information" && (
             <CharacterInfo name={character.name} info={character.info} onNameChange={setName} onInfoChange={setInfo} />
           )}
@@ -137,8 +141,8 @@ export function CharacterSheet() {
             />
           )}
           {activeTab === "skills" && (
-            <section className="min-h-[32rem] rounded-2xl border border-panel-border/45 bg-panel-elevated p-5 sm:p-7">
-              <p className="text-base text-panel-muted">Perícias e testes do personagem.</p>
+            <section className="min-h-[32rem] rounded-b-[27px] rounded-t-none border border-border bg-card p-5 shadow-sm sm:p-7">
+              <p className="text-lg text-muted-foreground">Perícias e testes do personagem.</p>
             </section>
           )}
         </div>

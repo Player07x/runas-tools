@@ -5,7 +5,7 @@ import type { AttributeKey } from "@/types/character"
 import type { DamageConfig, DamageResult, ParsedDamage } from "@/types/damage"
 import { damageTypes } from "@/data/damageTypes"
 import { useCharacter } from "@/components/character/character-provider"
-import { calculateDamage, rollDice } from "@/lib/damageCalculator"
+import { calculateDamage, convertDamageBonusesToDice, rollDice } from "@/lib/damageCalculator"
 import { isAttributeKey } from "@/lib/attributeOptions"
 
 function defaultConfig(): DamageConfig {
@@ -56,8 +56,13 @@ export function useDamageCalculator() {
   const applyParsed = useCallback((parsed: ParsedDamage) => {
     setConfig((prev) => {
       const next: DamageConfig = { ...prev }
-      if (parsed.numDice > 0) next.numDice = parsed.numDice
-      next.otherModifier = parsed.bonus
+      if (parsed.hasDamageValue) {
+        const conversion = convertDamageBonusesToDice(parsed.numDice, [parsed.bonus])
+        next.numDice = conversion.numDice
+        next.otherModifier = conversion.modifier
+      } else {
+        next.otherModifier = parsed.bonus
+      }
       if (parsed.damageTypeId) next.damageTypeId = parsed.damageTypeId
       next.attributeKey = parsed.attributeKey && isAttributeKey(parsed.attributeKey) ? parsed.attributeKey : "none"
       return next
@@ -65,8 +70,9 @@ export function useDamageCalculator() {
   }, [])
 
   const roll = useCallback(() => {
-    const diceRolls = rollDice(config.numDice)
     const attributeValue = getAttributeValue(config.attributeKey)
+    const conversion = convertDamageBonusesToDice(config.numDice, [attributeValue, config.otherModifier])
+    const diceRolls = rollDice(conversion.numDice)
     setResult(calculateDamage({ config, diceRolls, attributeValue }))
   }, [config, getAttributeValue])
 

@@ -56,6 +56,43 @@ function formatSigned(value: number): string {
   return value > 0 ? `+${value}` : String(value)
 }
 
+/** Arredonda sempre para cima e mantém uma casa decimal. */
+export function calculateScaleMultiplier(realSizeValue: string, baseSizeValue: string): string {
+  const realSize = parseNumber(realSizeValue)
+  const baseSize = parseNumber(baseSizeValue)
+  if (realSize === null || baseSize === null || realSize < 0 || baseSize <= 0) return ""
+
+  const ratio = realSize / baseSize
+  const floatingPointTolerance = Number.EPSILON * 10 * Math.max(1, Math.abs(ratio))
+  const roundedUp = Math.ceil(ratio * 10 - floatingPointTolerance) / 10
+  return `${roundedUp.toFixed(1)}x`
+}
+
+export function calculateRealWeight(
+  baseWeightValue: string,
+  scaleMultiplierValue: string,
+  bonusValue: string,
+): string {
+  const baseWeight = parseNumber(baseWeightValue)
+  const scaleMultiplier = parseNumber(scaleMultiplierValue.replace(/x/gi, ""))
+  if (baseWeight === null || scaleMultiplier === null) return ""
+
+  const bonus = parseNumber(bonusValue) ?? 0
+  return String(Number((baseWeight * scaleMultiplier ** 3 + bonus).toFixed(3)))
+}
+
+export function calculateLoadBase(
+  physical: number,
+  strengthBonus: number,
+  scaleMultiplierValue: string,
+): string {
+  const scaleMultiplier = parseNumber(scaleMultiplierValue.replace(/x/gi, ""))
+  if (scaleMultiplier === null) return ""
+
+  const result = 2 * (Math.max(0, physical) + Math.max(0, strengthBonus)) * scaleMultiplier ** 3
+  return String(Math.trunc(result))
+}
+
 export function calculateSizeModifier(sizeValue: string, bonusValue: string): string {
   const size = parseNumber(sizeValue)
   if (size === null || size <= 0) return ""
@@ -132,7 +169,7 @@ function normalizeText(value: string): string {
 }
 
 function parseBirthYear(value: string): { year: number; calendar: CharacterCalendar } | null {
-  const normalized = normalizeText(value)
+  const normalized = normalizeText(value).replace(/−/g, "-")
   const calendar: CharacterCalendar | null = normalized.includes("logi")
     ? "logi"
     : /(^|\s)(c\s*\.?\s*e\.?|calendario elfico|calendario elfo|elfico|elfo)(\s|$)/.test(normalized)
@@ -140,7 +177,8 @@ function parseBirthYear(value: string): { year: number; calendar: CharacterCalen
       : null
   if (!calendar) return null
 
-  const numbers = normalized.match(/\d+/g)?.map(Number) ?? []
+  // O sinal pertence ao número do ano. Ex.: "01/12/-100 C.E.".
+  const numbers = normalized.match(/[+-]?\d+/g)?.map(Number) ?? []
   if (numbers.length !== 1 && numbers.length !== 3) return null
 
   if (numbers.length === 3) {
@@ -169,10 +207,12 @@ export function calculateAge(
 
 export function deriveCharacterInfo(info: CharacterInfo): CharacterInfo {
   const essenceResult = calculateAffinity(info.essences)
+  const scaleMultiplier = calculateScaleMultiplier(info.sizeReal, info.sizeBase)
   return {
     ...info,
-    sizeModifier: calculateSizeModifier(info.size, info.sizeModifierBonus),
-    weightMultiplier: "",
+    sizeModifier: calculateSizeModifier(info.sizeReal, info.sizeModifierBonus),
+    scaleMultiplier,
+    weightReal: calculateRealWeight(info.weightBase, scaleMultiplier, info.weightBonus),
     age: calculateAge(info.birthDate, info.currentYear, info.calendar),
     affinity: essenceResult.affinity,
     efficiency: essenceResult.efficiency,

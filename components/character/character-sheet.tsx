@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { AttributeKey, CharacterCalendar, CharacterInfo as InfoType, CharacterStats as StatsType } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
-import { convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
+import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterInfo } from "./character-info"
@@ -40,6 +40,7 @@ export function CharacterSheet() {
         }
       }
       nextInfo = deriveCharacterInfo(nextInfo)
+      nextInfo.loadBase = calculateLoadBase(prev.attributes.physical, prev.attributes.strength, nextInfo.scaleMultiplier)
       return {
         ...prev,
         info: nextInfo,
@@ -60,7 +61,14 @@ export function CharacterSheet() {
       } else {
         attributes[key] = Math.min(attributes[group.primary.key], Math.max(0, Math.floor(value || 0)))
       }
-      return { ...prev, attributes }
+      return {
+        ...prev,
+        attributes,
+        info: {
+          ...prev.info,
+          loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
+        },
+      }
     })
   }
 
@@ -126,7 +134,6 @@ export function CharacterSheet() {
               loadBase={character.info.loadBase}
               onAttributeChange={setAttribute}
               onStatChange={setStat}
-              onLoadBaseChange={(value) => setInfo("loadBase", value)}
             />
           )}
           {activeTab === "skills" && (

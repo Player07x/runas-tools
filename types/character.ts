@@ -20,12 +20,14 @@ export interface CharacterInfo {
   race: string
   species: string
   profession: string
-  size: string
+  sizeBase: string
+  sizeReal: string
   sizeModifier: string
   sizeModifierBonus: string
-  weight: string
-  weightMultiplier: string
-  weightMultiplierBonus: string
+  weightBase: string
+  weightBonus: string
+  weightReal: string
+  scaleMultiplier: string
   birthDate: string
   age: string
   region: string
@@ -69,4 +71,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 3
+export const CHARACTER_VERSION = 5

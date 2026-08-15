@@ -1,6 +1,6 @@
 import type { AttributeKey } from "./character"
 
-export type DamageCategory = "physical" | "magical"
+export type DamageCategory = "physical" | "magical" | "special"
 
 export interface DamageType {
   id: string
@@ -16,6 +16,7 @@ export interface DamageType {
 export interface ParsedDamage {
   numDice: number
   bonus: number
+  hasDamageValue: boolean
   damageTypeId: string | null
   attributeKey: AttributeKey | null
 }

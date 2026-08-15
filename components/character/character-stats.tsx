@@ -10,13 +10,12 @@ interface Props {
   loadBase: string
   onAttributeChange: (key: AttributeKey, value: number) => void
   onStatChange: (key: keyof CharacterStatsType, value: number) => void
-  onLoadBaseChange: (value: string) => void
 }
 
 const groupStyles = {
-  physical: { label: "text-[#df8b8b]", track: "bg-[#a34e4e]", bubble: "bg-[#cd7a7a]" },
-  mental: { label: "text-[#e2a1df]", track: "bg-[#a34e8a]", bubble: "bg-[#c991cd]" },
-  mystic: { label: "text-[#a8d1a1]", track: "bg-[#4ea366]", bubble: "bg-[#a8d1a1]" },
+  physical: { label: "text-[#a34e4e] dark:text-[#df8b8b]", track: "bg-[#f4dada] dark:bg-[#a34e4e]", bubble: "bg-[#e5a6a6] dark:bg-[#cd7a7a]" },
+  mental: { label: "text-[#93447d] dark:text-[#e2a1df]", track: "bg-[#f2d8ed] dark:bg-[#a34e8a]", bubble: "bg-[#dda9d8] dark:bg-[#c991cd]" },
+  mystic: { label: "text-[#397d4d] dark:text-[#a8d1a1]", track: "bg-[#d9eedc] dark:bg-[#4ea366]", bubble: "bg-[#a8d1a1] dark:bg-[#86bd91]" },
 } as const
 
 function NumericInput({
@@ -93,7 +92,6 @@ export function CharacterStats({
   loadBase,
   onAttributeChange,
   onStatChange,
-  onLoadBaseChange,
 }: Props) {
   return (
     <section aria-labelledby="character-statistics-title" className="rounded-2xl border border-panel-border/45 bg-panel-elevated p-4 shadow-lg sm:p-6">
@@ -124,11 +122,12 @@ export function CharacterStats({
                         value={attributes[attribute.key]}
                         max={attributes[group.primary.key]}
                         onChange={(value) => onAttributeChange(attribute.key, value)}
-                        className="h-11 w-12"
+                        className="h-11 w-12 text-[#29263a]"
                       />
                     </span>
                   </label>
                 ))}
+                </div>
               </div>
             </div>
           )
@@ -146,7 +145,7 @@ export function CharacterStats({
           <span className="px-1 text-sm font-medium text-panel-muted">Base de Carga (kg)</span>
           <input
             value={loadBase}
-            onChange={(event) => onLoadBaseChange(event.target.value)}
+            readOnly
             inputMode="decimal"
             className="h-11 rounded-xl border border-panel-border/35 bg-panel-input px-3.5 text-sm text-white outline-none focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15"
           />

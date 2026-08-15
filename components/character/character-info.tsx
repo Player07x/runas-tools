@@ -1,7 +1,8 @@
 "use client"
 
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, CircleHelp, LockKeyhole } from "lucide-react"
 import type { CharacterInfo as CharacterInfoType } from "@/types/character"
+import { raceOptions as defaultRaceOptions } from "@/data/races"
 import { cn } from "@/lib/utils"
 
 interface Props {
@@ -25,6 +26,10 @@ interface FieldProps {
   className?: string
   inputClassName?: string
   placeholder?: string
+  onBlur?: (value: string) => void
+  optional?: boolean
+  defaultValueLabel?: string
+  caution?: string
 }
 
 function Field({
@@ -41,6 +46,10 @@ function Field({
   className,
   inputClassName,
   placeholder,
+  onBlur,
+  optional,
+  defaultValueLabel,
+  caution,
 }: FieldProps) {
   const type = inputMode === "text" ? "text" : "number"
   return (
@@ -65,9 +74,15 @@ function Field({
           "h-11 min-w-0 rounded-xl border border-panel-border/35 bg-panel-input px-3.5 text-sm text-white outline-none transition focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15 read-only:cursor-default read-only:bg-panel-input/65 read-only:text-panel-muted",
           inputClassName,
         )}
-      />
+      </span>
     </label>
   )
+}
+
+function clampNumber(value: string, min: number, max: number): string {
+  const parsed = Number(value.replace(",", "."))
+  if (!Number.isFinite(parsed)) return value
+  return String(Math.min(max, Math.max(min, parsed)))
 }
 
 function Select({
@@ -109,10 +124,9 @@ function Select({
 }
 
 export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props) {
-  const raceOptions = [
-    { value: "Personalizado", label: "Personalizado" },
-    ...(info.race && info.race !== "Personalizado" ? [{ value: info.race, label: info.race }] : []),
-  ]
+  const raceOptions = defaultRaceOptions.some((option) => option.value === info.race)
+    ? defaultRaceOptions
+    : [{ value: info.race, label: info.race }, ...defaultRaceOptions]
 
   return (
     <section aria-labelledby="character-information-title" className="rounded-2xl border border-panel-border/45 bg-panel-elevated p-4 shadow-lg sm:p-6">
@@ -125,6 +139,8 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
           <span className="text-right text-xs font-semibold uppercase leading-tight tracking-wide text-panel-muted">Ano<br />Atual</span>
           <input
             aria-label="Ano atual"
+            aria-description="Use um valor negativo para anos anteriores à criação do calendário élfico."
+            title="No calendário élfico, use um valor negativo para anos anteriores à sua criação."
             type="number"
             inputMode="numeric"
             value={info.currentYear}
@@ -146,7 +162,7 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
         <Field label="Nome" value={name} onChange={onNameChange} maxLength={80} required className="sm:col-span-2" />
 
         <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_minmax(8rem,0.65fr)] min-[480px]:gap-0">
@@ -202,6 +218,52 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
         <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
           <Field label="Raridade" value={info.legacyRarity} readOnly />
           <Field label="Pontos" value={info.legacyPoints} onChange={(value) => onInfoChange("legacyPoints", value)} inputMode="numeric" min={0} step={1} required />
+        </div>
+
+        <div className="rounded-[22px] border border-border bg-muted/25 p-2.5 sm:col-span-2">
+          <p className="px-2 text-sm font-semibold text-foreground">Escala e dimensões</p>
+          <div className="aligned-field-grid grid grid-cols-1 gap-x-2.5 gap-y-1 sm:grid-cols-2">
+            <Field
+              label="Tamanho Base (m)"
+              value={info.sizeBase}
+              onChange={(value) => onInfoChange("sizeBase", value)}
+              onBlur={(value) => onInfoChange("sizeBase", clampNumber(value, 0.25, 2.5))}
+              inputMode="decimal"
+              min={0.25}
+              max={2.5}
+              step={0.01}
+              optional
+              defaultValueLabel="2 m"
+              caution="Campo opcional usado como referência no cálculo do ME. Mantenha o valor padrão de 2 m se não tiver certeza. Para restaurar o padrão, informe 2."
+            />
+            <Field label="Tamanho Real (m)" value={info.sizeReal} onChange={(value) => onInfoChange("sizeReal", value)} inputMode="decimal" min={0.01} step={0.01} required />
+          </div>
+          <div className="aligned-field-grid mt-1 grid grid-cols-1 gap-x-2.5 gap-y-1 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)]">
+            <Field label="Modificador de Tamanho (MT)" value={info.sizeModifier} readOnly />
+            <Field label="Bônus" value={info.sizeModifierBonus} onChange={(value) => onInfoChange("sizeModifierBonus", value)} inputMode="numeric" step={1} />
+            <Field label="Multiplicador de Escala (ME)" value={info.scaleMultiplier} readOnly />
+          </div>
+        </div>
+
+        <div className="rounded-[22px] border border-border bg-muted/25 p-2.5 sm:col-span-2">
+          <p className="px-2 text-sm font-semibold text-foreground">Peso</p>
+          <div className="aligned-field-grid grid grid-cols-1 gap-x-2.5 gap-y-1 sm:grid-cols-3">
+            <Field
+              label="Peso Base (kg)"
+              value={info.weightBase}
+              onChange={(value) => onInfoChange("weightBase", value)}
+              onBlur={(value) => onInfoChange("weightBase", clampNumber(value, 0.2, 600))}
+              inputMode="decimal"
+              min={0.2}
+              max={600}
+              step={0.1}
+              optional
+              defaultValueLabel="100 kg"
+              caution="Campo opcional usado com o ME no cálculo do Peso Real: (Peso Base × ME³) + Bônus. Mantenha o valor padrão de 100 kg se não tiver certeza. Para restaurar o padrão, informe 100."
+            />
+            <Field label="Bônus (kg)" value={info.weightBonus} onChange={(value) => onInfoChange("weightBonus", value)} inputMode="decimal" step={0.1} />
+            <Field label="Peso Real (kg)" value={info.weightReal} readOnly />
+          </div>
         </div>
       </div>
       <p className="mt-5 text-xs text-panel-muted"><span className="text-highlight">*</span> Campo obrigatório</p>

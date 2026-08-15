@@ -54,7 +54,7 @@ export function CharacterActions() {
         </button>
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} className="hidden" />
       </div>
-      {error && <p role="alert" className="text-xs text-[#ffb4b4]">{error}</p>}
+      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

@@ -58,6 +58,9 @@ export const attributeGroups: AttributeGroupDef[] = [
 /** Lista plana de todos os atributos, útil para selects e parser. */
 export const allAttributes: AttributeDef[] = attributeGroups.flatMap((g) => [g.primary, ...g.attributes])
 
+/** Atributos que podem ser somados ao dano; exclui os três atributos primários. */
+export const damageAttributes: AttributeDef[] = attributeGroups.flatMap((group) => group.attributes)
+
 export function getAttributeDef(key: AttributeKey): AttributeDef | undefined {
   return allAttributes.find((a) => a.key === key)
 }

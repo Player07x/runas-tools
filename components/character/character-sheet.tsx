@@ -82,13 +82,38 @@ export function CharacterSheet() {
 
   return (
     <div className="flex flex-col gap-8">
-      <section className="rounded-[27px] border border-border bg-card px-5 py-4 shadow-sm sm:px-7">
-        <SaveIndicator />
-        <CharacterActions />
+      <section className="rounded-[20px] border border-border bg-card px-3 py-2.5 shadow-sm sm:rounded-[27px] sm:px-7 sm:py-4">
+        <div className="flex items-center justify-between gap-2 sm:block">
+          <SaveIndicator />
+          <CharacterActions />
+        </div>
       </section>
 
       <div className="relative">
-        <div className="relative z-0 -mb-px grid grid-cols-2 gap-x-px sm:grid-cols-4">
+        <div className="relative z-20 grid grid-cols-3 gap-x-px bg-muted sm:hidden" role="tablist" aria-label="Seções da ficha">
+          {availableTabs.filter((tab) => tab.id !== "abilities").map((tab) => {
+            const isActive = tab.id === activeTab
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as CharacterTab)}
+                aria-selected={isActive}
+                role="tab"
+                className={cn(
+                  "relative h-14 min-w-0 rounded-t-[20px] border-x border-t border-transparent px-1 text-sm font-bold transition-colors",
+                  isActive
+                    ? "z-10 border-border bg-card text-foreground shadow-sm after:absolute after:-bottom-0.5 after:inset-x-0 after:h-1 after:bg-card"
+                    : "bg-secondary text-secondary-foreground active:bg-accent",
+                )}
+              >
+                <span className="block truncate">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="relative z-0 -mb-px hidden grid-cols-4 gap-x-px sm:grid">
           {unavailableTabs.map((label) => (
             <button
               key={label}
@@ -101,7 +126,7 @@ export function CharacterSheet() {
             </button>
           ))}
         </div>
-        <div className="relative z-20 grid grid-cols-2 gap-x-px bg-muted sm:grid-cols-4" role="tablist" aria-label="Seções da ficha">
+        <div className="relative z-20 hidden grid-cols-4 gap-x-px bg-muted sm:grid" role="tablist" aria-label="Seções da ficha">
             {availableTabs.map((tab) => {
               const isAvailable = tab.id !== "abilities"
               const isActive = tab.id === activeTab

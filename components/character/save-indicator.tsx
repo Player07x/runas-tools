@@ -16,7 +16,8 @@ export function SaveIndicator() {
       ) : (
         <>
           <Check className="size-3.5 text-highlight" />
-          Salvo localmente
+          <span className="sm:hidden">Salvo</span>
+          <span className="hidden sm:inline">Salvo localmente</span>
         </>
       )}
     </span>

@@ -75,7 +75,7 @@ interface CalculateArgs {
 
 /**
  * Aplica a fórmula de dano:
- * ( dados + bônus restante - reduçãoDeDano ) * MT * outroMultiplicador
+ * ((dados + bônus restante) * MT - reduçãoDeDano) * outroMultiplicador
  * Cada +4 acumulado entre atributo e outro modificador é convertido em +1D.
  * Danos especiais não recebem redução. MT +1 corresponde a 1,5x.
  */
@@ -99,8 +99,10 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
   const bonusConversion = convertDamageBonusesToDice(config.numDice, [attr, modifier])
   const remainingModifier = bonusConversion.modifier
 
-  const base = diceSum + remainingModifier - (reduction || 0)
-  const rawTotal = base * mtMultiplier * otherMultiplier
+  const baseDamage = diceSum + remainingModifier
+  const damageAfterMt = baseDamage * mtMultiplier
+  const damageAfterReduction = damageAfterMt - (reduction || 0)
+  const rawTotal = damageAfterReduction * otherMultiplier
   const total = Number.isFinite(rawTotal) ? Math.round(rawTotal) : 0
 
   const diceLabel = bonusConversion.convertedDice > 0
@@ -115,15 +117,15 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
       value: Math.abs(remainingModifier),
     })
   }
+  if (config.mtEnabled) {
+    breakdown.push({ label: "MT", operator: "×", value: mtMultiplier })
+  }
   if ((reduction || 0) !== 0) {
     breakdown.push({
       label: isPhysical ? "RDF" : "RDM",
       operator: "-",
       value: reduction,
     })
-  }
-  if (config.mtEnabled) {
-    breakdown.push({ label: "MT", operator: "×", value: mtMultiplier })
   }
   if (otherMultiplier !== 1) {
     breakdown.push({ label: "multiplicador", operator: "×", value: otherMultiplier })

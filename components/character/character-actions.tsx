@@ -34,23 +34,23 @@ export function CharacterActions() {
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-        <button type="button" onClick={() => exportCharacterJSON(character)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
-          <Braces className="size-4" />
-          Exportar JSON
+    <div className="flex flex-col gap-2 sm:mt-3 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:flex-wrap sm:gap-2">
+        <button type="button" title="Exportar JSON" aria-label="Exportar JSON" onClick={() => exportCharacterJSON(character)} className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white/10 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight sm:h-10 sm:w-auto sm:px-4">
+          <Braces className="size-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">Exportar JSON</span>
         </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
-          <Upload className="size-4" />
-          Importar JSON
+        <button type="button" title="Importar JSON" aria-label="Importar JSON" onClick={() => fileInputRef.current?.click()} className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white/10 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight sm:h-10 sm:w-auto sm:px-4">
+          <Upload className="size-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">Importar JSON</span>
         </button>
-        <button type="button" onClick={() => exportCharacterMarkdown(character)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
-          <FileDown className="size-4" />
-          Baixar Markdown
+        <button type="button" title="Baixar Markdown" aria-label="Baixar Markdown" onClick={() => exportCharacterMarkdown(character)} className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white/10 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight sm:h-10 sm:w-auto sm:px-4">
+          <FileDown className="size-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">Baixar Markdown</span>
         </button>
-        <button type="button" onClick={handleReset} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-panel-muted transition hover:bg-destructive/15 hover:text-[#ffb4b4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
-          <RotateCcw className="size-4" />
-          Limpar ficha
+        <button type="button" title="Limpar ficha" aria-label="Limpar ficha" onClick={handleReset} className="inline-flex size-11 shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-semibold text-panel-muted transition hover:bg-destructive/15 hover:text-[#ffb4b4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight sm:h-10 sm:w-auto sm:px-3">
+          <RotateCcw className="size-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">Limpar ficha</span>
         </button>
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} className="hidden" />
       </div>

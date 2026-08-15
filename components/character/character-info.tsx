@@ -53,26 +53,71 @@ function Field({
 }: FieldProps) {
   const type = inputMode === "text" ? "text" : "number"
   return (
-    <label className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="px-1 text-sm font-medium leading-tight text-panel-muted">
-        {label}
-        {required && <span className="ml-1 text-highlight" aria-label="obrigatório">*</span>}
+    <label className={cn("character-field grid min-w-0 gap-0.5", className)}>
+      <span className="flex min-w-0 flex-wrap items-end gap-x-1.5 gap-y-0.5 px-2 text-[clamp(0.82rem,2vw,1rem)] leading-tight text-muted-foreground">
+        <span>
+          {label}
+          {required && <span className="ml-1 text-primary" aria-label="obrigatório">*</span>}
+        </span>
+        {optional && (
+          <span
+            className="group/help relative inline-flex cursor-help items-center gap-1 rounded-full border border-yellow/40 bg-yellow-soft px-2 py-0.5 text-[0.65rem] font-semibold leading-none text-yellow-foreground outline-none"
+            tabIndex={caution ? 0 : undefined}
+            title={caution}
+            aria-label={caution}
+          >
+            Opcional{defaultValueLabel ? ` · padrão ${defaultValueLabel}` : ""}
+            {caution && <CircleHelp className="size-3" aria-hidden="true" />}
+            {caution && (
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 hidden w-64 rounded-xl border border-border bg-popover p-3 text-xs font-normal leading-relaxed text-popover-foreground shadow-xl group-hover/help:block group-focus/help:block"
+              >
+                {caution}
+              </span>
+            )}
+          </span>
+        )}
+        {caution && !optional && (
+          <span
+            className="group/help relative mb-px inline-flex cursor-help items-center text-yellow-foreground outline-none"
+            tabIndex={0}
+            title={caution}
+            aria-label={caution}
+          >
+            <CircleHelp className="size-4" aria-hidden="true" />
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 hidden w-64 rounded-xl border border-border bg-popover p-3 text-xs font-normal leading-relaxed text-popover-foreground shadow-xl group-hover/help:block group-focus/help:block"
+            >
+              {caution}
+            </span>
+          </span>
+        )}
       </span>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
-        required={required}
-        maxLength={maxLength}
-        inputMode={inputMode}
-        min={min}
-        max={max}
-        step={step}
-        readOnly={readOnly}
-        placeholder={placeholder}
-        className={cn(
-          "h-11 min-w-0 rounded-xl border border-panel-border/35 bg-panel-input px-3.5 text-sm text-white outline-none transition focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15 read-only:cursor-default read-only:bg-panel-input/65 read-only:text-panel-muted",
-          inputClassName,
+      <span className="relative block min-w-0">
+        <input
+          type={type}
+          value={value}
+          onChange={onChange ? (event) => onChange(event.target.value) : undefined}
+          onBlur={onBlur ? (event) => onBlur(event.target.value) : undefined}
+          required={required}
+          maxLength={maxLength}
+          inputMode={inputMode}
+          min={min}
+          max={max}
+          step={step}
+          readOnly={readOnly}
+          placeholder={placeholder}
+          aria-description={caution}
+          className={cn(
+            "h-12 w-full min-w-0 rounded-[18px] border border-input bg-background px-4 text-base text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 read-only:cursor-default read-only:bg-muted read-only:text-muted-foreground sm:h-11",
+            caution && "border-dashed border-yellow/60 bg-yellow-soft/35 pr-11 dark:bg-yellow-soft/10",
+            inputClassName,
+          )}
+        />
+        {caution && (
+          <LockKeyhole className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-yellow-foreground/80" aria-hidden="true" />
         )}
       </span>
     </label>
@@ -101,23 +146,23 @@ function Select({
   className?: string
 }) {
   return (
-    <label className={cn("flex min-w-0 flex-col gap-1.5", className)}>
-      <span className="px-1 text-sm font-medium leading-tight text-panel-muted">
+    <label className={cn("character-field grid min-w-0 gap-0.5", className)}>
+      <span className="flex items-end px-2 text-[clamp(0.82rem,2vw,1rem)] leading-tight text-muted-foreground">
         {label}
-        {required && <span className="ml-1 text-highlight" aria-label="obrigatório">*</span>}
+        {required && <span className="ml-1 text-primary" aria-label="obrigatório">*</span>}
       </span>
       <span className="relative">
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
           required={required}
-          className="h-11 w-full appearance-none rounded-xl border border-panel-border/35 bg-panel-input px-3.5 pr-10 text-sm text-white outline-none transition focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15"
+          className="h-12 w-full appearance-none rounded-[18px] border border-input bg-background px-4 pr-10 text-base text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 sm:h-11"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-panel-muted" />
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
       </span>
     </label>
   )
@@ -129,14 +174,11 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
     : [{ value: info.race, label: info.race }, ...defaultRaceOptions]
 
   return (
-    <section aria-labelledby="character-information-title" className="rounded-2xl border border-panel-border/45 bg-panel-elevated p-4 shadow-lg sm:p-6">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 id="character-information-title" className="text-base font-bold text-white">Informações gerais</h3>
-          <p className="mt-1 text-sm text-panel-muted">Dados gerais do personagem.</p>
-        </div>
+    <section aria-labelledby="character-information-title" className="rounded-b-[27px] rounded-t-none border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <p id="character-information-title" className="text-lg text-muted-foreground">Dados gerais do personagem.</p>
         <div className="flex items-center justify-end gap-3">
-          <span className="text-right text-xs font-semibold uppercase leading-tight tracking-wide text-panel-muted">Ano<br />Atual</span>
+          <span className="text-right text-base leading-tight text-muted-foreground">Ano<br />Atual</span>
           <input
             aria-label="Ano atual"
             aria-description="Use um valor negativo para anos anteriores à criação do calendário élfico."
@@ -145,19 +187,19 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
             inputMode="numeric"
             value={info.currentYear}
             onChange={(event) => onInfoChange("currentYear", event.target.value)}
-            className="size-14 rounded-full border-2 border-transparent bg-highlight text-center text-lg font-bold text-highlight-foreground outline-none shadow-md focus:border-white"
+            className="size-16 rounded-full border-2 border-yellow/40 bg-yellow-soft text-center text-xl font-bold text-yellow-foreground outline-none focus:border-yellow"
           />
           <span className="relative">
             <select
               aria-label="Calendário"
               value={info.calendar}
               onChange={(event) => onInfoChange("calendar", event.target.value)}
-              className="h-11 appearance-none rounded-xl border border-panel-border/35 bg-panel-input pl-3.5 pr-9 text-sm text-panel-muted outline-none focus:border-highlight/70 focus:ring-3 focus:ring-highlight/15"
+              className="h-12 appearance-none rounded-[18px] border border-input bg-background pl-4 pr-10 text-base text-foreground outline-none focus:ring-2 focus:ring-ring/40 sm:h-11"
             >
               <option value="logi">Logi</option>
               <option value="ce">C.E.</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-panel-muted" />
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
           </span>
         </div>
       </div>
@@ -165,26 +207,39 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
       <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
         <Field label="Nome" value={name} onChange={onNameChange} maxLength={80} required className="sm:col-span-2" />
 
-        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_minmax(8rem,0.65fr)] min-[480px]:gap-0">
-          <Select label="Raça" value={info.race} onChange={(value) => onInfoChange("race", value)} options={raceOptions} required />
-          <Field label="Espécie" value={info.species} onChange={(value) => onInfoChange("species", value)} maxLength={20} inputClassName="min-[480px]:rounded-l-none" />
+        <div className="grid min-w-0 grid-rows-[1.5rem_auto] gap-0.5">
+          <span className="flex items-end px-2 text-[clamp(0.82rem,2vw,1rem)] leading-tight text-muted-foreground">
+            Raça e Espécie <span className="text-primary" aria-label="obrigatório">*</span>
+          </span>
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,0.72fr)] overflow-hidden rounded-[18px] border border-input bg-background transition focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+            <label className="relative min-w-0 border-r border-input">
+              <span className="sr-only">Raça</span>
+              <select
+                value={info.race}
+                onChange={(event) => onInfoChange("race", event.target.value)}
+                required
+                className="h-12 w-full appearance-none bg-transparent px-4 pr-9 text-base text-foreground outline-none sm:h-11"
+              >
+                {raceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+            </label>
+            <label className="min-w-0">
+              <span className="sr-only">Espécie</span>
+              <input
+                value={info.species}
+                onChange={(event) => onInfoChange("species", event.target.value)}
+                maxLength={20}
+                placeholder="Espécie"
+                className="h-12 w-full min-w-0 bg-transparent px-4 text-base text-foreground outline-none placeholder:text-muted-foreground sm:h-11"
+              />
+            </label>
+          </div>
         </div>
         <Field label="Ofício" value={info.profession} onChange={(value) => onInfoChange("profession", value)} maxLength={30} />
 
-        <Field label="Tamanho (m)" value={info.size} onChange={(value) => onInfoChange("size", value)} inputMode="decimal" min={0.01} step={0.01} required />
-        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
-          <Field label="Modificador de Tamanho (MT)" value={info.sizeModifier} readOnly />
-          <Field label="Bônus" value={info.sizeModifierBonus} onChange={(value) => onInfoChange("sizeModifierBonus", value)} inputMode="numeric" step={1} />
-        </div>
-
-        <Field label="Peso (kg)" value={info.weight} onChange={(value) => onInfoChange("weight", value)} inputMode="decimal" min={0.01} step={0.01} required />
-        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
-          <Field label="Multiplicador de Peso (MP)" value={info.weightMultiplier} readOnly placeholder="Tabela não fornecida" />
-          <Field label="Bônus" value={info.weightMultiplierBonus} onChange={(value) => onInfoChange("weightMultiplierBonus", value)} inputMode="decimal" step={0.1} />
-        </div>
-
-        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
-          <Field label="Nascimento" value={info.birthDate} onChange={(value) => onInfoChange("birthDate", value)} maxLength={20} required placeholder="400/12/01 Logi" />
+        <div className="aligned-field-grid grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+          <Field label="Nascimento" value={info.birthDate} onChange={(value) => onInfoChange("birthDate", value)} maxLength={20} required placeholder="400/12/01 Logi ou 01/12/-100 C.E." />
           <Field label="Idade" value={info.age} readOnly />
         </div>
         <Field label="Região" value={info.region} onChange={(value) => onInfoChange("region", value)} maxLength={40} />
@@ -203,19 +258,19 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
         <Field label="Arquétipo" value={info.archetype} onChange={(value) => onInfoChange("archetype", value)} maxLength={40} />
 
         <Field label="Afinidade" value={info.affinity} readOnly />
-        <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-[minmax(0,1fr)_minmax(8rem,0.85fr)]">
+        <div className="aligned-field-grid grid grid-cols-[minmax(0,1fr)_minmax(8rem,0.85fr)] gap-3">
           <Field label="Eficiência (%)" value={info.efficiency} readOnly />
           <Field label="Essências" value={info.essences} onChange={(value) => onInfoChange("essences", value)} inputMode="numeric" min={0} step={1} required />
         </div>
 
         <Field label="Divindade" value={info.deity} onChange={(value) => onInfoChange("deity", value)} maxLength={40} />
-        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+        <div className="aligned-field-grid grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
           <Field label="Alinhamento" value={info.alignment} readOnly />
           <Field label="Carma" value={info.karma} onChange={(value) => onInfoChange("karma", value)} inputMode="numeric" min={-60} max={60} step={1} required />
         </div>
 
         <Field label="Legado" value={info.legacy} onChange={(value) => onInfoChange("legacy", value)} maxLength={40} required />
-        <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+        <div className="aligned-field-grid grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
           <Field label="Raridade" value={info.legacyRarity} readOnly />
           <Field label="Pontos" value={info.legacyPoints} onChange={(value) => onInfoChange("legacyPoints", value)} inputMode="numeric" min={0} step={1} required />
         </div>
@@ -266,7 +321,7 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
           </div>
         </div>
       </div>
-      <p className="mt-5 text-xs text-panel-muted"><span className="text-highlight">*</span> Campo obrigatório</p>
+      <p className="mt-2 text-xs text-muted-foreground"><span className="text-primary">*</span> Campo obrigatório</p>
     </section>
   )
 }

@@ -36,6 +36,14 @@
   --color-yellow-soft: var(--yellow-soft);
   --color-yellow-foreground: var(--yellow-foreground);
 
+  --color-panel: var(--panel);
+  --color-panel-elevated: var(--panel-elevated);
+  --color-panel-input: var(--panel-input);
+  --color-panel-muted: var(--panel-muted);
+  --color-panel-border: var(--panel-border);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -48,37 +56,37 @@
 :root {
   color-scheme: light;
 
-  --background: #f8f7fc;
-  --foreground: #29263a;
+  --background: #f3f4f8;
+  --foreground: #252b3d;
 
   --card: #ffffff;
-  --card-foreground: #29263a;
+  --card-foreground: #252b3d;
 
   --popover: #ffffff;
-  --popover-foreground: #29263a;
+  --popover-foreground: #252b3d;
 
-  --primary: #8b7cf6;
+  --primary: #596b9f;
   --primary-foreground: #ffffff;
 
-  --secondary: #eeeafe;
-  --secondary-foreground: #29263a;
+  --secondary: #e5e8f2;
+  --secondary-foreground: #30384f;
 
-  --muted: #f1eff8;
-  --muted-foreground: #716d82;
+  --muted: #e9ebf1;
+  --muted-foreground: #697086;
 
-  --accent: #eeeafe;
-  --accent-foreground: #29263a;
+  --accent: #e2e4ff;
+  --accent-foreground: #414d79;
 
   --destructive: #e5484d;
   --destructive-foreground: #ffffff;
 
-  --border: #e6e2ef;
-  --input: #e6e2ef;
-  --ring: #8b7cf6;
+  --border: #dce0e9;
+  --input: #d7dce7;
+  --ring: #7183b7;
 
-  --purple: #8b7cf6;
-  --purple-soft: #eeeafe;
-  --purple-foreground: #4b3fa8;
+  --purple: #7f76c9;
+  --purple-soft: #eae8ff;
+  --purple-foreground: #514a91;
   --blue: #6eb6ff;
   --blue-soft: #eaf5ff;
   --blue-foreground: #2f6ba8;
@@ -86,39 +94,47 @@
   --yellow-soft: #fff4c7;
   --yellow-foreground: #927015;
 
-  --radius: 0.875rem;
+  --panel: #343b4e;
+  --panel-elevated: #485676;
+  --panel-input: #272d3d;
+  --panel-muted: #aeb8cf;
+  --panel-border: #657394;
+  --highlight: #efefad;
+  --highlight-foreground: #52482a;
+
+  --radius: 1rem;
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: #16141f;
-  --foreground: #eceaf4;
+  --background: #1d2230;
+  --foreground: #edf0f7;
 
-  --card: #201d2b;
-  --card-foreground: #eceaf4;
+  --card: #293044;
+  --card-foreground: #edf0f7;
 
-  --popover: #201d2b;
-  --popover-foreground: #eceaf4;
+  --popover: #293044;
+  --popover-foreground: #edf0f7;
 
-  --primary: #9a8cf8;
-  --primary-foreground: #16141f;
+  --primary: #aab5e4;
+  --primary-foreground: #202638;
 
-  --secondary: #2b2740;
-  --secondary-foreground: #eceaf4;
+  --secondary: #343d55;
+  --secondary-foreground: #edf0f7;
 
-  --muted: #26233333;
-  --muted-foreground: #a29dba;
+  --muted: #30374a;
+  --muted-foreground: #aeb7cb;
 
-  --accent: #2b2740;
-  --accent-foreground: #eceaf4;
+  --accent: #3d4762;
+  --accent-foreground: #f0f2fb;
 
   --destructive: #f2666b;
   --destructive-foreground: #16141f;
 
-  --border: #322e42;
-  --input: #322e42;
-  --ring: #9a8cf8;
+  --border: #3d465d;
+  --input: #4b566f;
+  --ring: #aab5e4;
 
   --purple: #9a8cf8;
   --purple-soft: #2c2647;
@@ -129,6 +145,14 @@
   --yellow: #f4c95d;
   --yellow-soft: #3a3016;
   --yellow-foreground: #f4d488;
+
+  --panel: #303749;
+  --panel-elevated: #43506e;
+  --panel-input: #232938;
+  --panel-muted: #b0bbd1;
+  --panel-border: #606d8d;
+  --highlight: #e5e6a8;
+  --highlight-foreground: #514829;
 }
 
 @layer base {
@@ -136,7 +160,30 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply min-h-dvh bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--primary) 10%, transparent) 0, transparent 30rem),
+      linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, white) 0, var(--background) 22rem);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 
   /* Remove os controles nativos de incremento dos campos numéricos. */

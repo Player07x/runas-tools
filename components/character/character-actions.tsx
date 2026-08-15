@@ -1,6 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
+import { Braces, FileDown, RotateCcw, Upload } from "lucide-react"
 import { useCharacter } from "./character-provider"
 import { exportCharacterJSON, exportCharacterMarkdown } from "@/lib/exportCharacter"
 import { parseCharacterFile } from "@/lib/characterStorage"
@@ -33,18 +34,22 @@ export function CharacterActions() {
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <button type="button" onClick={() => exportCharacterJSON(character)} className="h-12 rounded-[24px] bg-primary px-5 text-base text-primary-foreground transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
+    <div className="mt-3 flex flex-col gap-3">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+        <button type="button" onClick={() => exportCharacterJSON(character)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
+          <Braces className="size-4" />
           Exportar JSON
         </button>
-        <button type="button" onClick={() => fileInputRef.current?.click()} className="h-12 rounded-[24px] bg-primary px-5 text-base text-primary-foreground transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
+        <button type="button" onClick={() => fileInputRef.current?.click()} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
+          <Upload className="size-4" />
           Importar JSON
         </button>
-        <button type="button" onClick={() => exportCharacterMarkdown(character)} className="h-12 rounded-[24px] bg-primary px-5 text-base text-primary-foreground transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
+        <button type="button" onClick={() => exportCharacterMarkdown(character)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
+          <FileDown className="size-4" />
           Baixar Markdown
         </button>
-        <button type="button" onClick={handleReset} className="h-12 px-2 text-base text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:h-11">
+        <button type="button" onClick={handleReset} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-panel-muted transition hover:bg-destructive/15 hover:text-[#ffb4b4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-highlight">
+          <RotateCcw className="size-4" />
           Limpar ficha
         </button>
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={handleImport} className="hidden" />

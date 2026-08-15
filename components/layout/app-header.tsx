@@ -19,13 +19,13 @@ export function AppHeader() {
   return (
     <>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur-md">
-        <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-4 px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Dices className="size-4.5" />
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-background/88 shadow-[0_1px_0_rgba(20,25,40,0.02)] backdrop-blur-xl">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link href="/" className="group flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition-transform group-hover:-rotate-3">
+              <Dices className="size-5" />
             </span>
-            <span className="text-sm font-semibold tracking-tight text-foreground">Calculadora de Runas</span>
+            <span className="text-sm font-bold tracking-tight text-foreground sm:text-base">Runas Tools</span>
           </Link>
 
           {/* Desktop nav */}
@@ -38,8 +38,8 @@ export function AppHeader() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground",
+                    "rounded-xl px-3.5 py-2 text-sm font-semibold transition-all",
+                    active ? "bg-secondary text-secondary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                   )}
                 >
                   {item.label}
@@ -49,7 +49,7 @@ export function AppHeader() {
             <button
               type="button"
               onClick={open}
-              className="ml-1 inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
+              className="ml-1 inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:-translate-y-px hover:brightness-105"
             >
               <User className="size-4" />
               Ficha
@@ -64,7 +64,7 @@ export function AppHeader() {
             <button
               type="button"
               onClick={open}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-sm font-medium text-secondary-foreground"
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground shadow-sm"
             >
               <User className="size-4" />
               Ficha
@@ -75,8 +75,8 @@ export function AppHeader() {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur-md sm:hidden">
-        <div className="mx-auto flex max-w-md items-stretch justify-around px-2 py-1.5">
+      <nav className="fixed inset-x-3 bottom-3 z-30 rounded-2xl border border-border bg-card/95 p-1.5 shadow-[0_14px_40px_rgba(24,29,45,0.2)] backdrop-blur-xl sm:hidden">
+        <div className="mx-auto flex max-w-md items-stretch justify-around">
           {navItems.map((item) => {
             const active = isActive(pathname, item.href)
             const Icon = item.icon
@@ -86,8 +86,8 @@ export function AppHeader() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-w-16 flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                  active ? "text-primary" : "text-muted-foreground",
+                  "flex min-w-16 flex-1 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
+                  active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground",
                 )}
               >
                 <Icon className="size-5" />
@@ -98,7 +98,7 @@ export function AppHeader() {
           <button
             type="button"
             onClick={open}
-            className="flex min-w-16 flex-col items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground"
+            className="flex min-w-16 flex-1 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold text-muted-foreground"
           >
             <User className="size-5" />
             Ficha

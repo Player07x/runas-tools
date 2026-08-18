@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { AttributeKey, CharacterCalendar, CharacterInfo as InfoType, CharacterStats as StatsType } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
 import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
+import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterInfo } from "./character-info"
@@ -55,7 +56,7 @@ export function CharacterSheet() {
       const group = attributeGroups.find((item) => item.primary.key === key || item.attributes.some((attr) => attr.key === key))
       if (!group) return prev
       if (group.primary.key === key) {
-        const primary = Math.max(0, Math.floor(value || 0))
+        const primary = Math.max(1, Math.floor(value || 0))
         attributes[key] = primary
         for (const attribute of group.attributes) attributes[attribute.key] = Math.min(attributes[attribute.key], primary)
       } else {
@@ -68,12 +69,24 @@ export function CharacterSheet() {
           ...prev.info,
           loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
         },
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(
+            prev.stats.paExtra,
+            calculateCharacterStatSnapshot(attributes, prev.info, prev.stats).paExtraMax,
+          ),
+        },
       }
     })
   }
 
-  function setStat(key: keyof StatsType, value: number) {
-    updateCharacter((prev) => ({ ...prev, stats: { ...prev.stats, [key]: value } }))
+  function setStats(updates: Partial<StatsType>) {
+    updateCharacter((prev) => {
+      const stats = { ...prev.stats, ...updates }
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats)
+      stats.paExtra = Math.min(snapshot.paExtraMax, Math.max(0, stats.paExtra))
+      return { ...prev, stats }
+    })
   }
 
   if (!isReady) {
@@ -159,10 +172,10 @@ export function CharacterSheet() {
           {activeTab === "statistics" && (
             <CharacterStats
               attributes={character.attributes}
+              info={character.info}
               stats={character.stats}
-              loadBase={character.info.loadBase}
               onAttributeChange={setAttribute}
-              onStatChange={setStat}
+              onStatsChange={setStats}
             />
           )}
           {activeTab === "skills" && (

@@ -1,6 +1,8 @@
 import type { Character } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
+import { getCharacterElement } from "@/data/elements"
+import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 
 function downloadBlob(content: string, filename: string, mime: string): void {
   if (typeof window === "undefined") return
@@ -25,6 +27,18 @@ function characterFilename(name: string): string {
   return sanitized || "personagem-runas"
 }
 
+function richTextToPlainText(value: string): string {
+  return value
+    .replace(/<\/?(p|div|li|ol|ul|br)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 /** Exporta a ficha como arquivo .json (save manual). */
 export function exportCharacterJSON(character: Character): void {
   const file = { version: CHARACTER_VERSION, character }
@@ -34,6 +48,8 @@ export function exportCharacterJSON(character: Character): void {
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
   const { info, attributes, stats } = character
+  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats)
+  const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
 
   lines.push(`# ${character.name || "Personagem sem nome"}`)
@@ -81,10 +97,38 @@ export function characterToMarkdown(character: Character): string {
 
   lines.push("## Estatísticas")
   lines.push("")
-  lines.push(`- PV: ${stats.pv}`)
-  lines.push(`- PA: ${stats.pa}`)
-  lines.push(`- PE: ${stats.pe}`)
+  lines.push(`- PV atual: ${stats.pv}; máximo: ${statSnapshot.pvMax}; bônus: ${stats.pvBonus >= 0 ? "+" : ""}${stats.pvBonus}`)
+  lines.push(`- PA atual: ${stats.pa}; máximo: ${statSnapshot.paMax}; bônus: ${stats.paBonus >= 0 ? "+" : ""}${stats.paBonus}`)
+  lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}`)
+  lines.push(`- PE atual: ${stats.pe}; máximo: ${statSnapshot.peMax}; bônus: ${stats.peBonus >= 0 ? "+" : ""}${stats.peBonus}`)
+  lines.push(`- PE temporário: ${stats.peTemporary}`)
   lines.push(`- MT: ${stats.mt}`)
+  lines.push(`- Elemento principal: ${element?.name ?? "Nenhum"}`)
+  lines.push(`- Resistências: ${stats.resistances.join(", ") || "Nenhum"}`)
+  lines.push(`- Fraquezas: ${stats.weaknesses.join(", ") || "Nenhum"}`)
+  lines.push(`- Determinação atual: ${stats.determination}; máxima: ${statSnapshot.determinationMax}; bônus: ${stats.determinationBonus >= 0 ? "+" : ""}${stats.determinationBonus}`)
+  lines.push(`- Casualidade atual: ${stats.casualty}; máxima: ${statSnapshot.casualtyMax}; bônus: ${stats.casualtyBonus >= 0 ? "+" : ""}${stats.casualtyBonus}`)
+  lines.push(`- Carga atual: ${stats.currentLoad} kg; base: ${statSnapshot.loadCapacity} kg; bônus: ${stats.loadBonus >= 0 ? "+" : ""}${stats.loadBonus}`)
+  lines.push(`- Vontade: ${statSnapshot.willTest}; bônus: ${stats.willBonus >= 0 ? "+" : ""}${stats.willBonus}`)
+  lines.push(`- Acaso: ${statSnapshot.chanceTest}; bônus: ${stats.chanceBonus >= 0 ? "+" : ""}${stats.chanceBonus}`)
+  lines.push(`- Percepção: ${statSnapshot.perceptionTest}; bônus: ${stats.perceptionBonus >= 0 ? "+" : ""}${stats.perceptionBonus}`)
+  lines.push(`- Deslocamento: ${statSnapshot.movement} m; bônus: ${stats.movementBonus >= 0 ? "+" : ""}${stats.movementBonus}`)
+  if (statSnapshot.overweightLevel > 0) {
+    lines.push(`- Sobrepeso ${statSnapshot.overweightLevel}: -${statSnapshot.physicalPenalty} Físico, -${statSnapshot.movementPenalty} Deslocamento`)
+    if (statSnapshot.overweightWarnings.length > 0) {
+      lines.push(`- Alertas de sobrepeso: ${statSnapshot.overweightWarnings.join(", ")}`)
+    }
+  }
+  lines.push(`- Armadura: RDF ${stats.armorRdf}, RDM ${stats.armorRdm}`)
+  lines.push(`- Natural: RDF ${stats.naturalRdf}, RDM ${stats.naturalRdm}`)
+  lines.push(`- Totais: RDF ${statSnapshot.totalRdf}, RDM ${statSnapshot.totalRdm}`)
+  const effects = richTextToPlainText(stats.effects)
+  if (effects) {
+    lines.push("")
+    lines.push("### Efeitos")
+    lines.push("")
+    lines.push(effects)
+  }
   lines.push("")
 
   return lines.join("\n")

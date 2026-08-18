@@ -49,8 +49,31 @@ export type CharacterAttributes = Record<AttributeKey, number>
 
 export interface CharacterStats {
   pv: number
+  pvBonus: number
   pa: number
+  paBonus: number
   pe: number
+  peBonus: number
+  peTemporary: number
+  paExtra: number
+  resistances: string[]
+  weaknesses: string[]
+  elementId: string
+  effects: string
+  determination: number
+  determinationBonus: number
+  casualty: number
+  casualtyBonus: number
+  currentLoad: number
+  loadBonus: number
+  willBonus: number
+  chanceBonus: number
+  perceptionBonus: number
+  movementBonus: number
+  armorRdf: number
+  armorRdm: number
+  naturalRdf: number
+  naturalRdm: number
   mt: number
 }
 
@@ -71,4 +94,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 5
+export const CHARACTER_VERSION = 6

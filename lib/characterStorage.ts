@@ -37,7 +37,7 @@ export function createEmptyCharacter(): Character {
       efficiency: "0",
       alignment: "Neutro (0)",
       legacyRarity: "Comum (+0)",
-      loadBase: "7",
+      loadBase: "14",
     },
     attributes: {
       physical: 7,
@@ -54,9 +54,32 @@ export function createEmptyCharacter(): Character {
       luck: 0,
     },
     stats: {
-      pv: 0,
-      pa: 0,
-      pe: 0,
+      pv: 7,
+      pvBonus: 0,
+      pa: 7,
+      paBonus: 0,
+      pe: 4,
+      peBonus: 0,
+      peTemporary: 4,
+      paExtra: 0,
+      resistances: [],
+      weaknesses: [],
+      elementId: "none",
+      effects: "",
+      determination: 4,
+      determinationBonus: 0,
+      casualty: 4,
+      casualtyBonus: 0,
+      currentLoad: 0,
+      loadBonus: 0,
+      willBonus: 0,
+      chanceBonus: 0,
+      perceptionBonus: 0,
+      movementBonus: 0,
+      armorRdf: 0,
+      armorRdm: 0,
+      naturalRdf: 0,
+      naturalRdm: 0,
       mt: 0,
     },
   }
@@ -91,7 +114,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
     ["mystic", ["faith", "power", "luck"]],
   ] as const
   for (const [primaryKey, secondaryKeys] of groups) {
-    const primary = Math.max(0, Math.floor(Number(attributes[primaryKey]) || 0))
+    const primary = Math.max(1, Math.floor(Number(attributes[primaryKey]) || 0))
     attributes[primaryKey] = primary
     for (const key of secondaryKeys) {
       attributes[key] = Math.min(primary, Math.max(0, Math.floor(Number(attributes[key]) || 0)))
@@ -119,13 +142,24 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
   if (mergedInfo.calendar !== "logi" && mergedInfo.calendar !== "ce") mergedInfo.calendar = "logi"
   const info = deriveCharacterInfo(mergedInfo)
   info.loadBase = calculateLoadBase(attributes.physical, attributes.strength, info.scaleMultiplier)
+  const partialStats: Partial<Character["stats"]> = partial.stats ?? {}
+  const stats = { ...base.stats, ...partialStats }
+  stats.resistances = Array.isArray(partialStats.resistances)
+    ? partialStats.resistances.filter((value): value is string => typeof value === "string")
+    : base.stats.resistances
+  stats.weaknesses = Array.isArray(partialStats.weaknesses)
+    ? partialStats.weaknesses.filter((value): value is string => typeof value === "string")
+    : base.stats.weaknesses
+  stats.elementId = typeof partialStats.elementId === "string" ? partialStats.elementId : base.stats.elementId
+  stats.effects = typeof partialStats.effects === "string" ? partialStats.effects : base.stats.effects
+  stats.mt = modifierToNumber(info.sizeModifier)
   return {
     ...base,
     ...partial,
     version: CHARACTER_VERSION,
     info,
     attributes,
-    stats: { ...base.stats, ...(partial.stats ?? {}), mt: modifierToNumber(info.sizeModifier) },
+    stats,
   }
 }
 

@@ -72,7 +72,9 @@ export function calculateCharacterStatSnapshot(
 
   const loadCapacity = Math.max(0, parseDecimal(info.loadBase) + finite(stats.loadBonus))
   const currentLoad = nonNegative(stats.currentLoad)
-  const overweightLevel = currentLoad > 0 && loadCapacity > 0 ? Math.ceil(currentLoad / loadCapacity) : 0
+  const overweightLevel = loadCapacity > 0
+    ? Math.max(0, Math.ceil(currentLoad / loadCapacity) - 1)
+    : 0
   const physicalPenalty = overweightLevel * 2
   const mt = finite(stats.mt)
   const movementPenalty = Math.max(

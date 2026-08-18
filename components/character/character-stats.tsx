@@ -178,7 +178,7 @@ function TestRow({
   suffix?: string
 }) {
   return (
-    <div className="grid grid-cols-[minmax(5.5rem,1fr)_4rem_4rem] items-center gap-1.5 sm:grid-cols-[minmax(6.5rem,1fr)_5rem_5rem]">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-1.5">
       <span className="truncate text-right text-sm text-muted-foreground">{label}</span>
       <output aria-label={`${label}: ${result}${suffix ?? ""}`} className="flex h-10 items-center justify-center rounded-xl bg-muted text-sm font-semibold tabular-nums text-foreground">
         {result}{suffix}
@@ -390,9 +390,9 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div className="rounded-[20px] border border-border bg-background/55 p-3">
-                <div className="mb-2 grid grid-cols-[minmax(5.5rem,1fr)_4rem_4rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground sm:grid-cols-[minmax(6.5rem,1fr)_5rem_5rem]">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-5">
+              <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
+                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
                   <span />
                   <span>Teste</span>
                   <span>Bônus</span>
@@ -405,8 +405,8 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-border bg-background/55 p-3">
-                <div className="mb-2 grid grid-cols-[minmax(6rem,1fr)_4.5rem_4.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
+              <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
+                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
                   <span />
                   <span>RDF</span>
                   <span>RDM</span>
@@ -416,8 +416,8 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
                     ["Armadura", "armorRdf", "armorRdm"],
                     ["Natural", "naturalRdf", "naturalRdm"],
                   ] as const).map(([label, rdfKey, rdmKey]) => (
-                    <div key={label} className="grid grid-cols-[minmax(6rem,1fr)_4.5rem_4.5rem] items-center gap-1.5">
-                      <span className="text-right text-sm text-muted-foreground">{label}</span>
+                    <div key={label} className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-1.5">
+                      <span className="truncate text-right text-sm text-muted-foreground">{label}</span>
                       <NumericInput label={`${label} RDF`} value={stats[rdfKey]} min={0} onChange={(value) => onStatsChange({ [rdfKey]: value })} className="h-10 w-full rounded-xl bg-background/70" />
                       <NumericInput label={`${label} RDM`} value={stats[rdmKey]} min={0} onChange={(value) => onStatsChange({ [rdmKey]: value })} className="h-10 w-full rounded-xl bg-background/70" />
                     </div>

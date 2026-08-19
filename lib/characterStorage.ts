@@ -62,6 +62,7 @@ export function createEmptyCharacter(): Character {
       peBonus: 0,
       peTemporary: 4,
       paExtra: 0,
+      paExtraBonus: 0,
       resistances: [],
       weaknesses: [],
       elementId: "none",

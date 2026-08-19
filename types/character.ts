@@ -56,6 +56,7 @@ export interface CharacterStats {
   peBonus: number
   peTemporary: number
   paExtra: number
+  paExtraBonus: number
   resistances: string[]
   weaknesses: string[]
   elementId: string
@@ -94,4 +95,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 6
+export const CHARACTER_VERSION = 7

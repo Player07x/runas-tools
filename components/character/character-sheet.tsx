@@ -62,19 +62,19 @@ export function CharacterSheet() {
       } else {
         attributes[key] = Math.min(attributes[group.primary.key], Math.max(0, Math.floor(value || 0)))
       }
+      const info = {
+        ...prev.info,
+        loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
+      }
+      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats)
       return {
         ...prev,
         attributes,
-        info: {
-          ...prev.info,
-          loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
-        },
+        info,
         stats: {
           ...prev.stats,
-          paExtra: Math.min(
-            prev.stats.paExtra,
-            calculateCharacterStatSnapshot(attributes, prev.info, prev.stats).paExtraMax,
-          ),
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peMax),
         },
       }
     })
@@ -85,6 +85,7 @@ export function CharacterSheet() {
       const stats = { ...prev.stats, ...updates }
       const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats)
       stats.paExtra = Math.min(snapshot.paExtraMax, Math.max(0, stats.paExtra))
+      stats.peTemporary = Math.min(snapshot.peMax, Math.max(0, stats.peTemporary))
       return { ...prev, stats }
     })
   }

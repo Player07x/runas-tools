@@ -34,8 +34,6 @@ export interface CharacterStatSnapshot {
   chanceTest: number
   perceptionTest: number
   movement: number
-  totalRdf: number
-  totalRdm: number
 }
 
 export function calculateCharacterStatSnapshot(
@@ -89,12 +87,23 @@ export function calculateCharacterStatSnapshot(
   if (physicalPenalty >= attributes.physical + attributes.strength) overweightWarnings.push("Esmagado")
   if (physicalPenalty >= attributes.physical + attributes.dexterity) overweightWarnings.push("Imóvel")
   if (physicalPenalty >= attributes.physical + attributes.vitality) overweightWarnings.push("Desmaiado")
+  const movementBeforeSize = Math.max(
+    0,
+    Math.ceil((attributes.physical + attributes.strength + attributes.dexterity + attributes.vitality) / 3) +
+      finite(stats.movementBonus) -
+      movementPenalty,
+  )
+  const movement = mt > 0
+    ? movementBeforeSize * (mt === 1 ? 1.5 : mt)
+    : mt < 0
+      ? Math.max(1, movementBeforeSize + mt)
+      : movementBeforeSize
 
   return {
     pvMax,
     paMax,
     peMax,
-    paExtraMax: Math.ceil(paMax / 2),
+    paExtraMax: Math.max(0, Math.ceil(paMax / 2) + finite(stats.paExtraBonus)),
     determinationMax,
     casualtyMax,
     loadCapacity,
@@ -105,13 +114,6 @@ export function calculateCharacterStatSnapshot(
     willTest: Math.max(0, attributes.mystic + attributes.faith + finite(stats.willBonus)),
     chanceTest: Math.max(0, attributes.mystic + attributes.luck + finite(stats.chanceBonus)),
     perceptionTest: Math.max(0, attributes.mental + attributes.knowledge + finite(stats.perceptionBonus)),
-    movement: Math.max(
-      0,
-      Math.ceil((attributes.physical + attributes.strength + attributes.dexterity + attributes.vitality) / 3) +
-        finite(stats.movementBonus) -
-        movementPenalty,
-    ),
-    totalRdf: nonNegative(stats.armorRdf) + nonNegative(stats.naturalRdf),
-    totalRdm: nonNegative(stats.armorRdm) + nonNegative(stats.naturalRdm),
+    movement,
   }
 }

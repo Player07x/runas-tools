@@ -77,14 +77,14 @@ function CharacterPanel() {
           isOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex min-h-20 items-center justify-between border-b border-panel-border/70 px-5 py-3 sm:px-7">
-          <div className="flex items-center gap-3.5">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-panel-elevated text-white shadow-lg" aria-hidden="true">
-              <Dices className="size-5" />
+        <div className="flex min-h-16 items-center justify-between gap-2 border-b border-panel-border/70 px-3 py-2.5 sm:min-h-20 sm:px-7 sm:py-3">
+          <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-panel-elevated text-white shadow-lg sm:size-11 sm:rounded-2xl" aria-hidden="true">
+              <Dices className="size-4.5 sm:size-5" />
             </span>
-            <div>
-              <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-panel-muted">Runas · Livro Azul</p>
-              <h2 className="text-lg font-bold tracking-tight text-white">Ficha do personagem</h2>
+            <div className="min-w-0">
+              <p className="hidden text-[0.65rem] font-bold uppercase tracking-[0.18em] text-panel-muted min-[360px]:block">Runas · Livro Azul</p>
+              <h2 className="truncate text-base font-bold tracking-tight text-white sm:text-lg">Ficha do personagem</h2>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -108,7 +108,7 @@ function CharacterPanel() {
             </button>
             <button
               onClick={close}
-              className="flex size-10 items-center justify-center rounded-xl text-panel-muted transition-colors hover:bg-panel-input hover:text-white"
+              className="flex size-9 items-center justify-center rounded-xl text-panel-muted transition-colors hover:bg-panel-input hover:text-white sm:size-10"
               aria-label="Fechar ficha"
             >
               <X className="size-5.5" strokeWidth={2.25} />

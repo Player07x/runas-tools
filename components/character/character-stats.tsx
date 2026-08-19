@@ -1,6 +1,7 @@
 "use client"
 
-import { ChevronDown, RefreshCcw, RotateCcw, Shield, Sparkles } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { ChevronDown, Minus, Plus, RefreshCcw, RotateCcw } from "lucide-react"
 import type {
   AttributeKey,
   CharacterAttributes,
@@ -47,11 +48,6 @@ const damageSuggestions = [
   "Todos os Mágicos",
 ]
 
-function toNumber(value: string): number {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
 function NumericInput({
   value,
   onChange,
@@ -59,6 +55,7 @@ function NumericInput({
   min,
   max,
   readOnly,
+  fallbackValue,
   className,
 }: {
   value: number
@@ -67,18 +64,48 @@ function NumericInput({
   min?: number
   max?: number
   readOnly?: boolean
+  fallbackValue?: number
   className?: string
 }) {
+  const editing = useRef(false)
+  const [draft, setDraft] = useState(() => String(Number.isFinite(value) ? value : 0))
+
+  useEffect(() => {
+    if (!editing.current) setDraft(String(Number.isFinite(value) ? value : 0))
+  }, [value])
+
+  function commitDraft() {
+    editing.current = false
+    const parsed = Number(draft)
+    const fallback = fallbackValue ?? (min !== undefined && min > 0 ? min : 0)
+    const next = draft.trim() === "" || !Number.isFinite(parsed)
+      ? fallback
+      : Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(min ?? Number.NEGATIVE_INFINITY, parsed))
+    setDraft(String(next))
+    if (onChange && next !== value) onChange(next)
+  }
+
   return (
     <input
       aria-label={label}
       type="number"
       inputMode="numeric"
-      value={Number.isFinite(value) ? value : 0}
+      value={draft}
       min={min}
       max={max}
       readOnly={readOnly || !onChange}
-      onChange={onChange ? (event) => onChange(toNumber(event.target.value)) : undefined}
+      onFocus={() => { editing.current = true }}
+      onBlur={commitDraft}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur()
+      }}
+      onChange={onChange ? (event) => {
+        const nextDraft = event.target.value
+        setDraft(nextDraft)
+        if (nextDraft.trim() === "") return
+        const parsed = Number(nextDraft)
+        if (Number.isFinite(parsed)) onChange(parsed)
+      } : undefined}
       className={cn(
         "min-w-0 bg-transparent text-center text-base tabular-nums text-foreground outline-none read-only:cursor-default",
         className,
@@ -146,20 +173,22 @@ function ResourceRow({
   color: string
 }) {
   return (
-    <div className="grid grid-cols-[minmax(5.5rem,1fr)_repeat(3,minmax(3rem,0.65fr))] items-stretch overflow-hidden rounded-[18px] border border-border bg-background/60 sm:grid-cols-[minmax(7.5rem,1fr)_repeat(3,minmax(3.75rem,0.65fr))]">
-      <span className="flex items-center px-3 text-sm font-bold" style={{ color }}>{label}</span>
-      <label className="flex min-w-0 flex-col items-center justify-center border-l border-border px-1 py-2">
-        <span className="text-[0.62rem] text-muted-foreground">Atual</span>
-        <NumericInput label={`${label} atual`} value={current} onChange={onCurrentChange} min={0} className="w-full font-semibold" />
-      </label>
-      <label className="flex min-w-0 flex-col items-center justify-center border-l border-border bg-muted/35 px-1 py-2">
-        <span className="text-[0.62rem] text-muted-foreground">Máximo</span>
-        <NumericInput label={`${label} máximo`} value={maximum} readOnly className="w-full text-muted-foreground" />
-      </label>
-      <label className="flex min-w-0 flex-col items-center justify-center border-l border-border px-1 py-2">
-        <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
-        <NumericInput label={`${label} bônus`} value={bonus} onChange={onBonusChange} className="w-full" />
-      </label>
+    <div className="overflow-hidden rounded-[18px] border border-border bg-background/60">
+      <span className="block px-3 py-2 text-sm font-bold" style={{ color }}>{label}</span>
+      <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+        <label className="flex min-w-0 flex-col items-center justify-center px-1 py-2">
+          <span className="text-[0.62rem] text-muted-foreground">Atual</span>
+          <NumericInput label={`${label} atual`} value={current} onChange={onCurrentChange} min={0} className="w-full font-semibold" />
+        </label>
+        <label className="flex min-w-0 flex-col items-center justify-center bg-muted/35 px-1 py-2">
+          <span className="text-[0.62rem] text-muted-foreground">Máximo</span>
+          <NumericInput label={`${label} máximo`} value={maximum} readOnly className="w-full text-muted-foreground" />
+        </label>
+        <label className="flex min-w-0 flex-col items-center justify-center px-1 py-2">
+          <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
+          <NumericInput label={`${label} bônus`} value={bonus} onChange={onBonusChange} className="w-full" />
+        </label>
+      </div>
     </div>
   )
 }
@@ -178,7 +207,7 @@ function TestRow({
   suffix?: string
 }) {
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-1.5">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-1.5">
       <span className="truncate text-right text-sm text-muted-foreground">{label}</span>
       <output aria-label={`${label}: ${result}${suffix ?? ""}`} className="flex h-10 items-center justify-center rounded-xl bg-muted text-sm font-semibold tabular-nums text-foreground">
         {result}{suffix}
@@ -210,6 +239,12 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
       elementId,
       resistances: element ? [...element.resistances] : [],
       weaknesses: element ? [...element.weaknesses] : [],
+    })
+  }
+
+  function adjustPeTemporary(delta: number) {
+    onStatsChange({
+      peTemporary: Math.min(snapshot.peMax, Math.max(0, stats.peTemporary + delta)),
     })
   }
 
@@ -251,8 +286,8 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {group.attributes.map((attribute) => (
-                    <label key={attribute.key} className="flex min-w-0 flex-col items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <span className="w-full truncate text-center">{attribute.name}</span>
+                    <label key={attribute.key} className="flex min-w-0 flex-col items-center gap-2 font-medium text-muted-foreground">
+                      <span className="w-full text-center text-[clamp(0.65rem,3.3vw,0.875rem)] leading-tight">{attribute.name}</span>
                       <span className={cn("flex h-14 w-full min-w-0 items-center justify-center rounded-2xl", styles.bubble)}>
                         <NumericInput
                           label={attribute.name}
@@ -306,27 +341,63 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
         <VitalCard label="PE" current={stats.pe} maximum={snapshot.peMax} bonus={stats.peBonus} onCurrentChange={(pe) => onStatsChange({ pe })} onBonusChange={(peBonus) => onStatsChange({ peBonus })} accent="#94a6db" />
       </div>
 
-      <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="grid grid-cols-[minmax(0,1fr)_5rem] overflow-hidden rounded-[18px] border border-border bg-muted/45">
-          <span className="flex items-center px-4 text-sm font-semibold text-[#397d75] dark:text-[#79cfca]">
-            PA Extra <small className="ml-1 font-normal text-muted-foreground">(máx. {snapshot.paExtraMax})</small>
-          </span>
-          <NumericInput label="PA Extra" value={Math.min(stats.paExtra, snapshot.paExtraMax)} min={0} max={snapshot.paExtraMax} onChange={(paExtra) => onStatsChange({ paExtra })} className="h-11 w-full bg-[#a9dfdc]/65 font-semibold" />
-        </label>
-        <div className="grid grid-cols-[auto_minmax(0,1fr)_5rem] overflow-hidden rounded-[18px] border border-border bg-muted/45">
-          <button
-            type="button"
-            onClick={() => onStatsChange({ peTemporary: snapshot.peMax })}
-            title="Restaurar PE temporário"
-            aria-label="Restaurar PE temporário"
-            className="flex h-11 items-center gap-1.5 border-r border-border px-3 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            <RotateCcw className="size-3.5" />
-            <span className="hidden lg:inline">Restaurar</span>
-          </button>
-          <span className="flex items-center px-3 text-sm font-semibold text-[#66749a] dark:text-[#c7d1f5]">PE Temporário</span>
-          <NumericInput label="PE Temporário" value={stats.peTemporary} min={0} onChange={(peTemporary) => onStatsChange({ peTemporary })} className="h-11 w-full bg-[#d2ddff]/75 font-semibold" />
-        </div>
+      <div className="mb-7 grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-3">
+        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
+          <h3 className="px-3 py-2 text-sm font-semibold text-[#397d75] dark:text-[#79cfca]">PA Extra</h3>
+          <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Atual</span>
+              <NumericInput label="PA Extra atual" value={Math.min(stats.paExtra, snapshot.paExtraMax)} min={0} max={snapshot.paExtraMax} onChange={(paExtra) => onStatsChange({ paExtra })} className="h-8 w-full font-semibold" />
+            </label>
+            <label className="flex min-w-0 flex-col items-center bg-muted/35 px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Máximo</span>
+              <NumericInput label="PA Extra máximo" value={snapshot.paExtraMax} readOnly className="h-8 w-full text-muted-foreground" />
+            </label>
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
+              <NumericInput label="Bônus de PA Extra" value={stats.paExtraBonus} onChange={(paExtraBonus) => onStatsChange({ paExtraBonus })} className="h-8 w-full" />
+            </label>
+          </div>
+        </article>
+        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
+          <div className="flex min-h-10 items-center justify-between gap-2 px-3 py-1.5">
+            <h3 className="min-w-0 text-sm font-semibold text-[#66749a] dark:text-[#c7d1f5]">PE Temporário</h3>
+            <button
+              type="button"
+              onClick={() => onStatsChange({ peTemporary: snapshot.peMax })}
+              title="Restaurar PE temporário"
+              aria-label="Restaurar PE temporário"
+              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:bg-background hover:text-foreground"
+            >
+              <RotateCcw className="size-3.5" />
+              <span>Restaurar</span>
+            </button>
+          </div>
+          <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-stretch divide-x divide-border border-t border-border">
+            <button
+              type="button"
+              onClick={() => adjustPeTemporary(-1)}
+              disabled={stats.peTemporary <= 0}
+              aria-label="Reduzir PE temporário em 1"
+              className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Minus className="size-3.5" />1
+            </button>
+            <label className="flex min-w-0 items-center justify-center gap-1 bg-[#d2ddff]/55 px-2">
+              <NumericInput label="PE Temporário" value={stats.peTemporary} min={0} max={snapshot.peMax} onChange={(peTemporary) => onStatsChange({ peTemporary })} className="h-10 w-12 font-semibold" />
+              <span className="text-xs tabular-nums text-muted-foreground">/ {snapshot.peMax}</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => adjustPeTemporary(1)}
+              disabled={stats.peTemporary >= snapshot.peMax}
+              aria-label="Aumentar PE temporário em 1"
+              className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <Plus className="size-3.5" />1
+            </button>
+          </div>
+        </article>
       </div>
 
       <div className="rounded-[24px] border border-border bg-muted/25 p-3 sm:p-4">
@@ -363,20 +434,22 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
             </div>
 
             <div className="rounded-[20px] border border-border bg-background/55 p-3">
-              <div className="grid grid-cols-[minmax(5rem,1fr)_repeat(3,minmax(3rem,0.7fr))] items-stretch overflow-hidden rounded-[16px] border border-border sm:grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4rem,0.7fr))]">
-                <span className="flex items-center px-3 text-sm font-semibold text-muted-foreground">Carga (kg)</span>
-                <label className="flex flex-col items-center border-l border-border px-1 py-2">
-                  <span className="text-[0.62rem] text-muted-foreground">Atual</span>
-                  <NumericInput label="Carga atual" value={stats.currentLoad} min={0} onChange={(currentLoad) => onStatsChange({ currentLoad })} className="w-full font-semibold" />
-                </label>
-                <label className="flex flex-col items-center border-l border-border bg-muted/35 px-1 py-2">
-                  <span className="text-[0.62rem] text-muted-foreground">Base</span>
-                  <NumericInput label="Carga base" value={snapshot.loadCapacity} readOnly className="w-full text-muted-foreground" />
-                </label>
-                <label className="flex flex-col items-center border-l border-border px-1 py-2">
-                  <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
-                  <NumericInput label="Bônus de carga" value={stats.loadBonus} onChange={(loadBonus) => onStatsChange({ loadBonus })} className="w-full" />
-                </label>
+              <div className="overflow-hidden rounded-[16px] border border-border">
+                <span className="block px-3 py-2 text-sm font-semibold text-muted-foreground">Carga (kg)</span>
+                <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+                  <label className="flex min-w-0 flex-col items-center px-1 py-2">
+                    <span className="text-[0.62rem] text-muted-foreground">Atual</span>
+                    <NumericInput label="Carga atual" value={stats.currentLoad} min={0} onChange={(currentLoad) => onStatsChange({ currentLoad })} className="w-full font-semibold" />
+                  </label>
+                  <label className="flex min-w-0 flex-col items-center bg-muted/35 px-1 py-2">
+                    <span className="text-[0.62rem] text-muted-foreground">Base</span>
+                    <NumericInput label="Carga base" value={snapshot.loadCapacity} readOnly className="w-full text-muted-foreground" />
+                  </label>
+                  <label className="flex min-w-0 flex-col items-center px-1 py-2">
+                    <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
+                    <NumericInput label="Bônus de carga" value={stats.loadBonus} onChange={(loadBonus) => onStatsChange({ loadBonus })} className="w-full" />
+                  </label>
+                </div>
               </div>
               {snapshot.overweightLevel > 0 && (
                 <div className="mt-3 px-2 text-sm italic leading-relaxed">
@@ -392,7 +465,7 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
 
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-5">
               <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
-                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
+                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
                   <span />
                   <span>Teste</span>
                   <span>Bônus</span>
@@ -406,7 +479,7 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
               </div>
 
               <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
-                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
+                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
                   <span />
                   <span>RDF</span>
                   <span>RDM</span>
@@ -416,20 +489,12 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
                     ["Armadura", "armorRdf", "armorRdm"],
                     ["Natural", "naturalRdf", "naturalRdm"],
                   ] as const).map(([label, rdfKey, rdmKey]) => (
-                    <div key={label} className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem_4rem] items-center gap-1.5">
+                    <div key={label} className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-1.5">
                       <span className="truncate text-right text-sm text-muted-foreground">{label}</span>
                       <NumericInput label={`${label} RDF`} value={stats[rdfKey]} min={0} onChange={(value) => onStatsChange({ [rdfKey]: value })} className="h-10 w-full rounded-xl bg-background/70" />
                       <NumericInput label={`${label} RDM`} value={stats[rdmKey]} min={0} onChange={(value) => onStatsChange({ [rdmKey]: value })} className="h-10 w-full rounded-xl bg-background/70" />
                     </div>
                   ))}
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3">
-                  <span className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-muted px-2 py-2 text-xs font-semibold text-muted-foreground">
-                    <Shield className="size-3.5" /> RDF total {snapshot.totalRdf}
-                  </span>
-                  <span className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-muted px-2 py-2 text-xs font-semibold text-muted-foreground">
-                    <Sparkles className="size-3.5" /> RDM total {snapshot.totalRdm}
-                  </span>
                 </div>
               </div>
             </div>

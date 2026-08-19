@@ -99,7 +99,7 @@ export function characterToMarkdown(character: Character): string {
   lines.push("")
   lines.push(`- PV atual: ${stats.pv}; máximo: ${statSnapshot.pvMax}; bônus: ${stats.pvBonus >= 0 ? "+" : ""}${stats.pvBonus}`)
   lines.push(`- PA atual: ${stats.pa}; máximo: ${statSnapshot.paMax}; bônus: ${stats.paBonus >= 0 ? "+" : ""}${stats.paBonus}`)
-  lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}`)
+  lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}; bônus: ${stats.paExtraBonus >= 0 ? "+" : ""}${stats.paExtraBonus}`)
   lines.push(`- PE atual: ${stats.pe}; máximo: ${statSnapshot.peMax}; bônus: ${stats.peBonus >= 0 ? "+" : ""}${stats.peBonus}`)
   lines.push(`- PE temporário: ${stats.peTemporary}`)
   lines.push(`- MT: ${stats.mt}`)
@@ -121,7 +121,6 @@ export function characterToMarkdown(character: Character): string {
   }
   lines.push(`- Armadura: RDF ${stats.armorRdf}, RDM ${stats.armorRdm}`)
   lines.push(`- Natural: RDF ${stats.naturalRdf}, RDM ${stats.naturalRdm}`)
-  lines.push(`- Totais: RDF ${statSnapshot.totalRdf}, RDM ${statSnapshot.totalRdm}`)
   const effects = richTextToPlainText(stats.effects)
   if (effects) {
     lines.push("")

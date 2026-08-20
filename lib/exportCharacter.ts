@@ -118,14 +118,13 @@ export function characterToMarkdown(character: Character): string {
   lines.push(`- Acaso: ${statSnapshot.chanceTest}; Mod.: ${stats.chanceModifier >= 0 ? "+" : ""}${stats.chanceModifier}`)
   lines.push(`- Percepção: ${statSnapshot.perceptionTest}; Mod.: ${stats.perceptionModifier >= 0 ? "+" : ""}${stats.perceptionModifier}`)
   lines.push(`- Deslocamento: ${statSnapshot.movement} m; Mod.: ${stats.movementBonus >= 0 ? "+" : ""}${stats.movementBonus}`)
+  lines.push(`- Primeiras Impressões: ${statSnapshot.firstImpressions >= 0 ? "+" : ""}${statSnapshot.firstImpressions}; Mod.: ${stats.firstImpressionsBonus >= 0 ? "+" : ""}${stats.firstImpressionsBonus}`)
   if (statSnapshot.overweightLevel > 0) {
     lines.push(`- Sobrepeso ${statSnapshot.overweightLevel}: -${statSnapshot.physicalPenalty} Físico, -${statSnapshot.movementPenalty} Deslocamento`)
     if (statSnapshot.overweightWarnings.length > 0) {
       lines.push(`- Alertas de sobrepeso: ${statSnapshot.overweightWarnings.join(", ")}`)
     }
   }
-  lines.push(`- Armadura: RDF ${stats.armorRdf}, RDM ${stats.armorRdm}`)
-  lines.push(`- Natural: RDF ${stats.naturalRdf}, RDM ${stats.naturalRdm}`)
   const effects = richTextToPlainText(stats.effects)
   if (effects) {
     lines.push("")

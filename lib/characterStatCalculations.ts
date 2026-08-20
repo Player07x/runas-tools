@@ -37,6 +37,7 @@ export interface CharacterStatSnapshot {
   perceptionTest: number
   knowledgeTest: number
   movement: number
+  firstImpressions: number
   focusMaximum: number
   restMinutes: number
 }
@@ -110,6 +111,7 @@ export function calculateCharacterStatSnapshot(
       ? Math.max(1, movementBeforeSize + mt)
       : movementBeforeSize
   const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus)))
+  const firstImpressions = Math.trunc(attributes.social + finite(stats.firstImpressionsBonus))
   const defaultCoreSkills = createCoreSkills()
   const coreSkillTest = (id: string, fallbackIndex: number) => {
     const skill = skills.find((item) => item.id === id) ?? defaultCoreSkills[fallbackIndex]
@@ -139,6 +141,7 @@ export function calculateCharacterStatSnapshot(
     perceptionTest,
     knowledgeTest,
     movement,
+    firstImpressions,
     focusMaximum,
     restMinutes: Math.max(0, 30 - knowledgeTest),
   }

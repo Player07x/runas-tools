@@ -50,6 +50,11 @@ const damageSuggestions = [
   "Todos os Mágicos",
 ]
 
+function formatSignedInteger(value: number): string {
+  const integer = Math.trunc(Number.isFinite(value) ? value : 0)
+  return `${integer >= 0 ? "+" : ""}${integer}`
+}
+
 function NumericInput({
   value,
   onChange,
@@ -320,7 +325,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
         <VitalCard label="PE" current={stats.pe} maximum={snapshot.peMax} bonus={stats.peBonus} onCurrentChange={(pe) => onStatsChange({ pe })} onBonusChange={(peBonus) => onStatsChange({ peBonus })} accent="#94a6db" />
       </div>
 
-      <div className="mb-7 grid grid-cols-[repeat(auto-fit,minmax(min(100%,20rem),1fr))] gap-3">
+      <div className="mb-7 grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
         <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
           <h3 className="px-3 py-2 text-sm font-semibold text-[#397d75] dark:text-[#79cfca]">PA Extra</h3>
           <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
@@ -388,7 +393,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
             </div>
           </div>
         </article>
-        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
+        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45 sm:col-span-2">
           <h3 className="px-3 py-2 text-sm font-semibold text-[#8a6f2f] dark:text-[#e2c56d]">Tempo de Foco</h3>
           <div className="grid grid-cols-3 divide-x divide-border border-y border-border">
             <label className="flex min-w-0 flex-col items-center px-1 py-2">
@@ -424,6 +429,21 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
             <label className="flex min-w-0 flex-col items-center px-1 py-2">
               <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
               <NumericInput label="Modificador de deslocamento" value={stats.movementBonus} onChange={(movementBonus) => onStatsChange({ movementBonus })} className="h-8 w-full" />
+            </label>
+          </div>
+        </article>
+        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
+          <h3 className="px-3 py-2 text-sm font-semibold text-[#6b5b8d] dark:text-[#c9b9ef]">Primeiras Impressões</h3>
+          <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Máximo</span>
+              <output aria-label={`Primeiras Impressões máximas: ${formatSignedInteger(snapshot.firstImpressions)}`} className="flex h-8 w-full items-center justify-center text-base font-semibold tabular-nums text-foreground">
+                {formatSignedInteger(snapshot.firstImpressions)}
+              </output>
+            </label>
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
+              <NumericInput label="Modificador de Primeiras Impressões" value={stats.firstImpressionsBonus} onChange={(firstImpressionsBonus) => onStatsChange({ firstImpressionsBonus: Math.trunc(firstImpressionsBonus) })} className="h-8 w-full" />
             </label>
           </div>
         </article>

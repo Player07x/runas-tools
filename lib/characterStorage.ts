@@ -81,6 +81,7 @@ export function createEmptyCharacter(): Character {
       chanceModifier: 0,
       perceptionModifier: 0,
       movementBonus: 0,
+      firstImpressionsBonus: 0,
       armorRdf: 0,
       armorRdm: 0,
       naturalRdf: 0,
@@ -222,6 +223,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
   stats.willModifier = integer(partialStats.willModifier ?? partialStats.willBonus)
   stats.chanceModifier = integer(partialStats.chanceModifier ?? partialStats.chanceBonus)
   stats.perceptionModifier = integer(partialStats.perceptionModifier ?? partialStats.perceptionBonus)
+  stats.firstImpressionsBonus = integer(partialStats.firstImpressionsBonus)
   delete (stats as typeof stats & { willBonus?: number }).willBonus
   delete (stats as typeof stats & { chanceBonus?: number }).chanceBonus
   delete (stats as typeof stats & { perceptionBonus?: number }).perceptionBonus

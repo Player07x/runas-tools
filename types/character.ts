@@ -84,6 +84,7 @@ export interface CharacterStats {
   chanceModifier: number
   perceptionModifier: number
   movementBonus: number
+  firstImpressionsBonus: number
   armorRdf: number
   armorRdm: number
   naturalRdf: number
@@ -109,4 +110,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 8
+export const CHARACTER_VERSION = 9

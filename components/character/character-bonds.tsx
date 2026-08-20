@@ -41,7 +41,7 @@ function categoryKey(value: string): string {
 }
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <span className="mb-1 block text-[0.62rem] font-medium uppercase tracking-wide text-muted-foreground">{children}</span>
+  return <span className="mb-1 block text-[0.6rem] font-medium uppercase tracking-normal text-muted-foreground md:text-[0.62rem] md:tracking-wide">{children}</span>
 }
 
 function SortButton({
@@ -70,11 +70,11 @@ function SortButton({
       title={`${field.label}: ${nextAction}`}
       aria-label={`Organizar por ${field.label}; próximo clique: ${nextAction}`}
       className={compact
-        ? `inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[0.68rem] font-semibold transition ${isActive ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-background/55 text-muted-foreground hover:text-foreground"}`
+        ? `inline-flex h-8 shrink-0 items-center justify-center gap-1 rounded-lg border px-2 text-[0.68rem] font-semibold transition ${isActive ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-background/55 text-muted-foreground hover:text-foreground"}`
         : `inline-flex w-full items-center justify-center gap-1 rounded-md px-1 py-1 transition hover:bg-background/70 hover:text-foreground ${isActive ? "text-primary" : ""}`}
     >
       <span>{field.label}</span>
-      <Icon className="size-3" aria-hidden="true" />
+      <Icon className="size-3 shrink-0" aria-hidden="true" />
     </button>
   )
 }
@@ -169,27 +169,27 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
   }
 
   return (
-    <section aria-label="Vínculos do personagem" className="rounded-b-[27px] rounded-t-none border border-border bg-card p-4 shadow-sm sm:p-7">
+    <section aria-label="Vínculos do personagem" className="rounded-b-[22px] rounded-t-none border border-border bg-card p-2 shadow-sm sm:rounded-b-[27px] sm:p-7">
       <datalist id="bond-category-suggestions">
         {categories.filter((category) => category.key !== "__without_category__").map((category) => <option key={category.key} value={category.label} />)}
       </datalist>
 
-      <article className="overflow-hidden rounded-[22px] border border-border bg-muted/25">
-        <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:px-4">
+      <article className="overflow-hidden rounded-[18px] border border-border bg-muted/25 sm:rounded-[22px]">
+        <div className="flex flex-col gap-3 border-b border-border px-2.5 py-3 sm:px-4">
           <div className="flex flex-col gap-2 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
             <div>
               <h3 className="font-bold text-foreground">Vínculos</h3>
               <p className="text-xs text-muted-foreground">Qualidade e nível são calculados automaticamente pelos pontos.</p>
             </div>
-            <div className="grid gap-2 min-[430px]:grid-cols-3">
-              <button type="button" onClick={() => setShowFilters((current) => !current)} aria-expanded={showFilters} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+              <button type="button" onClick={() => setShowFilters((current) => !current)} aria-expanded={showFilters} className="inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-input bg-background px-1.5 py-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground sm:gap-2 sm:px-3 sm:text-sm">
                 <ListFilter className="size-4" /> Categorias
               </button>
-              <button type="button" onClick={() => setShowImport(true)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
-                <ListPlus className="size-4" /> Adicionar lista
+              <button type="button" onClick={() => setShowImport(true)} aria-label="Adicionar lista de vínculos" className="inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-input bg-background px-1.5 py-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground sm:gap-2 sm:px-3 sm:text-sm">
+                <ListPlus className="size-4" /> <span className="sm:hidden">Importar</span><span className="hidden sm:inline">Adicionar lista</span>
               </button>
-              <button type="button" onClick={addBond} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-accent">
-                <Plus className="size-4" /> Adicionar vínculo
+              <button type="button" onClick={addBond} aria-label="Adicionar vínculo" className="inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl bg-secondary px-1.5 py-2 text-xs font-semibold text-secondary-foreground transition hover:bg-accent sm:gap-2 sm:px-3 sm:text-sm">
+                <Plus className="size-4" /> <span className="sm:hidden">Novo</span><span className="hidden sm:inline">Adicionar vínculo</span>
               </button>
             </div>
           </div>
@@ -211,8 +211,8 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
           )}
         </div>
 
-        <div className="space-y-2 p-2 sm:p-3">
-          <div className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-muted/30 p-2 md:hidden" aria-label="Organizar vínculos">
+        <div className="space-y-2 p-1.5 sm:p-3">
+          <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/30 p-1.5 md:hidden" aria-label="Organizar vínculos">
             {sortFields.map((field) => <SortButton key={field.key} field={field} sortState={sortState} onSort={toggleSort} compact />)}
           </div>
           <div className="hidden grid-cols-[2.5rem_minmax(7.5rem,.9fr)_minmax(5.5rem,1fr)_3.5rem_minmax(6.5rem,.9fr)_3.25rem_3.5rem_3.5rem_2.25rem] gap-1.5 px-2 text-center text-[0.62rem] uppercase tracking-wide text-muted-foreground md:grid">
@@ -235,40 +235,40 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
             const quality = calculateBondQuality(bond.points)
             const test = calculateBondTest(attributes, stats, bond)
             return (
-              <div key={bond.id} className="grid grid-cols-6 items-end gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[2.5rem_minmax(7.5rem,.9fr)_minmax(5.5rem,1fr)_3.5rem_minmax(6.5rem,.9fr)_3.25rem_3.5rem_3.5rem_2.25rem] md:items-center md:gap-1.5">
-                <button type="button" onClick={() => openBondCalculator(bond)} aria-label={`Testar Primeiras Impressões com ${bond.name}`} title={`Testar vínculo com ${bond.name}`} className="col-span-1 inline-flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 md:col-auto">
+              <div key={bond.id} className="grid grid-cols-12 items-end gap-x-1.5 gap-y-2 rounded-[16px] border border-border bg-background/55 p-2 md:grid-cols-[2.5rem_minmax(7.5rem,.9fr)_minmax(5.5rem,1fr)_3.5rem_minmax(6.5rem,.9fr)_3.25rem_3.5rem_3.5rem_2.25rem] md:items-center md:gap-1.5 md:rounded-[18px]">
+                <button type="button" onClick={() => openBondCalculator(bond)} aria-label={`Testar Primeiras Impressões com ${bond.name}`} title={`Testar vínculo com ${bond.name}`} className="col-span-2 inline-flex size-9 items-center justify-center self-end justify-self-start rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 md:col-auto md:size-10">
                   <Handshake className="size-4.5" />
                 </button>
-                <label className="col-span-2 min-w-0 md:col-auto">
+                <label className="col-span-4 min-w-0 md:col-auto">
                   <FieldLabel>Categoria</FieldLabel>
-                  <input type="text" value={bond.category} list="bond-category-suggestions" maxLength={30} onChange={(event) => onBondChange(bond.id, { category: event.target.value.slice(0, 30) })} aria-label={`Categoria de ${bond.name}`} className="h-10 w-full min-w-0 rounded-xl border border-input bg-background/65 px-2 text-[0.8rem] text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25" />
+                  <input type="text" value={bond.category} list="bond-category-suggestions" maxLength={30} onChange={(event) => onBondChange(bond.id, { category: event.target.value.slice(0, 30) })} aria-label={`Categoria de ${bond.name}`} className="h-9 w-full min-w-0 rounded-xl border border-input bg-background/65 px-2 text-xs text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25 md:h-10 md:text-[0.8rem]" />
                 </label>
-                <label className="col-span-2 min-w-0 md:col-auto">
+                <label className="col-span-4 min-w-0 md:col-auto">
                   <FieldLabel>Nome</FieldLabel>
-                  <input type="text" value={bond.name} maxLength={50} onChange={(event) => onBondChange(bond.id, { name: event.target.value.slice(0, 50) })} aria-label="Nome do vínculo" className="h-10 w-full min-w-0 rounded-xl border border-input bg-background/65 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25" />
+                  <input type="text" value={bond.name} maxLength={50} onChange={(event) => onBondChange(bond.id, { name: event.target.value.slice(0, 50) })} aria-label="Nome do vínculo" className="h-9 w-full min-w-0 rounded-xl border border-input bg-background/65 px-2 text-xs text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25 md:h-10 md:px-3 md:text-sm" />
                 </label>
-                <button type="button" onClick={() => onRemoveBond(bond.id)} aria-label={`Remover vínculo ${bond.name}`} className="col-span-1 inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive md:col-auto md:col-start-9 md:row-start-1">
+                <button type="button" onClick={() => onRemoveBond(bond.id)} aria-label={`Remover vínculo ${bond.name}`} className="col-span-2 inline-flex size-9 items-center justify-center self-end justify-self-end rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive md:col-auto md:col-start-9 md:row-start-1 md:size-10">
                   <Trash2 className="size-4" />
                 </button>
-                <label className="col-span-1 md:col-auto md:col-start-4">
+                <label className="col-span-2 min-w-0 text-center md:col-auto md:col-start-4">
                   <FieldLabel>Teste</FieldLabel>
-                  <SkillIntegerInput value={test} label={`Teste de vínculo com ${bond.name}`} readOnly className="w-full font-semibold" />
+                  <SkillIntegerInput value={test} label={`Teste de vínculo com ${bond.name}`} readOnly className="h-9 w-full px-1 font-semibold md:h-10" />
                 </label>
-                <label className="col-span-3 min-w-0 md:col-auto">
+                <label className="col-span-4 min-w-0 text-center md:col-auto">
                   <FieldLabel>Qualidade</FieldLabel>
-                  <output aria-label={`Qualidade do vínculo com ${bond.name}: ${quality.name}`} className="flex h-10 w-full min-w-0 items-center justify-center truncate rounded-xl border border-input bg-background/65 px-2 text-sm font-semibold text-muted-foreground">{quality.name}</output>
+                  <output aria-label={`Qualidade do vínculo com ${bond.name}: ${quality.name}`} title={quality.name} className="flex h-9 w-full min-w-0 items-center justify-center truncate rounded-xl border border-input bg-background/65 px-1 text-[0.7rem] font-semibold text-muted-foreground min-[360px]:text-xs md:h-10 md:px-2 md:text-sm">{quality.name}</output>
                 </label>
-                <label className="col-span-1 md:col-auto">
+                <label className="col-span-2 min-w-0 text-center md:col-auto">
                   <FieldLabel>Nível</FieldLabel>
-                  <output aria-label={`Nível do vínculo com ${bond.name}: ${formatSigned(quality.level)}`} className="flex h-10 w-full items-center justify-center rounded-xl border border-input bg-background/65 text-sm font-semibold text-muted-foreground">{formatSigned(quality.level)}</output>
+                  <output aria-label={`Nível do vínculo com ${bond.name}: ${formatSigned(quality.level)}`} className="flex h-9 w-full items-center justify-center rounded-xl border border-input bg-background/65 text-sm font-semibold text-muted-foreground md:h-10">{formatSigned(quality.level)}</output>
                 </label>
-                <label className="col-span-1 md:col-auto">
+                <label className="col-span-2 min-w-0 text-center md:col-auto">
                   <FieldLabel>Pontos</FieldLabel>
-                  <SkillIntegerInput value={bond.points} onChange={(points) => onBondChange(bond.id, { points })} label={`Pontos do vínculo com ${bond.name}`} className="w-full" />
+                  <SkillIntegerInput value={bond.points} onChange={(points) => onBondChange(bond.id, { points })} label={`Pontos do vínculo com ${bond.name}`} className="h-9 w-full px-1 md:h-10" />
                 </label>
-                <label className="col-span-1 md:col-auto">
+                <label className="col-span-2 min-w-0 text-center md:col-auto">
                   <FieldLabel>Mod.</FieldLabel>
-                  <SkillIntegerInput value={bond.modifier} onChange={(modifier) => onBondChange(bond.id, { modifier })} label={`Modificador do vínculo com ${bond.name}`} className="w-full" />
+                  <SkillIntegerInput value={bond.modifier} onChange={(modifier) => onBondChange(bond.id, { modifier })} label={`Modificador do vínculo com ${bond.name}`} className="h-9 w-full px-1 md:h-10" />
                 </label>
               </div>
             )

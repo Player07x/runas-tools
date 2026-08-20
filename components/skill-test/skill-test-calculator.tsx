@@ -177,6 +177,8 @@ export function SkillTestCalculator() {
 
   function useDetermination() {
     if (!activeRoll || stats.determination <= 0) return
+    const isCritical = activeRoll.outcome === "critical-success" || activeRoll.outcome === "critical-failure"
+    if (isCritical) return
     const modified = applyDeterminationToRoll(activeRoll)
     setHistory((rolls) => rolls.map((roll) => roll.id === activeRoll.id ? modified : roll))
     setActiveRoll(modified)
@@ -197,6 +199,9 @@ export function SkillTestCalculator() {
   }
 
   const activeIsChance = normalizeSkillName(activeRoll?.skillName ?? "") === "acaso"
+  const determinationBlocked = !!activeRoll && (
+    activeRoll.outcome === "critical-success" || activeRoll.outcome === "critical-failure"
+  )
   const casualtyBlocked = !!activeRoll && !activeIsChance && (
     activeRoll.outcome === "critical-success" || activeRoll.outcome === "critical-failure"
   )
@@ -366,7 +371,13 @@ export function SkillTestCalculator() {
           {(stats.determination > 0 || stats.casualty > 0) && (
             <div className="mt-4 flex flex-col gap-2 min-[430px]:flex-row">
               {stats.determination > 0 && (
-                <button type="button" onClick={useDetermination} className="inline-flex h-10 items-center justify-center rounded-xl bg-background/55 px-3 text-sm font-semibold transition hover:bg-background">
+                <button
+                  type="button"
+                  onClick={useDetermination}
+                  disabled={determinationBlocked}
+                  title={determinationBlocked ? "Determinação não pode alterar resultados críticos" : "Aumentar o resultado usando Determinação"}
+                  className="inline-flex h-10 items-center justify-center rounded-xl bg-background/55 px-3 text-sm font-semibold transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-40"
+                >
                   Usar Determinação ({stats.determination})
                 </button>
               )}

@@ -222,6 +222,10 @@ function TestRow({
 export function CharacterStats({ attributes, info, stats, skills, onAttributeChange, onStatsChange }: Props) {
   const snapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
   const selectedElement = getCharacterElement(stats.elementId)
+  const peTemporaryValue = Math.min(snapshot.peMax, Math.max(0, stats.peTemporary))
+  const peTemporaryPercentage = snapshot.peMax > 0
+    ? Math.min(100, Math.max(0, (peTemporaryValue / snapshot.peMax) * 100))
+    : 0
 
   function restoreStatistics() {
     onStatsChange({
@@ -376,29 +380,40 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
               <span>Restaurar</span>
             </button>
           </div>
-          <div className="grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-stretch divide-x divide-border border-t border-border">
-            <button
-              type="button"
-              onClick={() => adjustPeTemporary(-1)}
-              disabled={stats.peTemporary <= 0}
-              aria-label="Reduzir PE temporário em 1"
-              className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              <Minus className="size-3.5" />1
-            </button>
-            <label className="flex min-w-0 items-center justify-center gap-1 bg-[#d2ddff]/55 px-2">
-              <NumericInput label="PE Temporário" value={stats.peTemporary} min={0} max={snapshot.peMax} onChange={(peTemporary) => onStatsChange({ peTemporary })} className="h-10 w-12 font-semibold" />
-              <span className="text-xs tabular-nums text-muted-foreground">/ {snapshot.peMax}</span>
-            </label>
-            <button
-              type="button"
-              onClick={() => adjustPeTemporary(1)}
-              disabled={stats.peTemporary >= snapshot.peMax}
-              aria-label="Aumentar PE temporário em 1"
-              className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              <Plus className="size-3.5" />1
-            </button>
+          <div className="relative overflow-hidden border-t border-border">
+            <div
+              role="progressbar"
+              aria-label="Proporção de PE temporário"
+              aria-valuemin={0}
+              aria-valuemax={snapshot.peMax}
+              aria-valuenow={peTemporaryValue}
+              style={{ width: `${peTemporaryPercentage}%` }}
+              className="absolute inset-y-0 left-0 bg-[#aebfee]/55 transition-[width] duration-500 ease-out motion-reduce:transition-none dark:bg-[#53658f]/55"
+            />
+            <div className="relative z-10 grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-stretch divide-x divide-border">
+              <button
+                type="button"
+                onClick={() => adjustPeTemporary(-1)}
+                disabled={stats.peTemporary <= 0}
+                aria-label="Reduzir PE temporário em 1"
+                className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background/65 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <Minus className="size-3.5" />1
+              </button>
+              <label className="flex min-w-0 items-center justify-center gap-1 bg-background/20 px-2">
+                <NumericInput label="PE Temporário" value={peTemporaryValue} min={0} max={snapshot.peMax} onChange={(peTemporary) => onStatsChange({ peTemporary })} className="h-10 w-12 font-semibold" />
+                <span className="text-xs tabular-nums text-muted-foreground">/ {snapshot.peMax}</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => adjustPeTemporary(1)}
+                disabled={stats.peTemporary >= snapshot.peMax}
+                aria-label="Aumentar PE temporário em 1"
+                className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background/65 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
+              >
+                <Plus className="size-3.5" />1
+              </button>
+            </div>
           </div>
         </article>
         <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
@@ -498,9 +513,6 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
                   <span>Mod.</span>
                 </div>
                 <div className="space-y-2">
-                  <TestRow label="Vontade" result={snapshot.willTest} bonus={stats.willModifier} onBonusChange={(willModifier) => onStatsChange({ willModifier })} />
-                  <TestRow label="Acaso" result={snapshot.chanceTest} bonus={stats.chanceModifier} onBonusChange={(chanceModifier) => onStatsChange({ chanceModifier })} />
-                  <TestRow label="Percepção" result={snapshot.perceptionTest} bonus={stats.perceptionModifier} onBonusChange={(perceptionModifier) => onStatsChange({ perceptionModifier })} />
                   <TestRow label="Deslocamento" result={snapshot.movement} suffix=" m" bonus={stats.movementBonus} onBonusChange={(movementBonus) => onStatsChange({ movementBonus })} />
                 </div>
               </div>

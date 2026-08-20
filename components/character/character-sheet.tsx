@@ -217,12 +217,9 @@ export function CharacterSheet() {
             <CharacterSkills
               attributes={character.attributes}
               skills={character.skills}
-              stats={character.stats}
-              info={character.info}
               onSkillChange={setSkill}
               onAddSkill={addSkill}
               onRemoveSkill={removeSkill}
-              onStatsChange={setStats}
             />
           )}
         </div>

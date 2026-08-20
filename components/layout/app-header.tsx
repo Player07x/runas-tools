@@ -37,12 +37,13 @@ export function AppHeader() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "rounded-xl px-3.5 py-2 text-sm font-semibold transition-all",
+                className={cn(
+                    "rounded-xl px-2.5 py-2 text-sm font-semibold transition-all md:px-3.5",
                     active ? "bg-secondary text-secondary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                   )}
                 >
-                  {item.label}
+                  <span className="md:hidden">{item.shortLabel}</span>
+                  <span className="hidden md:inline">{item.label}</span>
                 </Link>
               )
             })}
@@ -86,7 +87,7 @@ export function AppHeader() {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-w-16 flex-1 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors",
+                  "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[0.68rem] font-semibold transition-colors min-[390px]:text-xs",
                   active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground",
                 )}
               >
@@ -98,7 +99,7 @@ export function AppHeader() {
           <button
             type="button"
             onClick={open}
-            className="flex min-w-16 flex-1 flex-col items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold text-muted-foreground"
+            className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[0.68rem] font-semibold text-muted-foreground min-[390px]:text-xs"
           >
             <User className="size-5" />
             Ficha

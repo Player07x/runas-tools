@@ -23,7 +23,7 @@ export default function HomePage() {
         </p>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <FichaToolCard />
         <ToolCard
           title="Calculadora de Dano"
@@ -31,6 +31,14 @@ export default function HomePage() {
           icon={Swords}
           accent="blue"
           href="/calculadora-dano"
+          actionLabel="Abrir calculadora"
+        />
+        <ToolCard
+          title="Calculadora de Testes"
+          description="Resolva testes de atributos e perícias com dados especiais e histórico de rolagens."
+          icon={ListChecks}
+          accent="yellow"
+          href="/calculadora-testes"
           actionLabel="Abrir calculadora"
         />
       </div>
@@ -51,12 +59,6 @@ export default function HomePage() {
             title="Calculadora de Inventário"
             description="Controle carga, itens e capacidade."
             icon={Backpack}
-            comingSoon
-          />
-          <ToolCard
-            title="Calculadora de Testes"
-            description="Resolva testes de atributos e perícias."
-            icon={ListChecks}
             comingSoon
           />
           <ToolCard

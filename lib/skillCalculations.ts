@@ -9,7 +9,7 @@ import type {
   SpecialDieId,
 } from "@/types/skillTest"
 
-const SKILL_LEVEL_THRESHOLDS = [0, 3, 7, 15, 27, 43, 63] as const
+const SKILL_LEVEL_THRESHOLDS = [0, 3, 6, 10, 15, 21, 28] as const
 
 export function normalizeSkillName(value: string): string {
   return value

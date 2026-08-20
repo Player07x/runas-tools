@@ -232,12 +232,8 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
   }
 
   return (
-    <section aria-labelledby="character-statistics-title" className="rounded-b-[27px] rounded-t-none border border-border bg-card p-4 shadow-sm sm:p-7">
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p id="character-statistics-title" className="text-lg text-muted-foreground">Estatísticas do personagem.</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Valores calculados são atualizados automaticamente a partir da ficha.</p>
-        </div>
+    <section aria-label="Estatísticas do personagem" className="rounded-b-[27px] rounded-t-none border border-border bg-card p-4 shadow-sm sm:p-7">
+      <header className="mb-4 flex justify-end">
         <button
           type="button"
           onClick={restoreStatistics}
@@ -255,7 +251,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
             <div key={group.id}>
               <div className="rounded-[22px] border border-border bg-muted/45 p-4 sm:hidden">
                 <div className="flex items-center justify-between gap-3">
-                  <span className={cn("text-base font-bold uppercase", styles.label)}>{group.name}</span>
+                  <span className={cn("text-sm font-bold uppercase", styles.label)}>{group.name}</span>
                   <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                     {group.primary.name}
                     <NumericInput
@@ -287,7 +283,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
               </div>
 
               <div className="hidden grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-3 sm:grid">
-                <span className={cn("text-right text-base font-bold uppercase", styles.label)}>{group.name}</span>
+                <span className={cn("text-right text-sm font-bold uppercase", styles.label)}>{group.name}</span>
                 <div className={cn("grid min-w-0 grid-cols-[4rem_repeat(3,minmax(0,1fr))] items-center overflow-hidden rounded-[18px]", styles.track)}>
                   <NumericInput
                     label={group.primary.name}
@@ -297,7 +293,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
                     className="h-11 w-full rounded-[18px] bg-card/80 font-semibold dark:bg-[#2e323f]"
                   />
                   {group.attributes.map((attribute) => (
-                    <label key={attribute.key} className="flex min-w-0 items-center justify-end gap-2 pl-2 text-base text-foreground/80">
+                    <label key={attribute.key} className="flex min-w-0 items-center justify-end gap-2 pl-2 text-sm text-foreground/80">
                       <span className="truncate lowercase">{attribute.name}</span>
                       <span className={cn("flex h-11 w-14 shrink-0 items-center justify-center rounded-[18px]", styles.bubble)}>
                         <NumericInput
@@ -447,7 +443,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
                 <select
                   value={stats.elementId}
                   onChange={(event) => changeElement(event.target.value)}
-                  className="h-12 w-full appearance-none rounded-[18px] border border-input bg-background px-4 pr-11 text-base font-semibold text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25"
+                  className="h-12 w-full appearance-none rounded-[18px] border border-input bg-background px-4 pr-11 text-sm font-semibold text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25"
                   style={selectedElement ? { borderColor: selectedElement.color } : undefined}
                 >
                   {elementOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -496,27 +492,6 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
               )}
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-5">
-              <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
-                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
-                  <span />
-                  <span>RDF</span>
-                  <span>RDM</span>
-                </div>
-                <div className="space-y-2">
-                  {([
-                    ["Armadura", "armorRdf", "armorRdm"],
-                    ["Natural", "naturalRdf", "naturalRdm"],
-                  ] as const).map(([label, rdfKey, rdmKey]) => (
-                    <div key={label} className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-1.5">
-                      <span className="truncate text-right text-sm text-muted-foreground">{label}</span>
-                      <NumericInput label={`${label} RDF`} value={stats[rdfKey]} min={0} onChange={(value) => onStatsChange({ [rdfKey]: value })} className="h-10 w-full rounded-xl bg-background/70" />
-                      <NumericInput label={`${label} RDM`} value={stats[rdmKey]} min={0} onChange={(value) => onStatsChange({ [rdmKey]: value })} className="h-10 w-full rounded-xl bg-background/70" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
 
           <RichTextEditor label="Efeitos" value={stats.effects} onChange={(effects) => onStatsChange({ effects })} maxLength={1000} />

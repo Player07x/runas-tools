@@ -8,8 +8,11 @@ import type {
   CharacterStats as StatsType,
 } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
+import { systemSkills } from "@/data/skills"
 import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
+import { normalizeSkillName } from "@/lib/skillCalculations"
+import type { ImportedSkill } from "@/lib/skillImport"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterInfo } from "./character-info"
@@ -122,6 +125,49 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     updateCharacter((prev) => ({ ...prev, skills: [...prev.skills, skill] }))
   }
 
+  function importSkills(importedSkills: ImportedSkill[]) {
+    updateCharacter((prev) => {
+      const skills = [...prev.skills]
+      importedSkills.forEach((imported, index) => {
+        const importedName = normalizeSkillName(imported.name)
+        const systemSkill = systemSkills.find((definition) => (
+          [definition.name, ...(definition.aliases ?? [])]
+            .some((candidate) => normalizeSkillName(candidate) === importedName)
+        ))
+        const canonicalName = systemSkill?.name ?? imported.name
+        const normalizedName = normalizeSkillName(canonicalName)
+        const existingIndex = skills.findIndex((skill) => normalizeSkillName(skill.name) === normalizedName)
+        if (existingIndex >= 0) {
+          skills[existingIndex] = {
+            ...skills[existingIndex],
+            attributeKey: imported.attributeKey,
+            points: imported.points,
+          }
+          return
+        }
+
+        const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `skill-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`
+        skills.push({
+          id,
+          name: canonicalName,
+          attributeKey: imported.attributeKey,
+          points: imported.points,
+          modifier: 0,
+          locked: false,
+        })
+      })
+
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills)
+      return {
+        ...prev,
+        skills,
+        stats: { ...prev.stats, focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum) },
+      }
+    })
+  }
+
   function removeSkill(id: string) {
     updateCharacter((prev) => ({ ...prev, skills: prev.skills.filter((skill) => skill.locked || skill.id !== id) }))
   }
@@ -222,6 +268,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               skills={character.skills}
               onSkillChange={setSkill}
               onAddSkill={addSkill}
+              onImportSkills={importSkills}
               onRemoveSkill={removeSkill}
             />
           )}

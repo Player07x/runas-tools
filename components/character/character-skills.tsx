@@ -1,11 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
-import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Dices, Plus, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Dices, ListPlus, Plus, Trash2, X } from "lucide-react"
 import type { CharacterAttributes, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
 import { damageAttributes } from "@/data/attributes"
-import { calculateAttributeTest, calculateSkillLevel } from "@/lib/skillCalculations"
+import { systemSkills } from "@/data/skills"
+import { calculateAttributeTest, calculateSkillLevel, normalizeSkillName } from "@/lib/skillCalculations"
+import { parseSkillImport, type ImportedSkill } from "@/lib/skillImport"
 import { SkillIntegerInput } from "@/components/skill-test/skill-integer-input"
 import { useCharacterPanel } from "./character-panel"
 
@@ -14,6 +17,7 @@ interface Props {
   skills: CharacterSkill[]
   onSkillChange: (id: string, updates: Partial<CharacterSkill>) => void
   onAddSkill: (skill: CharacterSkill) => void
+  onImportSkills: (skills: ImportedSkill[]) => void
   onRemoveSkill: (id: string) => void
 }
 
@@ -70,10 +74,13 @@ function SortButton({
   )
 }
 
-export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill, onRemoveSkill }: Props) {
+export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill, onImportSkills, onRemoveSkill }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
   const [sortState, setSortState] = useState<SkillSortState>(null)
+  const [showImport, setShowImport] = useState(false)
+  const [importText, setImportText] = useState("")
+  const [importErrors, setImportErrors] = useState<string[]>([])
   const visibleSkills = useMemo(() => {
     const fixedSkills = skills.filter((skill) => skill.locked)
     const customSkills = skills.filter((skill) => !skill.locked)
@@ -131,24 +138,54 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
     onAddSkill({ id, name: "Nova perícia", attributeKey: "", points: 0, modifier: 0, locked: false })
   }
 
-  return (
-    <section aria-labelledby="character-skills-title" className="rounded-b-[27px] rounded-t-none border border-border bg-card p-4 shadow-sm sm:p-7">
-      <header className="mb-5">
-        <p id="character-skills-title" className="text-lg text-muted-foreground">Perícias do personagem.</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-          Edite as perícias abaixo ou use o dado para abrir a Calculadora de Testes com os dados preenchidos e a rolagem pronta.
-        </p>
-      </header>
+  function changeSkillName(skill: CharacterSkill, name: string) {
+    const trimmedName = name.slice(0, 30)
+    const normalizedName = normalizeSkillName(trimmedName)
+    const systemSkill = systemSkills.find((definition) => (
+      [definition.name, ...(definition.aliases ?? [])]
+        .some((candidate) => normalizeSkillName(candidate) === normalizedName)
+    ))
+    onSkillChange(skill.id, systemSkill
+      ? { name: systemSkill.name, attributeKey: systemSkill.attributeKey }
+      : { name: trimmedName })
+  }
 
+  function importSkillList(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const result = parseSkillImport(importText, damageAttributes)
+    if (result.errors.length > 0) {
+      setImportErrors(result.errors)
+      return
+    }
+    if (result.skills.length === 0) {
+      setImportErrors(["Informe ao menos uma perícia para importar."])
+      return
+    }
+    onImportSkills(result.skills)
+    setImportText("")
+    setImportErrors([])
+    setShowImport(false)
+  }
+
+  return (
+    <section aria-label="Perícias do personagem" className="rounded-b-[27px] rounded-t-none border border-border bg-card p-4 shadow-sm sm:p-7">
+      <datalist id="system-skill-suggestions">
+        {systemSkills.map((skill) => <option key={skill.name} value={skill.name} />)}
+      </datalist>
       <article className="overflow-hidden rounded-[22px] border border-border bg-muted/25">
         <div className="flex flex-col gap-2 border-b border-border px-3 py-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between sm:px-4">
           <div>
             <h3 className="font-bold text-foreground">Perícias</h3>
             <p className="text-xs text-muted-foreground">Nível automático pelo total acumulado de pontos.</p>
           </div>
-          <button type="button" onClick={addSkill} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-background px-3 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
-            <Plus className="size-4" /> Adicionar perícia
-          </button>
+          <div className="grid gap-2 min-[430px]:grid-cols-2">
+            <button type="button" onClick={() => setShowImport(true)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
+              <ListPlus className="size-4" /> Adicionar lista de perícias
+            </button>
+            <button type="button" onClick={addSkill} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-secondary px-3 py-2 text-sm font-semibold text-secondary-foreground transition hover:bg-accent">
+              <Plus className="size-4" /> Adicionar perícia
+            </button>
+          </div>
         </div>
 
         <div className="space-y-2 p-2 sm:p-3">
@@ -188,7 +225,8 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
                     value={skill.name}
                     maxLength={30}
                     readOnly={skill.locked}
-                    onChange={(event) => onSkillChange(skill.id, { name: event.target.value.slice(0, 30) })}
+                    list={skill.locked ? undefined : "system-skill-suggestions"}
+                    onChange={(event) => changeSkillName(skill, event.target.value)}
                     aria-label="Nome da perícia"
                     className="h-10 w-full min-w-0 rounded-xl border border-input bg-background/65 px-3 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25 read-only:cursor-default read-only:border-transparent read-only:bg-transparent read-only:font-semibold"
                   />
@@ -239,6 +277,62 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
           })}
         </div>
       </article>
+
+      {showImport && createPortal((
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-3 backdrop-blur-[2px]" onMouseDown={(event) => {
+          if (event.currentTarget === event.target) setShowImport(false)
+        }}>
+          <form
+            onSubmit={importSkillList}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="skill-import-title"
+            className="max-h-[min(46rem,calc(100dvh-1.5rem))] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-border bg-card p-4 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="skill-import-title" className="text-base font-bold text-foreground">Adicionar lista de perícias</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Uma perícia por linha. Teste e Nível são ignorados quando estiverem presentes.</p>
+              </div>
+              <button type="button" onClick={() => setShowImport(false)} aria-label="Fechar importação" className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground">
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <label className="mt-4 block">
+              <span className="mb-1.5 block text-sm font-medium text-muted-foreground">Lista de perícias</span>
+              <textarea
+                value={importText}
+                onChange={(event) => {
+                  setImportText(event.target.value)
+                  if (importErrors.length > 0) setImportErrors([])
+                }}
+                rows={10}
+                autoFocus
+                placeholder={"Nome | Atributo | Ponto\nElementarismo | POD | 6\n\nNome | Teste | Nível | Atributo | Ponto\nIntuição | 16 | +1 | SOR | 3"}
+                className="min-h-56 w-full resize-y rounded-[18px] border border-input bg-background p-3 font-mono text-sm leading-relaxed text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25"
+              />
+            </label>
+
+            <div className="mt-3 rounded-xl bg-muted/45 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+              Aceita colunas separadas por <strong>|</strong>, tabulação ou espaços. Se a perícia já existir, seus pontos e atributo serão atualizados, sem criar duplicata.
+            </div>
+
+            {importErrors.length > 0 && (
+              <div role="alert" className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {importErrors.map((error) => <p key={error}>{error}</p>)}
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setShowImport(false)} className="inline-flex h-11 items-center justify-center rounded-xl border border-input bg-background px-4 text-sm font-semibold text-muted-foreground transition hover:text-foreground">Cancelar</button>
+              <button type="submit" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:brightness-110">
+                <ListPlus className="size-4" /> Importar lista
+              </button>
+            </div>
+          </form>
+        </div>
+      ), document.body)}
     </section>
   )
 }

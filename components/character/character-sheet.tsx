@@ -1,7 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import type { AttributeKey, CharacterCalendar, CharacterInfo as InfoType, CharacterStats as StatsType } from "@/types/character"
+import type {
+  AttributeKey,
+  CharacterCalendar,
+  CharacterInfo as InfoType,
+  CharacterSkill,
+  CharacterStats as StatsType,
+} from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
 import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
@@ -9,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterInfo } from "./character-info"
 import { CharacterStats } from "./character-stats"
+import { CharacterSkills } from "./character-skills"
 import { CharacterActions } from "./character-actions"
 import { SaveIndicator } from "./save-indicator"
 
@@ -42,10 +49,14 @@ export function CharacterSheet() {
       }
       nextInfo = deriveCharacterInfo(nextInfo)
       nextInfo.loadBase = calculateLoadBase(prev.attributes.physical, prev.attributes.strength, nextInfo.scaleMultiplier)
+      const stats = { ...prev.stats, mt: modifierToNumber(nextInfo.sizeModifier) }
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, nextInfo, stats, prev.skills)
+      stats.paExtra = Math.min(stats.paExtra, snapshot.paExtraMax)
+      stats.peTemporary = Math.min(stats.peTemporary, snapshot.peMax)
       return {
         ...prev,
         info: nextInfo,
-        stats: { ...prev.stats, mt: modifierToNumber(nextInfo.sizeModifier) },
+        stats,
       }
     })
   }
@@ -66,7 +77,7 @@ export function CharacterSheet() {
         ...prev.info,
         loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
       }
-      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats)
+      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats, prev.skills)
       return {
         ...prev,
         attributes,
@@ -75,6 +86,7 @@ export function CharacterSheet() {
           ...prev.stats,
           paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
           peTemporary: Math.min(prev.stats.peTemporary, snapshot.peMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
         },
       }
     })
@@ -83,11 +95,32 @@ export function CharacterSheet() {
   function setStats(updates: Partial<StatsType>) {
     updateCharacter((prev) => {
       const stats = { ...prev.stats, ...updates }
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats, prev.skills)
       stats.paExtra = Math.min(snapshot.paExtraMax, Math.max(0, stats.paExtra))
       stats.peTemporary = Math.min(snapshot.peMax, Math.max(0, stats.peTemporary))
+      stats.focusCurrent = Math.min(snapshot.focusMaximum, Math.max(0, stats.focusCurrent))
       return { ...prev, stats }
     })
+  }
+
+  function setSkill(id: string, updates: Partial<CharacterSkill>) {
+    updateCharacter((prev) => {
+      const skills = prev.skills.map((skill) => skill.id === id ? { ...skill, ...updates } : skill)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills)
+      return {
+        ...prev,
+        skills,
+        stats: { ...prev.stats, focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum) },
+      }
+    })
+  }
+
+  function addSkill(skill: CharacterSkill) {
+    updateCharacter((prev) => ({ ...prev, skills: [...prev.skills, skill] }))
+  }
+
+  function removeSkill(id: string) {
+    updateCharacter((prev) => ({ ...prev, skills: prev.skills.filter((skill) => skill.locked || skill.id !== id) }))
   }
 
   if (!isReady) {
@@ -175,14 +208,22 @@ export function CharacterSheet() {
               attributes={character.attributes}
               info={character.info}
               stats={character.stats}
+              skills={character.skills}
               onAttributeChange={setAttribute}
               onStatsChange={setStats}
             />
           )}
           {activeTab === "skills" && (
-            <section className="min-h-[32rem] rounded-b-[27px] rounded-t-none border border-border bg-card p-5 shadow-sm sm:p-7">
-              <p className="text-lg text-muted-foreground">Perícias e testes do personagem.</p>
-            </section>
+            <CharacterSkills
+              attributes={character.attributes}
+              skills={character.skills}
+              stats={character.stats}
+              info={character.info}
+              onSkillChange={setSkill}
+              onAddSkill={addSkill}
+              onRemoveSkill={removeSkill}
+              onStatsChange={setStats}
+            />
           )}
         </div>
       </div>

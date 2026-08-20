@@ -6,6 +6,7 @@ import type {
   AttributeKey,
   CharacterAttributes,
   CharacterInfo,
+  CharacterSkill,
   CharacterStats as CharacterStatsType,
 } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
@@ -20,6 +21,7 @@ interface Props {
   attributes: CharacterAttributes
   info: CharacterInfo
   stats: CharacterStatsType
+  skills: CharacterSkill[]
   onAttributeChange: (key: AttributeKey, value: number) => void
   onStatsChange: (updates: Partial<CharacterStatsType>) => void
 }
@@ -147,8 +149,8 @@ function VitalCard({
           <NumericInput label={`${label} máximo`} value={maximum} readOnly className="w-full text-xl font-semibold text-muted-foreground" />
         </label>
         <label className="flex min-w-0 flex-col items-center gap-1 px-1.5 py-3">
-          <span className="text-[0.68rem] font-medium text-muted-foreground">Bônus</span>
-          <NumericInput label={`${label} bônus`} value={bonus} onChange={onBonusChange} className="w-full text-xl" />
+          <span className="text-[0.68rem] font-medium text-muted-foreground">Mod.</span>
+          <NumericInput label={`Modificador de ${label}`} value={bonus} onChange={onBonusChange} className="w-full text-xl" />
         </label>
       </div>
     </article>
@@ -185,8 +187,8 @@ function ResourceRow({
           <NumericInput label={`${label} máximo`} value={maximum} readOnly className="w-full text-muted-foreground" />
         </label>
         <label className="flex min-w-0 flex-col items-center justify-center px-1 py-2">
-          <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
-          <NumericInput label={`${label} bônus`} value={bonus} onChange={onBonusChange} className="w-full" />
+          <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
+          <NumericInput label={`Modificador de ${label}`} value={bonus} onChange={onBonusChange} className="w-full" />
         </label>
       </div>
     </div>
@@ -212,13 +214,13 @@ function TestRow({
       <output aria-label={`${label}: ${result}${suffix ?? ""}`} className="flex h-10 items-center justify-center rounded-xl bg-muted text-sm font-semibold tabular-nums text-foreground">
         {result}{suffix}
       </output>
-      <NumericInput label={`Bônus de ${label}`} value={bonus} onChange={onBonusChange} className="h-10 w-full rounded-xl bg-background/70" />
+      <NumericInput label={`Modificador de ${label}`} value={bonus} onChange={onBonusChange} className="h-10 w-full rounded-xl bg-background/70" />
     </div>
   )
 }
 
-export function CharacterStats({ attributes, info, stats, onAttributeChange, onStatsChange }: Props) {
-  const snapshot = calculateCharacterStatSnapshot(attributes, info, stats)
+export function CharacterStats({ attributes, info, stats, skills, onAttributeChange, onStatsChange }: Props) {
+  const snapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
   const selectedElement = getCharacterElement(stats.elementId)
 
   function restoreStatistics() {
@@ -230,6 +232,7 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
       paExtra: 0,
       determination: snapshot.determinationMax,
       casualty: snapshot.casualtyMax,
+      focusCurrent: snapshot.focusMaximum,
     })
   }
 
@@ -354,8 +357,8 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
               <NumericInput label="PA Extra máximo" value={snapshot.paExtraMax} readOnly className="h-8 w-full text-muted-foreground" />
             </label>
             <label className="flex min-w-0 flex-col items-center px-1 py-2">
-              <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
-              <NumericInput label="Bônus de PA Extra" value={stats.paExtraBonus} onChange={(paExtraBonus) => onStatsChange({ paExtraBonus })} className="h-8 w-full" />
+              <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
+              <NumericInput label="Modificador de PA Extra" value={stats.paExtraBonus} onChange={(paExtraBonus) => onStatsChange({ paExtraBonus })} className="h-8 w-full" />
             </label>
           </div>
         </article>
@@ -397,6 +400,30 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
               <Plus className="size-3.5" />1
             </button>
           </div>
+        </article>
+        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
+          <h3 className="px-3 py-2 text-sm font-semibold text-[#8a6f2f] dark:text-[#e2c56d]">Tempo de Foco</h3>
+          <div className="grid grid-cols-3 divide-x divide-border border-y border-border">
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Atual</span>
+              <NumericInput label="Tempo de Foco atual" value={stats.focusCurrent} min={0} max={snapshot.focusMaximum} onChange={(focusCurrent) => onStatsChange({ focusCurrent })} className="h-8 w-full font-semibold" />
+            </label>
+            <label className="flex min-w-0 flex-col items-center bg-muted/35 px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Máximo</span>
+              <NumericInput label="Tempo de Foco máximo" value={snapshot.focusMaximum} readOnly className="h-8 w-full text-muted-foreground" />
+            </label>
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
+              <NumericInput label="Modificador de Tempo de Foco" value={stats.focusModifier} onChange={(focusModifier) => onStatsChange({ focusModifier })} className="h-8 w-full" />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={() => onStatsChange({ focusCurrent: snapshot.focusMaximum })}
+            className="flex min-h-11 w-full items-center justify-center gap-2 px-3 text-sm font-semibold text-muted-foreground transition hover:bg-background hover:text-foreground"
+          >
+            <RotateCcw className="size-3.5" /> Tempo de Descanso: {snapshot.restMinutes} min.
+          </button>
         </article>
       </div>
 
@@ -446,8 +473,8 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
                     <NumericInput label="Carga base" value={snapshot.loadCapacity} readOnly className="w-full text-muted-foreground" />
                   </label>
                   <label className="flex min-w-0 flex-col items-center px-1 py-2">
-                    <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
-                    <NumericInput label="Bônus de carga" value={stats.loadBonus} onChange={(loadBonus) => onStatsChange({ loadBonus })} className="w-full" />
+                    <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
+                    <NumericInput label="Modificador de carga" value={stats.loadBonus} onChange={(loadBonus) => onStatsChange({ loadBonus })} className="w-full" />
                   </label>
                 </div>
               </div>
@@ -468,12 +495,12 @@ export function CharacterStats({ attributes, info, stats, onAttributeChange, onS
                 <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
                   <span />
                   <span>Teste</span>
-                  <span>Bônus</span>
+                  <span>Mod.</span>
                 </div>
                 <div className="space-y-2">
-                  <TestRow label="Vontade" result={snapshot.willTest} bonus={stats.willBonus} onBonusChange={(willBonus) => onStatsChange({ willBonus })} />
-                  <TestRow label="Acaso" result={snapshot.chanceTest} bonus={stats.chanceBonus} onBonusChange={(chanceBonus) => onStatsChange({ chanceBonus })} />
-                  <TestRow label="Percepção" result={snapshot.perceptionTest} bonus={stats.perceptionBonus} onBonusChange={(perceptionBonus) => onStatsChange({ perceptionBonus })} />
+                  <TestRow label="Vontade" result={snapshot.willTest} bonus={stats.willModifier} onBonusChange={(willModifier) => onStatsChange({ willModifier })} />
+                  <TestRow label="Acaso" result={snapshot.chanceTest} bonus={stats.chanceModifier} onBonusChange={(chanceModifier) => onStatsChange({ chanceModifier })} />
+                  <TestRow label="Percepção" result={snapshot.perceptionTest} bonus={stats.perceptionModifier} onBonusChange={(perceptionModifier) => onStatsChange({ perceptionModifier })} />
                   <TestRow label="Deslocamento" result={snapshot.movement} suffix=" m" bonus={stats.movementBonus} onBonusChange={(movementBonus) => onStatsChange({ movementBonus })} />
                 </div>
               </div>

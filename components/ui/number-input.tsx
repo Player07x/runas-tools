@@ -1,6 +1,6 @@
 "use client"
 
-import { useId } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 
 interface NumberInputProps {
@@ -29,18 +29,27 @@ export function NumberInput({
 }: NumberInputProps) {
   const id = useId()
   const effectiveMin = min ?? (allowNegative ? undefined : 0)
+  const editing = useRef(false)
+  const [draft, setDraft] = useState(() => String(Number.isFinite(value) ? value : 0))
 
-  function handleChange(raw: string) {
-    if (raw === "" || raw === "-") {
-      onChange(0)
-      return
-    }
+  useEffect(() => {
+    if (!editing.current) setDraft(String(Number.isFinite(value) ? value : 0))
+  }, [value])
+
+  function normalize(raw: string): number {
     const parsed = Number(raw)
-    if (!Number.isFinite(parsed)) return
+    if (!raw.trim() || !Number.isFinite(parsed)) return effectiveMin && effectiveMin > 0 ? effectiveMin : 0
     let next = parsed
     if (effectiveMin !== undefined) next = Math.max(effectiveMin, next)
     if (max !== undefined) next = Math.min(max, next)
-    onChange(next)
+    return next
+  }
+
+  function commit() {
+    editing.current = false
+    const next = normalize(draft)
+    setDraft(String(next))
+    if (next !== value) onChange(next)
   }
 
   return (
@@ -54,11 +63,22 @@ export function NumberInput({
         id={id}
         type="number"
         inputMode="numeric"
-        value={Number.isFinite(value) ? value : 0}
+        value={draft}
         min={effectiveMin}
         max={max}
         step={step}
-        onChange={(e) => handleChange(e.target.value)}
+        onFocus={() => { editing.current = true }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.currentTarget.blur()
+        }}
+        onChange={(event) => {
+          const nextDraft = event.target.value
+          setDraft(nextDraft)
+          if (!nextDraft.trim() || nextDraft === "-") return
+          const parsed = Number(nextDraft)
+          if (Number.isFinite(parsed)) onChange(normalize(nextDraft))
+        }}
         className={cn(
           "h-11 w-full rounded-xl border border-input bg-background/70 px-3.5 text-sm text-foreground outline-none transition-all focus-visible:border-ring focus-visible:bg-background focus-visible:ring-3 focus-visible:ring-ring/25",
           inputClassName,

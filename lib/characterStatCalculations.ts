@@ -1,4 +1,6 @@
-import type { CharacterAttributes, CharacterInfo, CharacterStats } from "@/types/character"
+import type { CharacterAttributes, CharacterInfo, CharacterSkill, CharacterStats } from "@/types/character"
+import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
+import { calculateAttributeTest, calculateSkillModifier } from "@/lib/skillCalculations"
 
 function finite(value: number): number {
   return Number.isFinite(value) ? value : 0
@@ -33,13 +35,17 @@ export interface CharacterStatSnapshot {
   willTest: number
   chanceTest: number
   perceptionTest: number
+  knowledgeTest: number
   movement: number
+  focusMaximum: number
+  restMinutes: number
 }
 
 export function calculateCharacterStatSnapshot(
   attributes: CharacterAttributes,
   info: CharacterInfo,
   stats: CharacterStats,
+  skills: CharacterSkill[] = createCoreSkills(),
 ): CharacterStatSnapshot {
   const affinityLevel = parseLevel(info.affinity)
   const alignmentLevel = parseLevel(info.alignment)
@@ -49,11 +55,17 @@ export function calculateCharacterStatSnapshot(
   const pvMax = Math.max(0, attributes.physical + 2 * attributes.vitality + finite(stats.pvBonus))
   const paMax = Math.max(
     0,
-    attributes.mystic + affinityLevel * Math.ceil(attributes.power / 2) + finite(stats.paBonus),
+    attributes.mystic +
+      attributes.power +
+      affinityLevel * Math.ceil(attributes.power / 2) +
+      finite(stats.paBonus),
   )
   const peMax = Math.max(
     0,
-    Math.ceil(attributes.mystic / 2) + affinityLevel * Math.ceil(attributes.power / 4) + finite(stats.peBonus),
+    Math.ceil(attributes.mystic / 2) +
+      Math.ceil(attributes.power / 2) +
+      affinityLevel * Math.ceil(attributes.power / 4) +
+      finite(stats.peBonus),
   )
   const determinationMax = Math.max(
     0,
@@ -89,15 +101,26 @@ export function calculateCharacterStatSnapshot(
   if (physicalPenalty >= attributes.physical + attributes.vitality) overweightWarnings.push("Desmaiado")
   const movementBeforeSize = Math.max(
     0,
-    Math.ceil((attributes.physical + attributes.strength + attributes.dexterity + attributes.vitality) / 3) +
-      finite(stats.movementBonus) -
+    Math.ceil((attributes.physical + attributes.strength + attributes.dexterity + attributes.vitality) / 3) -
       movementPenalty,
   )
-  const movement = mt > 0
+  const movementAfterSize = mt > 0
     ? movementBeforeSize * (mt === 1 ? 1.5 : mt)
     : mt < 0
       ? Math.max(1, movementBeforeSize + mt)
       : movementBeforeSize
+  const movement = Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus))
+  const defaultCoreSkills = createCoreSkills()
+  const coreSkillTest = (id: string, fallbackIndex: number) => {
+    const skill = skills.find((item) => item.id === id) ?? defaultCoreSkills[fallbackIndex]
+    const attributeTest = skill.attributeKey ? calculateAttributeTest(attributes, skill.attributeKey) : 0
+    return Math.max(0, attributeTest + calculateSkillModifier(skill))
+  }
+  const willTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.will, 0) + finite(stats.willModifier))
+  const chanceTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.chance, 1) + finite(stats.chanceModifier))
+  const perceptionTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.perception, 2) + finite(stats.perceptionModifier))
+  const knowledgeTest = Math.max(0, attributes.mental + attributes.knowledge)
+  const focusMaximum = Math.max(0, 5 * willTest + finite(stats.focusModifier))
 
   return {
     pvMax,
@@ -111,9 +134,12 @@ export function calculateCharacterStatSnapshot(
     physicalPenalty,
     movementPenalty,
     overweightWarnings,
-    willTest: Math.max(0, attributes.mystic + attributes.faith + finite(stats.willBonus)),
-    chanceTest: Math.max(0, attributes.mystic + attributes.luck + finite(stats.chanceBonus)),
-    perceptionTest: Math.max(0, attributes.mental + attributes.knowledge + finite(stats.perceptionBonus)),
+    willTest,
+    chanceTest,
+    perceptionTest,
+    knowledgeTest,
     movement,
+    focusMaximum,
+    restMinutes: Math.max(0, 30 - knowledgeTest),
   }
 }

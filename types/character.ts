@@ -47,6 +47,17 @@ export interface CharacterInfo {
 
 export type CharacterAttributes = Record<AttributeKey, number>
 
+export type SecondaryAttributeKey = Exclude<AttributeKey, "physical" | "mental" | "mystic">
+
+export interface CharacterSkill {
+  id: string
+  name: string
+  attributeKey: SecondaryAttributeKey | ""
+  points: number
+  modifier: number
+  locked: boolean
+}
+
 export interface CharacterStats {
   pv: number
   pvBonus: number
@@ -65,11 +76,13 @@ export interface CharacterStats {
   determinationBonus: number
   casualty: number
   casualtyBonus: number
+  focusCurrent: number
+  focusModifier: number
   currentLoad: number
   loadBonus: number
-  willBonus: number
-  chanceBonus: number
-  perceptionBonus: number
+  willModifier: number
+  chanceModifier: number
+  perceptionModifier: number
   movementBonus: number
   armorRdf: number
   armorRdm: number
@@ -84,6 +97,7 @@ export interface Character {
   info: CharacterInfo
   attributes: CharacterAttributes
   stats: CharacterStats
+  skills: CharacterSkill[]
 }
 
 /**
@@ -95,4 +109,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 7
+export const CHARACTER_VERSION = 8

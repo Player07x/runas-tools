@@ -295,7 +295,7 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
           </div>
           <div className="aligned-field-grid mt-1 grid grid-cols-1 gap-x-2.5 gap-y-1 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)]">
             <Field label="Modificador de Tamanho (MT)" value={info.sizeModifier} readOnly />
-            <Field label="Bônus" value={info.sizeModifierBonus} onChange={(value) => onInfoChange("sizeModifierBonus", value)} inputMode="numeric" step={1} />
+            <Field label="Mod." value={info.sizeModifierBonus} onChange={(value) => onInfoChange("sizeModifierBonus", value)} inputMode="numeric" step={1} />
             <Field label="Multiplicador de Escala (ME)" value={info.scaleMultiplier} readOnly />
           </div>
         </div>
@@ -314,9 +314,9 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
               step={0.1}
               optional
               defaultValueLabel="100 kg"
-              caution="Campo opcional usado com o ME no cálculo do Peso Real: (Peso Base × ME³) + Bônus. Mantenha o valor padrão de 100 kg se não tiver certeza. Para restaurar o padrão, informe 100."
+              caution="Campo opcional usado com o ME no cálculo do Peso Real: (Peso Base × ME³) + Mod. Mantenha o valor padrão de 100 kg se não tiver certeza. Para restaurar o padrão, informe 100."
             />
-            <Field label="Bônus (kg)" value={info.weightBonus} onChange={(value) => onInfoChange("weightBonus", value)} inputMode="decimal" step={0.1} />
+            <Field label="Mod. (kg)" value={info.weightBonus} onChange={(value) => onInfoChange("weightBonus", value)} inputMode="decimal" step={0.1} />
             <Field label="Peso Real (kg)" value={info.weightReal} readOnly />
           </div>
         </div>

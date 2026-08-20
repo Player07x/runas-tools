@@ -1,8 +1,11 @@
 import type { Character } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { attributeGroups } from "@/data/attributes"
+import { CORE_SKILL_IDS } from "@/data/skills"
 import { getCharacterElement } from "@/data/elements"
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
+import { calculateAttributeTest, calculateSkillLevel } from "@/lib/skillCalculations"
+import { getAttributeDef } from "@/data/attributes"
 
 function downloadBlob(content: string, filename: string, mime: string): void {
   if (typeof window === "undefined") return
@@ -47,8 +50,8 @@ export function exportCharacterJSON(character: Character): void {
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
-  const { info, attributes, stats } = character
-  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats)
+  const { info, attributes, stats, skills } = character
+  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
 
@@ -64,7 +67,7 @@ export function characterToMarkdown(character: Character): string {
   lines.push(`- Tamanho Real: ${info.sizeReal} m`)
   lines.push(`- Modificador de Tamanho (MT): ${info.sizeModifier}`)
   lines.push(`- Peso Base: ${info.weightBase} kg`)
-  lines.push(`- Bônus de Peso: ${info.weightBonus} kg`)
+  lines.push(`- Mod. de Peso: ${info.weightBonus} kg`)
   lines.push(`- Peso Real: ${info.weightReal} kg`)
   lines.push(`- Multiplicador de Escala (ME): ${info.scaleMultiplier}`)
   lines.push(`- Nascimento: ${info.birthDate}`)
@@ -97,22 +100,24 @@ export function characterToMarkdown(character: Character): string {
 
   lines.push("## Estatísticas")
   lines.push("")
-  lines.push(`- PV atual: ${stats.pv}; máximo: ${statSnapshot.pvMax}; bônus: ${stats.pvBonus >= 0 ? "+" : ""}${stats.pvBonus}`)
-  lines.push(`- PA atual: ${stats.pa}; máximo: ${statSnapshot.paMax}; bônus: ${stats.paBonus >= 0 ? "+" : ""}${stats.paBonus}`)
-  lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}; bônus: ${stats.paExtraBonus >= 0 ? "+" : ""}${stats.paExtraBonus}`)
-  lines.push(`- PE atual: ${stats.pe}; máximo: ${statSnapshot.peMax}; bônus: ${stats.peBonus >= 0 ? "+" : ""}${stats.peBonus}`)
+  lines.push(`- PV atual: ${stats.pv}; máximo: ${statSnapshot.pvMax}; Mod.: ${stats.pvBonus >= 0 ? "+" : ""}${stats.pvBonus}`)
+  lines.push(`- PA atual: ${stats.pa}; máximo: ${statSnapshot.paMax}; Mod.: ${stats.paBonus >= 0 ? "+" : ""}${stats.paBonus}`)
+  lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}; Mod.: ${stats.paExtraBonus >= 0 ? "+" : ""}${stats.paExtraBonus}`)
+  lines.push(`- PE atual: ${stats.pe}; máximo: ${statSnapshot.peMax}; Mod.: ${stats.peBonus >= 0 ? "+" : ""}${stats.peBonus}`)
   lines.push(`- PE temporário: ${stats.peTemporary}`)
   lines.push(`- MT: ${stats.mt}`)
   lines.push(`- Elemento principal: ${element?.name ?? "Nenhum"}`)
   lines.push(`- Resistências: ${stats.resistances.join(", ") || "Nenhum"}`)
   lines.push(`- Fraquezas: ${stats.weaknesses.join(", ") || "Nenhum"}`)
-  lines.push(`- Determinação atual: ${stats.determination}; máxima: ${statSnapshot.determinationMax}; bônus: ${stats.determinationBonus >= 0 ? "+" : ""}${stats.determinationBonus}`)
-  lines.push(`- Casualidade atual: ${stats.casualty}; máxima: ${statSnapshot.casualtyMax}; bônus: ${stats.casualtyBonus >= 0 ? "+" : ""}${stats.casualtyBonus}`)
-  lines.push(`- Carga atual: ${stats.currentLoad} kg; base: ${statSnapshot.loadCapacity} kg; bônus: ${stats.loadBonus >= 0 ? "+" : ""}${stats.loadBonus}`)
-  lines.push(`- Vontade: ${statSnapshot.willTest}; bônus: ${stats.willBonus >= 0 ? "+" : ""}${stats.willBonus}`)
-  lines.push(`- Acaso: ${statSnapshot.chanceTest}; bônus: ${stats.chanceBonus >= 0 ? "+" : ""}${stats.chanceBonus}`)
-  lines.push(`- Percepção: ${statSnapshot.perceptionTest}; bônus: ${stats.perceptionBonus >= 0 ? "+" : ""}${stats.perceptionBonus}`)
-  lines.push(`- Deslocamento: ${statSnapshot.movement} m; bônus: ${stats.movementBonus >= 0 ? "+" : ""}${stats.movementBonus}`)
+  lines.push(`- Determinação atual: ${stats.determination}; máxima: ${statSnapshot.determinationMax}; Mod.: ${stats.determinationBonus >= 0 ? "+" : ""}${stats.determinationBonus}`)
+  lines.push(`- Casualidade atual: ${stats.casualty}; máxima: ${statSnapshot.casualtyMax}; Mod.: ${stats.casualtyBonus >= 0 ? "+" : ""}${stats.casualtyBonus}`)
+  lines.push(`- Tempo de Foco atual: ${stats.focusCurrent}; máximo: ${statSnapshot.focusMaximum}; Mod.: ${stats.focusModifier >= 0 ? "+" : ""}${stats.focusModifier}`)
+  lines.push(`- Tempo de Descanso: ${statSnapshot.restMinutes} min.`)
+  lines.push(`- Carga atual: ${stats.currentLoad} kg; base: ${statSnapshot.loadCapacity} kg; Mod.: ${stats.loadBonus >= 0 ? "+" : ""}${stats.loadBonus}`)
+  lines.push(`- Vontade: ${statSnapshot.willTest}; Mod.: ${stats.willModifier >= 0 ? "+" : ""}${stats.willModifier}`)
+  lines.push(`- Acaso: ${statSnapshot.chanceTest}; Mod.: ${stats.chanceModifier >= 0 ? "+" : ""}${stats.chanceModifier}`)
+  lines.push(`- Percepção: ${statSnapshot.perceptionTest}; Mod.: ${stats.perceptionModifier >= 0 ? "+" : ""}${stats.perceptionModifier}`)
+  lines.push(`- Deslocamento: ${statSnapshot.movement} m; Mod.: ${stats.movementBonus >= 0 ? "+" : ""}${stats.movementBonus}`)
   if (statSnapshot.overweightLevel > 0) {
     lines.push(`- Sobrepeso ${statSnapshot.overweightLevel}: -${statSnapshot.physicalPenalty} Físico, -${statSnapshot.movementPenalty} Deslocamento`)
     if (statSnapshot.overweightWarnings.length > 0) {
@@ -127,6 +132,19 @@ export function characterToMarkdown(character: Character): string {
     lines.push("### Efeitos")
     lines.push("")
     lines.push(effects)
+  }
+  lines.push("")
+
+  lines.push("## Perícias")
+  lines.push("")
+  for (const skill of skills) {
+    const level = calculateSkillLevel(skill.points)
+    const attribute = skill.attributeKey ? getAttributeDef(skill.attributeKey)?.name ?? skill.attributeKey : "Não definido"
+    const test = skill.attributeKey
+      ? calculateAttributeTest(attributes, skill.attributeKey) + level + skill.modifier
+      : "Indisponível"
+    const fixed = Object.values(CORE_SKILL_IDS).includes(skill.id as typeof CORE_SKILL_IDS[keyof typeof CORE_SKILL_IDS])
+    lines.push(`- ${skill.name || "Perícia sem nome"}: teste ${test}; nível +${level}; atributo ${attribute}; pontos ${skill.points}; Mod. ${skill.modifier >= 0 ? "+" : ""}${skill.modifier}${fixed ? "; padrão" : ""}`)
   }
   lines.push("")
 

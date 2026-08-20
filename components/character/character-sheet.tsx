@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import type {
   AttributeKey,
   CharacterCalendar,
@@ -19,7 +18,12 @@ import { CharacterSkills } from "./character-skills"
 import { CharacterActions } from "./character-actions"
 import { SaveIndicator } from "./save-indicator"
 
-type CharacterTab = "information" | "statistics" | "skills"
+export type CharacterTab = "information" | "statistics" | "skills"
+
+interface CharacterSheetProps {
+  activeTab: CharacterTab
+  onActiveTabChange: (tab: CharacterTab) => void
+}
 
 const unavailableTabs = ["Vínculos", "Inventário", "Magias", "Anotações"]
 const availableTabs: { id: CharacterTab | "abilities"; label: string }[] = [
@@ -29,9 +33,8 @@ const availableTabs: { id: CharacterTab | "abilities"; label: string }[] = [
   { id: "abilities", label: "Habilidades" },
 ]
 
-export function CharacterSheet() {
+export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetProps) {
   const { character, updateCharacter, isReady } = useCharacter()
-  const [activeTab, setActiveTab] = useState<CharacterTab>("information")
 
   function setName(value: string) {
     updateCharacter((prev) => ({ ...prev, name: value.slice(0, 80) }))
@@ -144,7 +147,7 @@ export function CharacterSheet() {
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id as CharacterTab)}
+                onClick={() => onActiveTabChange(tab.id as CharacterTab)}
                 aria-selected={isActive}
                 role="tab"
                 className={cn(
@@ -182,7 +185,7 @@ export function CharacterSheet() {
                   key={tab.id}
                   type="button"
                   disabled={!isAvailable}
-                  onClick={isAvailable ? () => setActiveTab(tab.id as CharacterTab) : undefined}
+                  onClick={isAvailable ? () => onActiveTabChange(tab.id as CharacterTab) : undefined}
                   aria-selected={isActive}
                   role="tab"
                   className={cn(

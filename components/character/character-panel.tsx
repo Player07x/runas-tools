@@ -4,23 +4,49 @@ import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { Dices, PanelLeftClose, PanelLeftOpen, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { CharacterSheet } from "./character-sheet"
+import { CharacterSheet, type CharacterTab } from "./character-sheet"
+
+const ACTIVE_TAB_STORAGE_KEY = "runas-tools:character-active-tab"
+
+function isCharacterTab(value: string | null): value is CharacterTab {
+  return value === "information" || value === "statistics" || value === "skills"
+}
 
 interface PanelContextValue {
   isOpen: boolean
   open: () => void
   close: () => void
   toggle: () => void
+  activeTab: CharacterTab
+  setActiveTab: (tab: CharacterTab) => void
 }
 
 const PanelContext = createContext<PanelContextValue | null>(null)
 
 export function CharacterPanelProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [activeTab, setActiveTabState] = useState<CharacterTab>("information")
 
   const open = useCallback(() => setIsOpen(true), [])
   const close = useCallback(() => setIsOpen(false), [])
   const toggle = useCallback(() => setIsOpen((v) => !v), [])
+  const setActiveTab = useCallback((tab: CharacterTab) => {
+    setActiveTabState(tab)
+    try {
+      window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab)
+    } catch {
+      // A ficha continua funcionando mesmo se o armazenamento estiver indisponível.
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      const storedTab = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY)
+      if (isCharacterTab(storedTab)) setActiveTabState(storedTab)
+    } catch {
+      // Mantém a aba inicial quando o armazenamento estiver indisponível.
+    }
+  }, [])
 
   // Fecha com Escape e trava o scroll do body quando aberto.
   useEffect(() => {
@@ -38,7 +64,7 @@ export function CharacterPanelProvider({ children }: { children: React.ReactNode
   }, [isOpen, close])
 
   return (
-    <PanelContext.Provider value={{ isOpen, open, close, toggle }}>
+    <PanelContext.Provider value={{ isOpen, open, close, toggle, activeTab, setActiveTab }}>
       {children}
       <CharacterPanel />
     </PanelContext.Provider>
@@ -52,7 +78,7 @@ export function useCharacterPanel(): PanelContextValue {
 }
 
 function CharacterPanel() {
-  const { isOpen, close } = useCharacterPanel()
+  const { isOpen, close, activeTab, setActiveTab } = useCharacterPanel()
   const [panelWidth, setPanelWidth] = useState(800)
 
   return (
@@ -116,7 +142,9 @@ function CharacterPanel() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-7 sm:py-6">{isOpen && <CharacterSheet />}</div>
+        <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-7 sm:py-6">
+          {isOpen && <CharacterSheet activeTab={activeTab} onActiveTabChange={setActiveTab} />}
+        </div>
       </aside>
     </div>
   )

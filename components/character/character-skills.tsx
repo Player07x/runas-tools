@@ -1,7 +1,8 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronDown, Dices, Plus, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Dices, Plus, Trash2 } from "lucide-react"
 import type { CharacterAttributes, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
 import { damageAttributes } from "@/data/attributes"
 import { calculateAttributeTest, calculateSkillLevel } from "@/lib/skillCalculations"
@@ -16,13 +17,106 @@ interface Props {
   onRemoveSkill: (id: string) => void
 }
 
+type SkillSortKey = "name" | "test" | "level" | "attribute" | "points" | "modifier"
+type SkillSortState = { key: SkillSortKey; direction: "asc" | "desc" } | null
+
+const sortFields: { key: SkillSortKey; label: string }[] = [
+  { key: "name", label: "Nome" },
+  { key: "test", label: "Teste" },
+  { key: "level", label: "Nível" },
+  { key: "attribute", label: "Atributo" },
+  { key: "points", label: "Pontos" },
+  { key: "modifier", label: "Mod." },
+]
+
+const skillCollator = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" })
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="mb-1 block text-[0.62rem] font-medium uppercase tracking-wide text-muted-foreground">{children}</span>
+}
+
+function SortButton({
+  field,
+  sortState,
+  onSort,
+  compact = false,
+}: {
+  field: { key: SkillSortKey; label: string }
+  sortState: SkillSortState
+  onSort: (key: SkillSortKey) => void
+  compact?: boolean
+}) {
+  const isActive = sortState?.key === field.key
+  const nextAction = !isActive
+    ? "ordem crescente"
+    : sortState.direction === "asc"
+      ? "ordem decrescente"
+      : "ordem padrão"
+  const Icon = !isActive ? ChevronsUpDown : sortState.direction === "asc" ? ArrowUp : ArrowDown
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field.key)}
+      title={`${field.label}: ${nextAction}`}
+      aria-label={`Organizar por ${field.label}; próximo clique: ${nextAction}`}
+      className={compact
+        ? `inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[0.68rem] font-semibold transition ${isActive ? "border-primary/50 bg-primary/10 text-primary" : "border-border bg-background/55 text-muted-foreground hover:text-foreground"}`
+        : `inline-flex w-full items-center justify-center gap-1 rounded-md px-1 py-1 transition hover:bg-background/70 hover:text-foreground ${isActive ? "text-primary" : ""}`}
+    >
+      <span>{field.label}</span>
+      <Icon className="size-3" aria-hidden="true" />
+    </button>
+  )
 }
 
 export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill, onRemoveSkill }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
+  const [sortState, setSortState] = useState<SkillSortState>(null)
+  const visibleSkills = useMemo(() => {
+    const fixedSkills = skills.filter((skill) => skill.locked)
+    const customSkills = skills.filter((skill) => !skill.locked)
+    if (!sortState) return [...fixedSkills, ...customSkills]
+
+    const valueFor = (skill: CharacterSkill): string | number | null => {
+      const level = calculateSkillLevel(skill.points)
+      if (sortState.key === "name") return skill.name
+      if (sortState.key === "test") {
+        return skill.attributeKey
+          ? calculateAttributeTest(attributes, skill.attributeKey) + level + skill.modifier
+          : null
+      }
+      if (sortState.key === "level") return level
+      if (sortState.key === "attribute") {
+        return damageAttributes.find((attribute) => attribute.key === skill.attributeKey)?.name ?? null
+      }
+      if (sortState.key === "points") return skill.points
+      return skill.modifier
+    }
+
+    const direction = sortState.direction === "asc" ? 1 : -1
+    const sortedCustomSkills = [...customSkills].sort((left, right) => {
+      const leftValue = valueFor(left)
+      const rightValue = valueFor(right)
+      if (leftValue === null && rightValue === null) return 0
+      if (leftValue === null) return 1
+      if (rightValue === null) return -1
+      const comparison = typeof leftValue === "string" && typeof rightValue === "string"
+        ? skillCollator.compare(leftValue, rightValue)
+        : Number(leftValue) - Number(rightValue)
+      return comparison * direction
+    })
+    return [...fixedSkills, ...sortedCustomSkills]
+  }, [attributes, skills, sortState])
+
+  function toggleSort(key: SkillSortKey) {
+    setSortState((current) => {
+      if (!current || current.key !== key) return { key, direction: "asc" }
+      if (current.direction === "asc") return { key, direction: "desc" }
+      return null
+    })
+  }
 
   function openSkillCalculator(skill: CharacterSkill) {
     if (!skill.attributeKey) return
@@ -58,10 +152,19 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
         </div>
 
         <div className="space-y-2 p-2 sm:p-3">
-          <div className="hidden grid-cols-[2.75rem_minmax(7rem,1.2fr)_3.75rem_3.5rem_minmax(7rem,1fr)_3.75rem_3.75rem_2.5rem] gap-2 px-2 text-center text-[0.62rem] uppercase tracking-wide text-muted-foreground md:grid">
-            <span>Rolar</span><span>Nome</span><span>Teste</span><span>Nível</span><span>Atributo</span><span>Pontos</span><span>Mod.</span><span />
+          <div className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-muted/30 p-2 md:hidden" aria-label="Organizar perícias">
+            {sortFields.map((field) => <SortButton key={field.key} field={field} sortState={sortState} onSort={toggleSort} compact />)}
           </div>
-          {skills.map((skill) => {
+          <div className="hidden grid-cols-[2.75rem_minmax(7rem,1.2fr)_3.75rem_3.5rem_minmax(7rem,1fr)_3.75rem_3.75rem_2.5rem] gap-2 px-2 text-center text-[0.62rem] uppercase tracking-wide text-muted-foreground md:grid">
+            <span>Rolar</span>
+            {sortFields.map((field) => (
+              <span key={field.key} role="columnheader" aria-sort={sortState?.key === field.key ? (sortState.direction === "asc" ? "ascending" : "descending") : "none"}>
+                <SortButton field={field} sortState={sortState} onSort={toggleSort} />
+              </span>
+            ))}
+            <span />
+          </div>
+          {visibleSkills.map((skill) => {
             const level = calculateSkillLevel(skill.points)
             const test = skill.attributeKey
               ? calculateAttributeTest(attributes, skill.attributeKey) + level + skill.modifier

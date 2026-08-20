@@ -18,6 +18,7 @@ export const systemSkills: SystemSkillDefinition[] = [
   { name: "Acaso", attributeKey: "luck" },
   { name: "Percepção", attributeKey: "knowledge", aliases: ["percepcao"] },
   { name: "Iniciativa", attributeKey: "dexterity" },
+  { name: "Reflexo", attributeKey: "dexterity", aliases: ["reflexos"] },
   { name: "Lâminas", attributeKey: "dexterity", aliases: ["lamina", "laminas"] },
   { name: "Hastes", attributeKey: "dexterity", aliases: ["haste"] },
   { name: "Contundentes", attributeKey: "dexterity", aliases: ["contundente"] },

@@ -171,7 +171,7 @@ export function rollSkillTest({
 
   let specialModifier = 0
   const normalizedSkill = normalizeSkillName(config.skillName)
-  if (config.specialDieId === "jera-distrust" && normalizedSkill === "iniciativa") {
+  if (config.specialDieId === "jera-distrust" && normalizedSkill === "reflexo") {
     specialModifier = 4
   } else if (config.specialDieId === "divine-advantage") {
     specialModifier = randomInteger(6, random)

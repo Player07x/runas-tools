@@ -335,7 +335,7 @@ export function SkillTestCalculator() {
   return (
     <section aria-label="Recursos da Calculadora de Testes">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] lg:items-start">
-        <div className="min-w-0 rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6">
+        <div className="order-2 min-w-0 rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6 lg:order-1">
           <div className="grid gap-3 lg:grid-cols-2">
         <article className="rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
           <h2 className="text-sm font-bold text-foreground">Teste rápido</h2>
@@ -467,7 +467,7 @@ export function SkillTestCalculator() {
           </article>
         </div>
 
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24">
+        <aside className="order-1 min-w-0 space-y-4 lg:order-2 lg:sticky lg:top-24">
           <SkillTestResultPanel
             activeRoll={activeRoll}
             quickResult={quickResult}

@@ -109,7 +109,7 @@ export function calculateCharacterStatSnapshot(
     : mt < 0
       ? Math.max(1, movementBeforeSize + mt)
       : movementBeforeSize
-  const movement = Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus))
+  const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus)))
   const defaultCoreSkills = createCoreSkills()
   const coreSkillTest = (id: string, fallbackIndex: number) => {
     const skill = skills.find((item) => item.id === id) ?? defaultCoreSkills[fallbackIndex]

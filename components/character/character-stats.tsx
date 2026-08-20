@@ -195,30 +195,6 @@ function ResourceRow({
   )
 }
 
-function TestRow({
-  label,
-  result,
-  bonus,
-  onBonusChange,
-  suffix,
-}: {
-  label: string
-  result: number
-  bonus: number
-  onBonusChange: (value: number) => void
-  suffix?: string
-}) {
-  return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] items-center gap-1.5">
-      <span className="truncate text-right text-sm text-muted-foreground">{label}</span>
-      <output aria-label={`${label}: ${result}${suffix ?? ""}`} className="flex h-10 items-center justify-center rounded-xl bg-muted text-sm font-semibold tabular-nums text-foreground">
-        {result}{suffix}
-      </output>
-      <NumericInput label={`Modificador de ${label}`} value={bonus} onChange={onBonusChange} className="h-10 w-full rounded-xl bg-background/70" />
-    </div>
-  )
-}
-
 export function CharacterStats({ attributes, info, stats, skills, onAttributeChange, onStatsChange }: Props) {
   const snapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
   const selectedElement = getCharacterElement(stats.elementId)
@@ -440,6 +416,21 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
             <RotateCcw className="size-3.5" /> Tempo de Descanso: {snapshot.restMinutes} min.
           </button>
         </article>
+        <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
+          <h3 className="px-3 py-2 text-sm font-semibold text-[#57747d] dark:text-[#a9d2de]">Deslocamento</h3>
+          <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Atual</span>
+              <output aria-label={`Deslocamento atual: ${snapshot.movement} m`} className="flex h-8 w-full items-center justify-center text-base font-semibold tabular-nums text-foreground">
+                {snapshot.movement} m
+              </output>
+            </label>
+            <label className="flex min-w-0 flex-col items-center px-1 py-2">
+              <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
+              <NumericInput label="Modificador de deslocamento" value={stats.movementBonus} onChange={(movementBonus) => onStatsChange({ movementBonus })} className="h-8 w-full" />
+            </label>
+          </div>
+        </article>
       </div>
 
       <div className="rounded-[24px] border border-border bg-muted/25 p-3 sm:p-4">
@@ -506,17 +497,6 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
             </div>
 
             <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-5">
-              <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
-                <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
-                  <span />
-                  <span>Teste</span>
-                  <span>Mod.</span>
-                </div>
-                <div className="space-y-2">
-                  <TestRow label="Deslocamento" result={snapshot.movement} suffix=" m" bonus={stats.movementBonus} onBonusChange={(movementBonus) => onStatsChange({ movementBonus })} />
-                </div>
-              </div>
-
               <div className="min-w-0 overflow-hidden rounded-[20px] border border-border bg-background/55 p-3">
                 <div className="mb-2 grid min-w-0 grid-cols-[minmax(0,1fr)_3.5rem_3.5rem] gap-1.5 text-center text-[0.65rem] text-muted-foreground">
                   <span />

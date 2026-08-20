@@ -35,11 +35,132 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="mb-1 block text-[0.62rem] font-medium uppercase tracking-wide text-muted-foreground">{children}</span>
 }
 
-function resultTone(outcome: SkillRoll["outcome"]): string {
-  if (outcome === "critical-success") return "border-emerald-500/45 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-  if (outcome === "success") return "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-  if (outcome === "critical-failure") return "border-red-500/45 bg-red-500/10 text-red-700 dark:text-red-300"
-  return "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+function resultTextTone(outcome: SkillRoll["outcome"]): string {
+  if (outcome === "critical-success") return "text-emerald-300"
+  if (outcome === "success") return "text-sky-300"
+  if (outcome === "critical-failure") return "text-red-300"
+  return "text-amber-300"
+}
+
+function SkillTestResultPanel({
+  activeRoll,
+  quickResult,
+  resultMode,
+  determination,
+  casualty,
+  determinationBlocked,
+  casualtyBlocked,
+  onUseDetermination,
+  onUseCasualty,
+}: {
+  activeRoll: SkillRoll | null
+  quickResult: QuickRollResult | null
+  resultMode: "quick" | "full" | null
+  determination: number
+  casualty: number
+  determinationBlocked: boolean
+  casualtyBlocked: boolean
+  onUseDetermination: () => void
+  onUseCasualty: () => void
+}) {
+  if (resultMode === "quick" && quickResult) {
+    return (
+      <div className="flex min-h-72 flex-col gap-4 rounded-2xl border border-panel-border/60 bg-panel p-5 text-white shadow-[0_16px_44px_rgba(28,34,52,0.16)] sm:p-6">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-panel-muted">Resultado do teste rápido</p>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-highlight">{quickResult.label}</p>
+        </div>
+        <div className="rounded-xl border border-panel-border/50 bg-panel-input/75 p-4">
+          <p className="text-xs font-semibold text-panel-muted">Dados rolados</p>
+          <p className="mt-1 text-lg text-white">
+            <span className="text-panel-muted">{quickResult.diceRolls[0]} + {quickResult.diceRolls[1]}</span>
+            <span className="ml-2 font-semibold">= {quickResult.diceSum}</span>
+          </p>
+        </div>
+        <div className="rounded-xl border border-panel-border/50 bg-panel-input/75 p-4">
+          <p className="text-xs font-semibold text-panel-muted">Margem</p>
+          <p className="mt-1 text-3xl font-bold tabular-nums text-white">{quickResult.margin >= 0 ? "+" : ""}{quickResult.margin}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!activeRoll || resultMode !== "full") {
+    return (
+      <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-dashed border-panel-border/60 bg-panel px-7 py-12 text-center shadow-[0_16px_44px_rgba(28,34,52,0.16)]">
+        <span className="flex size-14 items-center justify-center rounded-2xl bg-panel-elevated text-white shadow-lg">
+          <Dices className="size-7" />
+        </span>
+        <p className="mt-4 text-base font-bold text-white">Nenhum teste rolado ainda</p>
+        <p className="mt-1.5 max-w-64 text-sm leading-relaxed text-panel-muted text-pretty">
+          Configure os campos e toque em Rolar teste para ver o resultado.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl border border-panel-border/60 bg-panel p-5 text-white shadow-[0_16px_44px_rgba(28,34,52,0.16)] sm:p-6">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-panel-muted">Resultado do teste</p>
+        <p className={cn("mt-1 text-3xl font-bold tracking-tight", resultTextTone(activeRoll.outcome))}>
+          {formatSkillRollOutcome(activeRoll)}
+        </p>
+        <p className="mt-1 text-sm text-panel-muted">Margem {activeRoll.margin >= 0 ? "+" : ""}{activeRoll.margin}</p>
+      </div>
+
+      <div className="rounded-xl border border-panel-border/50 bg-panel-input/75 p-4">
+        <p className="text-xs font-semibold text-panel-muted">Dados rolados</p>
+        <p className="mt-1 text-lg text-white">
+          <span className="text-panel-muted">{activeRoll.diceRolls[0]} + {activeRoll.diceRolls[1]}</span>
+          <span className="ml-2 font-semibold">= {activeRoll.diceSum}</span>
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+        <span className="rounded-xl border border-panel-border/50 bg-panel-input/75 px-2 py-3"><small className="block text-panel-muted">Base</small><strong>{activeRoll.baseTest}</strong></span>
+        <span className="rounded-xl border border-panel-border/50 bg-panel-input/75 px-2 py-3"><small className="block text-panel-muted">Mod.</small><strong>{activeRoll.totalModifiers >= 0 ? "+" : ""}{activeRoll.totalModifiers}</strong></span>
+        <span className="rounded-xl border border-panel-border/50 bg-panel-input/75 px-2 py-3"><small className="block text-panel-muted">Total</small><strong>{activeRoll.totalTest}</strong></span>
+      </div>
+
+      <div className="rounded-xl border border-panel-border/50 bg-panel-input/75 p-4">
+        <p className="mb-3 text-xs font-semibold text-panel-muted">Como o valor foi calculado</p>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <div><dt className="text-panel-muted">Teste base</dt><dd className="font-semibold">{activeRoll.baseTest}</dd></div>
+          <div><dt className="text-panel-muted">Total de Mod.</dt><dd className="font-semibold">{activeRoll.totalModifiers >= 0 ? "+" : ""}{activeRoll.totalModifiers}</dd></div>
+          <div><dt className="text-panel-muted">Teste total</dt><dd className="font-semibold">{activeRoll.totalTest}</dd></div>
+          <div><dt className="text-panel-muted">Margem</dt><dd className="font-semibold">{activeRoll.margin >= 0 ? "+" : ""}{activeRoll.margin}</dd></div>
+        </dl>
+      </div>
+
+      {(determination > 0 || casualty > 0) && (
+        <div className="flex flex-col gap-2">
+          {determination > 0 && (
+            <button
+              type="button"
+              onClick={onUseDetermination}
+              disabled={determinationBlocked}
+              title={determinationBlocked ? "Determinação não pode alterar resultados críticos" : "Aumentar o resultado usando Determinação"}
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-panel-input px-3 text-sm font-semibold text-white transition hover:bg-panel-elevated disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Usar Determinação ({determination})
+            </button>
+          )}
+          {casualty > 0 && (
+            <button
+              type="button"
+              onClick={onUseCasualty}
+              disabled={casualtyBlocked}
+              title={casualtyBlocked ? "Críticos só podem ser refeitos em testes de Acaso" : "Rolar novamente usando Casualidade"}
+              className="inline-flex min-h-10 items-center justify-center rounded-xl bg-panel-input px-3 text-sm font-semibold text-white transition hover:bg-panel-elevated disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Usar Casualidade ({casualty})
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function configFromSkill(skill: CharacterSkill): SkillTestConfig {
@@ -73,6 +194,7 @@ export function SkillTestCalculator() {
   const [parserMessage, setParserMessage] = useState<string | null>(null)
   const [history, setHistory] = useState<SkillRoll[]>([])
   const [activeRoll, setActiveRoll] = useState<SkillRoll | null>(null)
+  const [resultMode, setResultMode] = useState<"quick" | "full" | null>(null)
   const handledRollToken = useRef<string | null>(null)
   const { attributes, info, skills, stats } = character
   const snapshot = useMemo(
@@ -85,6 +207,7 @@ export function SkillTestCalculator() {
   function clearRolls() {
     setHistory([])
     setActiveRoll(null)
+    setResultMode(null)
   }
 
   function changeConfig<K extends keyof SkillTestConfig>(key: K, value: SkillTestConfig[K]) {
@@ -123,6 +246,7 @@ export function SkillTestCalculator() {
     if (useBestChanceResult) displayed = getBestSkillRoll(nextHistory) ?? roll
     setHistory(nextHistory)
     setActiveRoll(displayed)
+    setResultMode("full")
   }
 
   useEffect(() => {
@@ -150,6 +274,7 @@ export function SkillTestCalculator() {
         ? "Fracasso Crítico"
         : `${margin >= 0 ? "Sucesso" : "Fracasso"} por ${margin >= 0 ? "+" : ""}${margin}`
     setQuickResult({ diceRolls, diceSum, margin, label })
+    setResultMode("quick")
   }
 
   function applyQuickExpression() {
@@ -208,8 +333,10 @@ export function SkillTestCalculator() {
   const attributeValue = config.attributeKey ? calculateAttributeTest(attributes, config.attributeKey) : null
 
   return (
-    <section aria-label="Recursos da Calculadora de Testes" className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6">
-      <div className="grid gap-3 lg:grid-cols-2">
+    <section aria-label="Recursos da Calculadora de Testes">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] lg:items-start">
+        <div className="min-w-0 rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6">
+          <div className="grid gap-3 lg:grid-cols-2">
         <article className="rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
           <h2 className="text-sm font-bold text-foreground">Teste rápido</h2>
           <p className="mt-1 text-xs text-muted-foreground">Informe o total do teste e role 2d10 sem abrir o resumo.</p>
@@ -219,12 +346,6 @@ export function SkillTestCalculator() {
               <Dices className="size-5" />
             </button>
           </div>
-          {quickResult && (
-            <output className="mt-3 block rounded-xl border border-border bg-background/65 px-3 py-2 text-sm">
-              <strong>{quickResult.label}</strong>
-              <span className="ml-2 text-muted-foreground">({quickResult.diceRolls[0]} + {quickResult.diceRolls[1]} = {quickResult.diceSum})</span>
-            </output>
-          )}
         </article>
 
         <article className="rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
@@ -249,9 +370,9 @@ export function SkillTestCalculator() {
           </div>
           {parserMessage && <p className="mt-2 text-xs text-muted-foreground">{parserMessage}</p>}
         </article>
-      </div>
+          </div>
 
-      <article className="mt-5 rounded-[22px] border border-border bg-muted/25 p-3 sm:p-5">
+          <article className="mt-5 rounded-[22px] border border-border bg-muted/25 p-3 sm:p-5">
         <div className="mb-4 flex items-center gap-2">
           <Sparkles className="size-4.5 text-primary" />
           <div>
@@ -261,17 +382,19 @@ export function SkillTestCalculator() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <label className="relative min-w-0">
+          <label className="min-w-0">
             <FieldLabel>Atributo</FieldLabel>
-            <select
-              value={config.attributeKey}
-              onChange={(event) => changeConfig("attributeKey", event.target.value as SecondaryAttributeKey | "")}
-              className="h-11 w-full appearance-none rounded-xl border border-input bg-background/65 px-3 pr-9 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25"
-            >
-              <option value="">Selecione</option>
-              {damageAttributes.map((attribute) => <option key={attribute.key} value={attribute.key}>{attribute.name}</option>)}
-            </select>
-            <ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 size-4 text-muted-foreground" />
+            <span className="relative block">
+              <select
+                value={config.attributeKey}
+                onChange={(event) => changeConfig("attributeKey", event.target.value as SecondaryAttributeKey | "")}
+                className="h-11 w-full appearance-none rounded-xl border border-input bg-background/65 px-3 pr-9 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25"
+              >
+                <option value="">Selecione</option>
+                {damageAttributes.map((attribute) => <option key={attribute.key} value={attribute.key}>{attribute.name}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            </span>
             <span className="mt-1 block text-[0.65rem] text-muted-foreground">Valor: {attributeValue ?? "—"}</span>
           </label>
           <label className="min-w-0">
@@ -341,78 +464,40 @@ export function SkillTestCalculator() {
           <Dices className="size-5" /> Rolar teste
         </button>
         {!config.attributeKey && <p className="mt-2 text-xs text-destructive">Selecione um atributo para habilitar a rolagem.</p>}
-      </article>
+          </article>
+        </div>
 
-      {activeRoll && (
-        <article className={cn("mt-5 rounded-[22px] border p-4 sm:p-5", resultTone(activeRoll.outcome))}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] opacity-75">Resultado</p>
-              <h2 className="mt-1 text-2xl font-black">{formatSkillRollOutcome(activeRoll)}</h2>
-              <p className="mt-1 text-sm opacity-80">Dados: {activeRoll.diceRolls[0]} + {activeRoll.diceRolls[1]} = {activeRoll.diceSum}</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-center text-xs sm:min-w-64">
-              <span className="rounded-xl bg-background/45 px-2 py-2"><small className="block opacity-70">Base</small><strong>{activeRoll.baseTest}</strong></span>
-              <span className="rounded-xl bg-background/45 px-2 py-2"><small className="block opacity-70">Mod.</small><strong>{activeRoll.totalModifiers >= 0 ? "+" : ""}{activeRoll.totalModifiers}</strong></span>
-              <span className="rounded-xl bg-background/45 px-2 py-2"><small className="block opacity-70">Total</small><strong>{activeRoll.totalTest}</strong></span>
-            </div>
-          </div>
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-24">
+          <SkillTestResultPanel
+            activeRoll={activeRoll}
+            quickResult={quickResult}
+            resultMode={resultMode}
+            determination={stats.determination}
+            casualty={stats.casualty}
+            determinationBlocked={determinationBlocked}
+            casualtyBlocked={casualtyBlocked}
+            onUseDetermination={useDetermination}
+            onUseCasualty={useCasualty}
+          />
 
-          <details className="mt-4 rounded-xl bg-background/45 px-3 py-2 text-sm">
-            <summary className="cursor-pointer font-semibold">Resumo dos cálculos</summary>
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-4">
-              <div><dt className="opacity-65">Teste base</dt><dd className="font-bold">{activeRoll.baseTest}</dd></div>
-              <div><dt className="opacity-65">Total de Mod.</dt><dd className="font-bold">{activeRoll.totalModifiers >= 0 ? "+" : ""}{activeRoll.totalModifiers}</dd></div>
-              <div><dt className="opacity-65">Teste total</dt><dd className="font-bold">{activeRoll.totalTest}</dd></div>
-              <div><dt className="opacity-65">Margem</dt><dd className="font-bold">{activeRoll.margin >= 0 ? "+" : ""}{activeRoll.margin}</dd></div>
-            </dl>
-          </details>
-
-          {(stats.determination > 0 || stats.casualty > 0) && (
-            <div className="mt-4 flex flex-col gap-2 min-[430px]:flex-row">
-              {stats.determination > 0 && (
-                <button
-                  type="button"
-                  onClick={useDetermination}
-                  disabled={determinationBlocked}
-                  title={determinationBlocked ? "Determinação não pode alterar resultados críticos" : "Aumentar o resultado usando Determinação"}
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-background/55 px-3 text-sm font-semibold transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Usar Determinação ({stats.determination})
-                </button>
-              )}
-              {stats.casualty > 0 && (
-                <button
-                  type="button"
-                  onClick={useCasualty}
-                  disabled={casualtyBlocked}
-                  title={casualtyBlocked ? "Críticos só podem ser refeitos em testes de Acaso" : "Rolar novamente usando Casualidade"}
-                  className="inline-flex h-10 items-center justify-center rounded-xl bg-background/55 px-3 text-sm font-semibold transition hover:bg-background disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Usar Casualidade ({stats.casualty})
-                </button>
-              )}
-            </div>
+          {history.length > 0 && resultMode === "full" && (
+            <article className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="inline-flex items-center gap-2 font-bold"><History className="size-4" /> Histórico</h2>
+                <span className="text-xs text-muted-foreground">{history.length}/{historyLimit(history)}</span>
+              </div>
+              <ol className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+                {history.map((roll) => (
+                  <li key={roll.id} className={cn("rounded-xl border px-3 py-2 text-sm", roll.id === activeRoll?.id ? "border-primary/55 bg-primary/10" : "border-border bg-background/55")}>
+                    <strong>{formatSkillRollOutcome(roll)}</strong>
+                    <span className="ml-2 text-muted-foreground">({roll.diceRolls[0]} + {roll.diceRolls[1]} = {roll.diceSum})</span>
+                  </li>
+                ))}
+              </ol>
+            </article>
           )}
-        </article>
-      )}
-
-      {history.length > 0 && (
-        <article className="mt-5 rounded-[22px] border border-border bg-muted/25 p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="inline-flex items-center gap-2 font-bold"><History className="size-4" /> Histórico</h2>
-            <span className="text-xs text-muted-foreground">{history.length}/{historyLimit(history)}</span>
-          </div>
-          <ol className="mt-3 space-y-2">
-            {history.map((roll) => (
-              <li key={roll.id} className={cn("rounded-xl border px-3 py-2 text-sm", roll.id === activeRoll?.id ? "border-primary/55 bg-primary/10" : "border-border bg-background/55")}>
-                <strong>{formatSkillRollOutcome(roll)}</strong>
-                <span className="ml-2 text-muted-foreground">({roll.diceRolls[0]} + {roll.diceRolls[1]} = {roll.diceSum})</span>
-              </li>
-            ))}
-          </ol>
-        </article>
-      )}
+        </aside>
+      </div>
     </section>
   )
 }

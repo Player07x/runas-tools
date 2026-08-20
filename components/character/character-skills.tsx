@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { ArrowDown, ArrowUp, ChevronDown, ChevronsUpDown, Dices, ListPlus, Plus, Trash2, X } from "lucide-react"
@@ -34,6 +34,16 @@ const sortFields: { key: SkillSortKey; label: string }[] = [
 ]
 
 const skillCollator = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" })
+const SKILL_SORT_STORAGE_KEY = "runas-tools:skill-sort"
+
+function loadSkillSort(): SkillSortState {
+  if (typeof window === "undefined") return null
+  try {
+    return JSON.parse(window.localStorage.getItem(SKILL_SORT_STORAGE_KEY) ?? "null") as SkillSortState
+  } catch {
+    return null
+  }
+}
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <span className="mb-1 block text-[0.62rem] font-medium uppercase tracking-wide text-muted-foreground">{children}</span>
@@ -77,10 +87,18 @@ function SortButton({
 export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill, onImportSkills, onRemoveSkill }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
-  const [sortState, setSortState] = useState<SkillSortState>(null)
+  const [sortState, setSortState] = useState<SkillSortState>(loadSkillSort)
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState("")
   const [importErrors, setImportErrors] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SKILL_SORT_STORAGE_KEY, JSON.stringify(sortState))
+    } catch {
+      // Mantém a ordenação durante a sessão quando o armazenamento falhar.
+    }
+  }, [sortState])
   const visibleSkills = useMemo(() => {
     const fixedSkills = skills.filter((skill) => skill.locked)
     const customSkills = skills.filter((skill) => !skill.locked)
@@ -128,7 +146,8 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
   function openSkillCalculator(skill: CharacterSkill) {
     if (!skill.attributeKey) return
     close()
-    router.push(`/calculadora-testes?skill=${encodeURIComponent(skill.id)}&roll=${Date.now()}`)
+    const rollToken = crypto.randomUUID()
+    router.push(`/calculadora-testes?skill=${encodeURIComponent(skill.id)}&roll=${encodeURIComponent(rollToken)}`)
   }
 
   function addSkill() {
@@ -172,13 +191,8 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
       <datalist id="system-skill-suggestions">
         {systemSkills.map((skill) => <option key={skill.name} value={skill.name} />)}
       </datalist>
-      <article className="overflow-hidden rounded-[22px] border border-border bg-muted/25">
-        <div className="flex flex-col gap-2 border-b border-border px-3 py-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between sm:px-4">
-          <div>
-            <h3 className="font-bold text-foreground">Perícias</h3>
-            <p className="text-xs text-muted-foreground">Nível automático pelo total acumulado de pontos.</p>
-          </div>
-          <div className="grid gap-2 min-[430px]:grid-cols-2">
+        <div className="flex flex-col gap-2 border-b border-border px-0.5 pb-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between sm:px-0">
+          <div className="grid gap-2 min-[430px]:ml-auto min-[430px]:grid-cols-2">
             <button type="button" onClick={() => setShowImport(true)} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
               <ListPlus className="size-4" /> Adicionar lista de perícias
             </button>
@@ -188,7 +202,7 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
           </div>
         </div>
 
-        <div className="space-y-2 p-2 sm:p-3">
+        <div className="space-y-2 pt-3">
           <div className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-muted/30 p-2 md:hidden" aria-label="Organizar perícias">
             {sortFields.map((field) => <SortButton key={field.key} field={field} sortState={sortState} onSort={toggleSort} compact />)}
           </div>
@@ -276,7 +290,6 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
             )
           })}
         </div>
-      </article>
 
       {showImport && createPortal((
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-3 backdrop-blur-[2px]" onMouseDown={(event) => {

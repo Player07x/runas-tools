@@ -214,10 +214,10 @@ export function SkillTestCalculator() {
   const [activeRoll, setActiveRoll] = useState<SkillRoll | null>(null)
   const [resultMode, setResultMode] = useState<"quick" | "full" | null>(null)
   const handledRollToken = useRef<string | null>(null)
-  const { attributes, info, skills, stats, bonds } = character
+  const { attributes, info, skills, stats, bonds, abilities } = character
   const snapshot = useMemo(
-    () => calculateCharacterStatSnapshot(attributes, info, stats, skills),
-    [attributes, info, skills, stats],
+    () => calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities),
+    [abilities, attributes, info, skills, stats],
   )
   const requestedSkillId = searchParams.get("skill")
   const requestedBondId = searchParams.get("bond")
@@ -286,6 +286,8 @@ export function SkillTestCalculator() {
     setConfig(nextConfig)
     setParserMessage(`Teste de ${skill.name} preenchido e rolado a partir da ficha.`)
     performRoll(nextConfig, [], null)
+    // performRoll usa o snapshot atual; o token abaixo é a fonte de disparo e impede repetições.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bonds, isReady, requestedBondId, requestedRollToken, requestedSkillId, skills, stats])
 
   function updateStats(updates: Partial<typeof stats>) {

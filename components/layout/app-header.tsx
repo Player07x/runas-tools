@@ -1,8 +1,10 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
-import { Dices, User } from "lucide-react"
+import { User } from "lucide-react"
+import logo from "@/app/icon.png"
 import { cn } from "@/lib/utils"
 import { navItems } from "@/data/navigation"
 import { ThemeToggle } from "./theme-toggle"
@@ -22,8 +24,8 @@ export function AppHeader() {
       <header className="sticky top-0 z-30 border-b border-border/80 bg-background/88 shadow-[0_1px_0_rgba(20,25,40,0.02)] backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" className="group flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition-transform group-hover:-rotate-3">
-              <Dices className="size-5" />
+            <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-black shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition-transform group-hover:-rotate-3">
+              <Image src={logo} alt="Logo Runas Tools" priority className="size-full object-cover" />
             </span>
             <span className="text-sm font-bold tracking-tight text-foreground sm:text-base">Runas Tools</span>
           </Link>

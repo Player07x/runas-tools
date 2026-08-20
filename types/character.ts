@@ -66,6 +66,21 @@ export interface CharacterBond {
   modifier: number
 }
 
+export type AbilityCostType = "none" | "other" | "pv" | "pa" | "pe" | "paExtra" | "peTemporary"
+export type AbilityCostMode = "fixed" | "relative"
+
+export interface CharacterAbility {
+  id: string
+  category: string
+  name: string
+  description: string
+  permanentModifiers: string
+  costType: AbilityCostType
+  costMode: AbilityCostMode
+  costValue: number
+  costText: string
+}
+
 export interface CharacterStats {
   pv: number
   pvBonus: number
@@ -108,6 +123,7 @@ export interface Character {
   stats: CharacterStats
   skills: CharacterSkill[]
   bonds: CharacterBond[]
+  abilities: CharacterAbility[]
 }
 
 /**
@@ -119,4 +135,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 10
+export const CHARACTER_VERSION = 11

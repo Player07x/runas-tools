@@ -2,6 +2,8 @@
 
 import type {
   AttributeKey,
+  AbilityCostType,
+  CharacterAbility,
   CharacterCalendar,
   CharacterBond,
   CharacterInfo as InfoType,
@@ -22,21 +24,32 @@ import { CharacterStats } from "./character-stats"
 import { CharacterSkills } from "./character-skills"
 import { CharacterBonds } from "./character-bonds"
 import { CharacterActions } from "./character-actions"
+import { CharacterAbilities } from "./character-abilities"
 import { SaveIndicator } from "./save-indicator"
 
-export type CharacterTab = "information" | "statistics" | "skills" | "bonds"
+export type CharacterTab = "information" | "statistics" | "skills" | "bonds" | "abilities"
 
 interface CharacterSheetProps {
   activeTab: CharacterTab
   onActiveTabChange: (tab: CharacterTab) => void
 }
 
-const unavailableTabs = ["Habilidades", "Inventário", "Magias", "Anotações"]
-const availableTabs: { id: CharacterTab; label: string }[] = [
+interface CharacterTabItem {
+  id: CharacterTab | null
+  label: string
+}
+
+const recordTabs: CharacterTabItem[] = [
   { id: "information", label: "Informação" },
   { id: "statistics", label: "Estatísticas" },
   { id: "skills", label: "Perícias" },
   { id: "bonds", label: "Vínculos" },
+]
+const featureTabs: CharacterTabItem[] = [
+  { id: "abilities", label: "Habilidades" },
+  { id: null, label: "Inventário" },
+  { id: null, label: "Magias" },
+  { id: null, label: "Anotações" },
 ]
 
 export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetProps) {
@@ -59,9 +72,9 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
       nextInfo = deriveCharacterInfo(nextInfo)
       nextInfo.loadBase = calculateLoadBase(prev.attributes.physical, prev.attributes.strength, nextInfo.scaleMultiplier)
       const stats = { ...prev.stats, mt: modifierToNumber(nextInfo.sizeModifier) }
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, nextInfo, stats, prev.skills)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, nextInfo, stats, prev.skills, prev.abilities)
       stats.paExtra = Math.min(stats.paExtra, snapshot.paExtraMax)
-      stats.peTemporary = Math.min(stats.peTemporary, snapshot.peMax)
+      stats.peTemporary = Math.min(stats.peTemporary, snapshot.peTemporaryMax)
       return {
         ...prev,
         info: nextInfo,
@@ -86,7 +99,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         ...prev.info,
         loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
       }
-      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats, prev.skills)
+      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats, prev.skills, prev.abilities)
       return {
         ...prev,
         attributes,
@@ -94,7 +107,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         stats: {
           ...prev.stats,
           paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
-          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
           focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
         },
       }
@@ -104,9 +117,9 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function setStats(updates: Partial<StatsType>) {
     updateCharacter((prev) => {
       const stats = { ...prev.stats, ...updates }
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats, prev.skills)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats, prev.skills, prev.abilities)
       stats.paExtra = Math.min(snapshot.paExtraMax, Math.max(0, stats.paExtra))
-      stats.peTemporary = Math.min(snapshot.peMax, Math.max(0, stats.peTemporary))
+      stats.peTemporary = Math.min(snapshot.peTemporaryMax, Math.max(0, stats.peTemporary))
       stats.focusCurrent = Math.min(snapshot.focusMaximum, Math.max(0, stats.focusCurrent))
       return { ...prev, stats }
     })
@@ -115,7 +128,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function setSkill(id: string, updates: Partial<CharacterSkill>) {
     updateCharacter((prev) => {
       const skills = prev.skills.map((skill) => skill.id === id ? { ...skill, ...updates } : skill)
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills, prev.abilities)
       return {
         ...prev,
         skills,
@@ -162,7 +175,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         })
       })
 
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills, prev.abilities)
       return {
         ...prev,
         skills,
@@ -214,9 +227,63 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     updateCharacter((prev) => ({ ...prev, bonds: prev.bonds.filter((bond) => bond.id !== id) }))
   }
 
+  function setAbility(id: string, updates: Partial<CharacterAbility>) {
+    updateCharacter((prev) => {
+      const abilities = prev.abilities.map((ability) => ability.id === id ? { ...ability, ...updates } : ability)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, abilities)
+      return {
+        ...prev,
+        abilities,
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
+        },
+      }
+    })
+  }
+
+  function addAbility(ability: CharacterAbility) {
+    updateCharacter((prev) => ({ ...prev, abilities: [...prev.abilities, ability] }))
+  }
+
+  function removeAbility(id: string) {
+    updateCharacter((prev) => {
+      const abilities = prev.abilities.filter((ability) => ability.id !== id)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, abilities)
+      return {
+        ...prev,
+        abilities,
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
+        },
+      }
+    })
+  }
+
+  function applyAbilityCost(costType: Exclude<AbilityCostType, "none" | "other">, amount: number) {
+    const statKey = costType === "pv" ? "pv"
+      : costType === "pa" ? "pa"
+        : costType === "pe" ? "pe"
+          : costType === "paExtra" ? "paExtra"
+            : "peTemporary"
+    updateCharacter((prev) => ({
+      ...prev,
+      stats: { ...prev.stats, [statKey]: prev.stats[statKey] - Math.max(0, Math.trunc(amount)) },
+    }))
+  }
+
   if (!isReady) {
     return <p className="px-4 py-8 text-sm text-muted-foreground">Carregando ficha…</p>
   }
+
+  const featureIsActive = activeTab === "abilities"
+  const upperTabs = featureIsActive ? recordTabs : featureTabs
+  const lowerTabs = featureIsActive ? featureTabs : recordTabs
 
   return (
     <div className="flex flex-col gap-8">
@@ -228,60 +295,39 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
       </section>
 
       <div className="relative">
-        <div className="relative z-20 grid grid-cols-4 gap-x-px bg-muted sm:hidden" role="tablist" aria-label="Seções da ficha">
-          {availableTabs.map((tab) => {
-            const isActive = tab.id === activeTab
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => onActiveTabChange(tab.id as CharacterTab)}
-                aria-selected={isActive}
-                role="tab"
-                className={cn(
-                  "relative h-14 min-w-0 rounded-t-[20px] border-x border-t border-transparent px-1 text-sm font-bold transition-colors",
-                  isActive
-                    ? "z-10 border-border bg-card text-foreground shadow-sm after:absolute after:-bottom-0.5 after:inset-x-0 after:h-1 after:bg-card"
-                    : "bg-secondary text-secondary-foreground active:bg-accent",
-                )}
-              >
-                <span className="block truncate">{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="relative z-0 -mb-px hidden grid-cols-4 gap-x-px sm:grid">
-          {unavailableTabs.map((label) => (
+        <div className="relative z-0 -mb-px grid grid-cols-4 gap-x-px">
+          {upperTabs.map((tab) => (
             <button
-              key={label}
+              key={tab.label}
               type="button"
-              disabled
-              title="Ainda não disponível"
-              className="h-14 rounded-t-[20px] border-t border-border bg-muted px-3 pb-px text-base font-bold text-muted-foreground disabled:cursor-not-allowed sm:h-12 sm:rounded-t-[27px] sm:px-2"
+              disabled={!tab.id}
+              onClick={() => tab.id && onActiveTabChange(tab.id)}
+              title={!tab.id ? "Ainda não disponível" : undefined}
+              className="h-12 min-w-0 rounded-t-[20px] border-t border-border bg-muted px-1 pb-px text-xs font-bold text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:hover:text-muted-foreground sm:rounded-t-[27px] sm:px-2 sm:text-base"
             >
-              {label}
+              <span className="block truncate">{tab.label}</span>
             </button>
           ))}
         </div>
-        <div className="relative z-20 hidden grid-cols-4 gap-x-px bg-muted sm:grid" role="tablist" aria-label="Seções da ficha">
-            {availableTabs.map((tab) => {
+        <div className="relative z-20 grid grid-cols-4 gap-x-px bg-muted" role="tablist" aria-label="Seções da ficha">
+            {lowerTabs.map((tab) => {
               const isActive = tab.id === activeTab
               return (
                 <button
-                  key={tab.id}
+                  key={tab.label}
                   type="button"
-                  onClick={() => onActiveTabChange(tab.id)}
+                  disabled={!tab.id}
+                  onClick={() => tab.id && onActiveTabChange(tab.id)}
                   aria-selected={isActive}
                   role="tab"
                   className={cn(
-                    "relative h-14 rounded-t-[20px] border-x border-t border-transparent px-3 text-base font-bold transition-colors sm:h-12 sm:rounded-t-[27px] sm:px-2",
+                    "relative h-14 min-w-0 rounded-t-[20px] border-x border-t border-transparent px-1 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:text-muted-foreground sm:h-12 sm:rounded-t-[27px] sm:px-2 sm:text-base",
                     isActive
                       ? "z-10 border-border bg-card text-foreground shadow-sm after:absolute after:-bottom-0.5 after:inset-x-0 after:h-1 after:bg-card"
                       : "bg-secondary text-secondary-foreground hover:bg-accent",
                   )}
                 >
-                  {tab.label}
+                  <span className="block truncate">{tab.label}</span>
                 </button>
               )
             })}
@@ -297,6 +343,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               info={character.info}
               stats={character.stats}
               skills={character.skills}
+              abilities={character.abilities}
               onAttributeChange={setAttribute}
               onStatsChange={setStats}
             />
@@ -320,6 +367,16 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               onAddBond={addBond}
               onImportBonds={importBonds}
               onRemoveBond={removeBond}
+            />
+          )}
+          {activeTab === "abilities" && (
+            <CharacterAbilities
+              abilities={character.abilities}
+              stats={character.stats}
+              onAddAbility={addAbility}
+              onAbilityChange={setAbility}
+              onRemoveAbility={removeAbility}
+              onApplyCost={applyAbilityCost}
             />
           )}
         </div>

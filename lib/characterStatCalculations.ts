@@ -1,6 +1,7 @@
-import type { CharacterAttributes, CharacterInfo, CharacterSkill, CharacterStats } from "@/types/character"
+import type { CharacterAbility, CharacterAttributes, CharacterInfo, CharacterSkill, CharacterStats } from "@/types/character"
 import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateAttributeTest, calculateSkillModifier } from "@/lib/skillCalculations"
+import { sumAbilityModifiers } from "@/lib/abilityModifiers"
 
 function finite(value: number): number {
   return Number.isFinite(value) ? value : 0
@@ -24,6 +25,7 @@ export interface CharacterStatSnapshot {
   pvMax: number
   paMax: number
   peMax: number
+  peTemporaryMax: number
   paExtraMax: number
   determinationMax: number
   casualtyMax: number
@@ -47,41 +49,43 @@ export function calculateCharacterStatSnapshot(
   info: CharacterInfo,
   stats: CharacterStats,
   skills: CharacterSkill[] = createCoreSkills(),
+  abilities: CharacterAbility[] = [],
 ): CharacterStatSnapshot {
+  const abilityModifiers = sumAbilityModifiers(abilities)
   const affinityLevel = parseLevel(info.affinity)
   const alignmentLevel = parseLevel(info.alignment)
   const karma = parseDecimal(info.karma)
   const karmaDirection = karma > 0 ? 1 : karma < 0 ? -1 : 0
 
-  const pvMax = Math.max(0, attributes.physical + 2 * attributes.vitality + finite(stats.pvBonus))
+  const pvMax = Math.max(0, attributes.physical + 2 * attributes.vitality + finite(stats.pvBonus) + abilityModifiers.pv)
   const paMax = Math.max(
     0,
     attributes.mystic +
       attributes.power +
       affinityLevel * Math.ceil(attributes.power / 2) +
-      finite(stats.paBonus),
+      finite(stats.paBonus) + abilityModifiers.pa,
   )
   const peMax = Math.max(
     0,
     Math.ceil(attributes.mystic / 2) +
       Math.ceil(attributes.power / 2) +
       affinityLevel * Math.ceil(attributes.power / 4) +
-      finite(stats.peBonus),
+      finite(stats.peBonus) + abilityModifiers.pe,
   )
   const determinationMax = Math.max(
     0,
     Math.ceil((attributes.mystic + attributes.faith) / 2) +
       finite(stats.determinationBonus) +
-      karmaDirection * alignmentLevel,
+      karmaDirection * alignmentLevel + abilityModifiers.determination,
   )
   const casualtyMax = Math.max(
     0,
     Math.ceil((attributes.mystic + attributes.luck) / 2) +
       finite(stats.casualtyBonus) -
-      karmaDirection * alignmentLevel,
+      karmaDirection * alignmentLevel + abilityModifiers.casualty,
   )
 
-  const loadCapacity = Math.max(0, parseDecimal(info.loadBase) + finite(stats.loadBonus))
+  const loadCapacity = Math.max(0, parseDecimal(info.loadBase) + finite(stats.loadBonus) + abilityModifiers.load)
   const currentLoad = nonNegative(stats.currentLoad)
   const overweightLevel = loadCapacity > 0
     ? Math.max(0, Math.ceil(currentLoad / loadCapacity) - 1)
@@ -110,8 +114,8 @@ export function calculateCharacterStatSnapshot(
     : mt < 0
       ? Math.max(1, movementBeforeSize + mt)
       : movementBeforeSize
-  const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus)))
-  const firstImpressions = Math.trunc(attributes.social + finite(stats.firstImpressionsBonus))
+  const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus) + abilityModifiers.movement))
+  const firstImpressions = Math.trunc(attributes.social + finite(stats.firstImpressionsBonus) + abilityModifiers.firstImpressions)
   const defaultCoreSkills = createCoreSkills()
   const coreSkillTest = (id: string, fallbackIndex: number) => {
     const skill = skills.find((item) => item.id === id) ?? defaultCoreSkills[fallbackIndex]
@@ -122,13 +126,14 @@ export function calculateCharacterStatSnapshot(
   const chanceTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.chance, 1) + finite(stats.chanceModifier))
   const perceptionTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.perception, 2) + finite(stats.perceptionModifier))
   const knowledgeTest = Math.max(0, attributes.mental + attributes.knowledge)
-  const focusMaximum = Math.max(0, 5 * willTest + finite(stats.focusModifier))
+  const focusMaximum = Math.max(0, 5 * willTest + finite(stats.focusModifier) + abilityModifiers.focus)
 
   return {
     pvMax,
     paMax,
     peMax,
-    paExtraMax: Math.max(0, Math.ceil(paMax / 2) + finite(stats.paExtraBonus)),
+    peTemporaryMax: Math.max(0, peMax + abilityModifiers.peTemporary),
+    paExtraMax: Math.max(0, Math.ceil(paMax / 2) + finite(stats.paExtraBonus) + abilityModifiers.paExtra),
     determinationMax,
     casualtyMax,
     loadCapacity,

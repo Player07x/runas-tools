@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { ChevronDown, Minus, Plus, RefreshCcw, RotateCcw } from "lucide-react"
 import type {
   AttributeKey,
+  CharacterAbility,
   CharacterAttributes,
   CharacterInfo,
   CharacterSkill,
@@ -22,6 +23,7 @@ interface Props {
   info: CharacterInfo
   stats: CharacterStatsType
   skills: CharacterSkill[]
+  abilities: CharacterAbility[]
   onAttributeChange: (key: AttributeKey, value: number) => void
   onStatsChange: (updates: Partial<CharacterStatsType>) => void
 }
@@ -200,12 +202,12 @@ function ResourceRow({
   )
 }
 
-export function CharacterStats({ attributes, info, stats, skills, onAttributeChange, onStatsChange }: Props) {
-  const snapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
+export function CharacterStats({ attributes, info, stats, skills, abilities, onAttributeChange, onStatsChange }: Props) {
+  const snapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities)
   const selectedElement = getCharacterElement(stats.elementId)
-  const peTemporaryValue = Math.min(snapshot.peMax, Math.max(0, stats.peTemporary))
-  const peTemporaryPercentage = snapshot.peMax > 0
-    ? Math.min(100, Math.max(0, (peTemporaryValue / snapshot.peMax) * 100))
+  const peTemporaryValue = Math.min(snapshot.peTemporaryMax, Math.max(0, stats.peTemporary))
+  const peTemporaryPercentage = snapshot.peTemporaryMax > 0
+    ? Math.min(100, Math.max(0, (peTemporaryValue / snapshot.peTemporaryMax) * 100))
     : 0
 
   function restoreStatistics() {
@@ -213,7 +215,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
       pv: snapshot.pvMax,
       pa: snapshot.paMax,
       pe: snapshot.peMax,
-      peTemporary: snapshot.peMax,
+      peTemporary: snapshot.peTemporaryMax,
       paExtra: 0,
       determination: snapshot.determinationMax,
       casualty: snapshot.casualtyMax,
@@ -232,7 +234,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
 
   function adjustPeTemporary(delta: number) {
     onStatsChange({
-      peTemporary: Math.min(snapshot.peMax, Math.max(0, stats.peTemporary + delta)),
+      peTemporary: Math.min(snapshot.peTemporaryMax, Math.max(0, stats.peTemporary + delta)),
     })
   }
 
@@ -348,7 +350,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
             <h3 className="min-w-0 text-sm font-semibold text-[#66749a] dark:text-[#c7d1f5]">PE Temporário</h3>
             <button
               type="button"
-              onClick={() => onStatsChange({ peTemporary: snapshot.peMax })}
+              onClick={() => onStatsChange({ peTemporary: snapshot.peTemporaryMax })}
               title="Restaurar PE temporário"
               aria-label="Restaurar PE temporário"
               className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-muted-foreground transition hover:bg-background hover:text-foreground"
@@ -362,7 +364,7 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
               role="progressbar"
               aria-label="Proporção de PE temporário"
               aria-valuemin={0}
-              aria-valuemax={snapshot.peMax}
+              aria-valuemax={snapshot.peTemporaryMax}
               aria-valuenow={peTemporaryValue}
               style={{ width: `${peTemporaryPercentage}%` }}
               className="absolute inset-y-0 left-0 bg-[#aebfee]/55 transition-[width] duration-500 ease-out motion-reduce:transition-none dark:bg-[#53658f]/55"
@@ -378,13 +380,13 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
                 <Minus className="size-3.5" />1
               </button>
               <label className="flex min-w-0 items-center justify-center gap-1 bg-background/20 px-2">
-                <NumericInput label="PE Temporário" value={peTemporaryValue} min={0} max={snapshot.peMax} onChange={(peTemporary) => onStatsChange({ peTemporary })} className="h-10 w-12 font-semibold" />
-                <span className="text-xs tabular-nums text-muted-foreground">/ {snapshot.peMax}</span>
+                <NumericInput label="PE Temporário" value={peTemporaryValue} min={0} max={snapshot.peTemporaryMax} onChange={(peTemporary) => onStatsChange({ peTemporary })} className="h-10 w-12 font-semibold" />
+                <span className="text-xs tabular-nums text-muted-foreground">/ {snapshot.peTemporaryMax}</span>
               </label>
               <button
                 type="button"
                 onClick={() => adjustPeTemporary(1)}
-                disabled={stats.peTemporary >= snapshot.peMax}
+                disabled={stats.peTemporary >= snapshot.peTemporaryMax}
                 aria-label="Aumentar PE temporário em 1"
                 className="flex min-h-14 items-center justify-center text-sm font-bold text-muted-foreground transition hover:bg-background/65 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35"
               >

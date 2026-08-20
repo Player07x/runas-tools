@@ -110,7 +110,6 @@ function Field({
           step={step}
           readOnly={readOnly}
           placeholder={placeholder}
-          aria-description={caution}
           className={cn(
             "h-12 w-full min-w-0 rounded-[18px] border border-input bg-background px-4 text-sm text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 read-only:cursor-default read-only:bg-muted read-only:text-muted-foreground sm:h-11",
             caution && "border-dashed border-yellow/60 bg-yellow-soft/35 pr-11 dark:bg-yellow-soft/10",
@@ -182,7 +181,6 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
           <span className="text-right text-sm leading-tight text-muted-foreground">Ano<br />Atual</span>
           <input
             aria-label="Ano atual"
-            aria-description="Use um valor negativo para anos anteriores à criação do calendário élfico."
             title="No calendário élfico, use um valor negativo para anos anteriores à sua criação."
             type="number"
             inputMode="numeric"

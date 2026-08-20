@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState } from "react"
 import CharacterCount from "@tiptap/extension-character-count"
-import UnderlineExtension from "@tiptap/extension-underline"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import { Bold, Eraser, Italic, List, ListOrdered, Underline } from "lucide-react"
@@ -23,7 +22,6 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
   const editor = useEditor({
     extensions: [
       StarterKit,
-      UnderlineExtension,
       CharacterCount.configure({ limit: maxLength }),
     ],
     content: value,

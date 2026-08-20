@@ -145,6 +145,11 @@ export function determineSkillRollOutcome(diceRolls: [number, number], margin: n
   return margin >= 0 ? "success" : "failure"
 }
 
+function applyCriticalImpressionsMargin(skillName: string, outcome: SkillRollOutcome, margin: number): number {
+  const isCritical = outcome === "critical-success" || outcome === "critical-failure"
+  return isCritical && normalizeSkillName(skillName) === "primeiras impressoes" ? margin * 2 : margin
+}
+
 export function rollSkillTest({
   config,
   attributes,
@@ -185,7 +190,9 @@ export function rollSkillTest({
   const totalModifiers = config.skillModifier + config.masterModifier + config.otherModifiers + specialModifier
   const totalTest = baseTest + totalModifiers
   const diceSum = diceRolls[0] + diceRolls[1]
-  const margin = totalTest - diceSum
+  const rawMargin = totalTest - diceSum
+  const outcome = determineSkillRollOutcome(diceRolls, rawMargin)
+  const margin = applyCriticalImpressionsMargin(config.skillName, outcome, rawMargin)
 
   return {
     id,
@@ -202,7 +209,7 @@ export function rollSkillTest({
     totalModifiers,
     totalTest,
     margin,
-    outcome: determineSkillRollOutcome(diceRolls, margin),
+    outcome,
     specialDieId: config.specialDieId,
     determinationUses: 0,
   }
@@ -212,13 +219,15 @@ export function applyDeterminationToRoll(roll: SkillRoll): SkillRoll {
   const modifier = normalizeSkillName(roll.skillName) === "vontade" ? 3 : 1
   const totalModifiers = roll.totalModifiers + modifier
   const totalTest = roll.totalTest + modifier
-  const margin = totalTest - roll.diceSum
+  const rawMargin = totalTest - roll.diceSum
+  const outcome = determineSkillRollOutcome(roll.diceRolls, rawMargin)
+  const margin = applyCriticalImpressionsMargin(roll.skillName, outcome, rawMargin)
   return {
     ...roll,
     totalModifiers,
     totalTest,
     margin,
-    outcome: determineSkillRollOutcome(roll.diceRolls, margin),
+    outcome,
     determinationUses: roll.determinationUses + 1,
   }
 }

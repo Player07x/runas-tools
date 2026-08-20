@@ -51,8 +51,8 @@ export function exportCharacterJSON(character: Character): void {
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
-  const { info, attributes, stats, skills, bonds } = character
-  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
+  const { info, attributes, stats, skills, bonds, abilities } = character
+  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities)
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
 
@@ -155,6 +155,23 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- ${bond.name}: categoria ${bond.category || "Sem categoria"}; teste ${calculateBondTest(attributes, stats, bond)}; qualidade ${quality.name}; nível ${formatSigned(quality.level)}; pontos ${bond.points}; Mod. ${formatSigned(bond.modifier)}`)
   }
   lines.push("")
+
+  lines.push("## Habilidades")
+  lines.push("")
+  for (const ability of abilities) {
+    const cost = ability.costType === "none"
+      ? "Nenhum"
+      : ability.costType === "other"
+        ? ability.costText || "Outro"
+        : `${ability.costValue} ${ability.costType} (${ability.costMode === "fixed" ? "fixo" : "relativo"})`
+    lines.push(`### ${ability.name}`)
+    lines.push(`- Categoria: ${ability.category || "Sem categoria"}`)
+    lines.push(`- Modificadores permanentes: ${ability.permanentModifiers || "Nenhum"}`)
+    lines.push(`- Custo: ${cost}`)
+    const description = richTextToPlainText(ability.description)
+    if (description) lines.push("", description)
+    lines.push("")
+  }
 
   return lines.join("\n")
 }

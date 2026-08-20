@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { ArrowDown, ArrowUp, ChevronsUpDown, Eye, EyeOff, Handshake, ListFilter, ListPlus, Plus, Trash2, X } from "lucide-react"
@@ -35,6 +35,25 @@ const sortFields: { key: BondSortKey; label: string }[] = [
 ]
 
 const bondCollator = new Intl.Collator("pt-BR", { numeric: true, sensitivity: "base" })
+const BOND_FILTER_STORAGE_KEY = "runas-tools:bond-filters"
+
+function loadBondFilters(): { sortState: BondSortState; hiddenCategories: Set<string>; showFilters: boolean } {
+  if (typeof window === "undefined") return { sortState: null, hiddenCategories: new Set(), showFilters: false }
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(BOND_FILTER_STORAGE_KEY) ?? "null") as {
+      sortState?: BondSortState
+      hiddenCategories?: string[]
+      showFilters?: boolean
+    } | null
+    return {
+      sortState: saved?.sortState ?? null,
+      hiddenCategories: new Set(saved?.hiddenCategories ?? []),
+      showFilters: saved?.showFilters ?? false,
+    }
+  } catch {
+    return { sortState: null, hiddenCategories: new Set(), showFilters: false }
+  }
+}
 
 function categoryKey(value: string): string {
   return normalizeSkillName(value) || "__without_category__"
@@ -82,12 +101,25 @@ function SortButton({
 export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBond, onImportBonds, onRemoveBond }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
-  const [sortState, setSortState] = useState<BondSortState>(null)
-  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(() => new Set())
-  const [showFilters, setShowFilters] = useState(false)
+  const [initialFilters] = useState(loadBondFilters)
+  const [sortState, setSortState] = useState<BondSortState>(initialFilters.sortState)
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(initialFilters.hiddenCategories)
+  const [showFilters, setShowFilters] = useState(initialFilters.showFilters)
   const [showImport, setShowImport] = useState(false)
   const [importText, setImportText] = useState("")
   const [importErrors, setImportErrors] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(BOND_FILTER_STORAGE_KEY, JSON.stringify({
+        sortState,
+        hiddenCategories: [...hiddenCategories],
+        showFilters,
+      }))
+    } catch {
+      // Os filtros continuam funcionando durante a sessão se o armazenamento falhar.
+    }
+  }, [hiddenCategories, showFilters, sortState])
 
   const categories = useMemo(() => {
     const byKey = new Map<string, string>()
@@ -148,7 +180,8 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
 
   function openBondCalculator(bond: CharacterBond) {
     close()
-    router.push(`/calculadora-testes?bond=${encodeURIComponent(bond.id)}&roll=${Date.now()}`)
+    const rollToken = crypto.randomUUID()
+    router.push(`/calculadora-testes?bond=${encodeURIComponent(bond.id)}&roll=${encodeURIComponent(rollToken)}`)
   }
 
   function importBondList(event: React.FormEvent<HTMLFormElement>) {
@@ -174,14 +207,9 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
         {categories.filter((category) => category.key !== "__without_category__").map((category) => <option key={category.key} value={category.label} />)}
       </datalist>
 
-      <article className="overflow-hidden rounded-[18px] border border-border bg-muted/25 sm:rounded-[22px]">
-        <div className="flex flex-col gap-3 border-b border-border px-2.5 py-3 sm:px-4">
+        <div className="flex flex-col gap-3 border-b border-border px-0.5 pb-3 sm:px-0">
           <div className="flex flex-col gap-2 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
-            <div>
-              <h3 className="font-bold text-foreground">Vínculos</h3>
-              <p className="text-xs text-muted-foreground">Qualidade e nível são calculados automaticamente pelos pontos.</p>
-            </div>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:ml-auto sm:gap-2">
               <button type="button" onClick={() => setShowFilters((current) => !current)} aria-expanded={showFilters} className="inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 rounded-xl border border-input bg-background px-1.5 py-2 text-xs font-semibold text-muted-foreground transition hover:text-foreground sm:gap-2 sm:px-3 sm:text-sm">
                 <ListFilter className="size-4" /> Categorias
               </button>
@@ -211,7 +239,7 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
           )}
         </div>
 
-        <div className="space-y-2 p-1.5 sm:p-3">
+        <div className="space-y-2 pt-3">
           <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/30 p-1.5 md:hidden" aria-label="Organizar vínculos">
             {sortFields.map((field) => <SortButton key={field.key} field={field} sortState={sortState} onSort={toggleSort} compact />)}
           </div>
@@ -274,7 +302,6 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
             )
           })}
         </div>
-      </article>
 
       {showImport && createPortal((
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-3 backdrop-blur-[2px]" onMouseDown={(event) => {

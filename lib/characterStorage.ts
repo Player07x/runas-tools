@@ -1,8 +1,9 @@
-import type { Character, CharacterBond, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
+import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { calculateAttributeTest, calculateSkillModifier, normalizeSkillName } from "@/lib/skillCalculations"
+import { sumAbilityModifiers } from "@/lib/abilityModifiers"
 
 export const STORAGE_KEY = "runas.character.v1"
 
@@ -90,6 +91,7 @@ export function createEmptyCharacter(): Character {
     },
     skills: createCoreSkills(),
     bonds: [],
+    abilities: [],
   }
 }
 
@@ -185,6 +187,37 @@ function normalizeBonds(partialBonds: CharacterBond[] | undefined): CharacterBon
   return bonds
 }
 
+const abilityCostTypes = new Set<AbilityCostType>(["none", "other", "pv", "pa", "pe", "paExtra", "peTemporary"])
+
+function normalizeAbilities(partialAbilities: CharacterAbility[] | undefined): CharacterAbility[] {
+  const source = Array.isArray(partialAbilities) ? partialAbilities : []
+  const usedIds = new Set<string>()
+
+  return source.flatMap((ability, index) => {
+    if (!ability || typeof ability !== "object") return []
+    const name = typeof ability.name === "string" ? ability.name.trim().slice(0, 80) : ""
+    if (!name) return []
+    let id = typeof ability.id === "string" && ability.id.trim() ? ability.id.trim() : `ability-${index + 1}`
+    while (usedIds.has(id)) id = `${id}-${index + 1}`
+    usedIds.add(id)
+    const costType = abilityCostTypes.has(ability.costType as AbilityCostType)
+      ? ability.costType as AbilityCostType
+      : "none"
+    const costMode: AbilityCostMode = ability.costMode === "relative" ? "relative" : "fixed"
+    return [{
+      id,
+      category: typeof ability.category === "string" ? ability.category.trim().slice(0, 40) : "",
+      name,
+      description: typeof ability.description === "string" ? ability.description.slice(0, 5000) : "",
+      permanentModifiers: typeof ability.permanentModifiers === "string" ? ability.permanentModifiers.slice(0, 500) : "",
+      costType,
+      costMode,
+      costValue: Math.max(0, integer(ability.costValue)),
+      costText: typeof ability.costText === "string" ? ability.costText.slice(0, 50) : "",
+    }]
+  })
+}
+
 /**
  * Faz merge da ficha carregada com a estrutura padrão.
  * Garante que campos novos (adicionados em versões futuras) sempre existam.
@@ -266,6 +299,8 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
   stats.mt = modifierToNumber(info.sizeModifier)
   const skills = normalizeSkills(partial.skills)
   const bonds = normalizeBonds(partial.bonds)
+  const abilities = normalizeAbilities(partial.abilities)
+  const abilityModifiers = sumAbilityModifiers(abilities)
   const willSkill = skills.find((skill) => skill.id === CORE_SKILL_IDS.will) ?? createCoreSkills()[0]
   const focusMaximum = Math.max(
     0,
@@ -273,7 +308,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
       (willSkill.attributeKey ? calculateAttributeTest(attributes, willSkill.attributeKey) : 0) +
       calculateSkillModifier(willSkill) +
       integer(stats.willModifier)
-    ) + integer(stats.focusModifier),
+    ) + integer(stats.focusModifier) + abilityModifiers.focus,
   )
   stats.focusCurrent = partialStats.focusCurrent === undefined
     ? focusMaximum
@@ -287,6 +322,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
     stats,
     skills,
     bonds,
+    abilities,
   }
 }
 

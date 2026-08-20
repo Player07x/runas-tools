@@ -1,4 +1,4 @@
-import type { Character, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
+import type { Character, CharacterBond, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
@@ -89,6 +89,7 @@ export function createEmptyCharacter(): Character {
       mt: 0,
     },
     skills: createCoreSkills(),
+    bonds: [],
   }
 }
 
@@ -155,6 +156,33 @@ function normalizeSkills(
   })
 
   return [...core, ...custom]
+}
+
+function normalizeBonds(partialBonds: CharacterBond[] | undefined): CharacterBond[] {
+  const source = Array.isArray(partialBonds) ? partialBonds : []
+  const usedIds = new Set<string>()
+  const usedNames = new Set<string>()
+  const bonds: CharacterBond[] = []
+
+  source.forEach((bond, index) => {
+    if (!bond || typeof bond !== "object") return
+    const name = typeof bond.name === "string" ? bond.name.trim().slice(0, 50) : ""
+    const normalizedName = normalizeSkillName(name)
+    if (!name || usedNames.has(normalizedName)) return
+    usedNames.add(normalizedName)
+    let id = typeof bond.id === "string" && bond.id.trim() ? bond.id.trim() : `bond-${index + 1}`
+    while (usedIds.has(id)) id = `${id}-${index + 1}`
+    usedIds.add(id)
+    bonds.push({
+      id,
+      category: typeof bond.category === "string" ? bond.category.trim().slice(0, 30) : "",
+      name,
+      points: integer(bond.points),
+      modifier: integer(bond.modifier),
+    })
+  })
+
+  return bonds
 }
 
 /**
@@ -237,6 +265,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
   stats.effects = typeof partialStats.effects === "string" ? partialStats.effects : base.stats.effects
   stats.mt = modifierToNumber(info.sizeModifier)
   const skills = normalizeSkills(partial.skills)
+  const bonds = normalizeBonds(partial.bonds)
   const willSkill = skills.find((skill) => skill.id === CORE_SKILL_IDS.will) ?? createCoreSkills()[0]
   const focusMaximum = Math.max(
     0,
@@ -257,6 +286,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
     attributes,
     stats,
     skills,
+    bonds,
   }
 }
 

@@ -5,6 +5,7 @@ import { CORE_SKILL_IDS } from "@/data/skills"
 import { getCharacterElement } from "@/data/elements"
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { calculateAttributeTest, calculateSkillLevel } from "@/lib/skillCalculations"
+import { calculateBondQuality, calculateBondTest, formatSigned } from "@/lib/bondCalculations"
 import { getAttributeDef } from "@/data/attributes"
 
 function downloadBlob(content: string, filename: string, mime: string): void {
@@ -50,7 +51,7 @@ export function exportCharacterJSON(character: Character): void {
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
-  const { info, attributes, stats, skills } = character
+  const { info, attributes, stats, skills, bonds } = character
   const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills)
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
@@ -144,6 +145,14 @@ export function characterToMarkdown(character: Character): string {
       : "Indisponível"
     const fixed = Object.values(CORE_SKILL_IDS).includes(skill.id as typeof CORE_SKILL_IDS[keyof typeof CORE_SKILL_IDS])
     lines.push(`- ${skill.name || "Perícia sem nome"}: teste ${test}; nível +${level}; atributo ${attribute}; pontos ${skill.points}; Mod. ${skill.modifier >= 0 ? "+" : ""}${skill.modifier}${fixed ? "; padrão" : ""}`)
+  }
+  lines.push("")
+
+  lines.push("## Vínculos")
+  lines.push("")
+  for (const bond of bonds) {
+    const quality = calculateBondQuality(bond.points)
+    lines.push(`- ${bond.name}: categoria ${bond.category || "Sem categoria"}; teste ${calculateBondTest(attributes, stats, bond)}; qualidade ${quality.name}; nível ${formatSigned(quality.level)}; pontos ${bond.points}; Mod. ${formatSigned(bond.modifier)}`)
   }
   lines.push("")
 

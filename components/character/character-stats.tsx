@@ -436,8 +436,8 @@ export function CharacterStats({ attributes, info, stats, skills, onAttributeCha
           <h3 className="px-3 py-2 text-sm font-semibold text-[#6b5b8d] dark:text-[#c9b9ef]">Primeiras Impressões</h3>
           <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
             <label className="flex min-w-0 flex-col items-center px-1 py-2">
-              <span className="text-[0.62rem] text-muted-foreground">Máximo</span>
-              <output aria-label={`Primeiras Impressões máximas: ${formatSignedInteger(snapshot.firstImpressions)}`} className="flex h-8 w-full items-center justify-center text-base font-semibold tabular-nums text-foreground">
+              <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
+              <output aria-label={`Bônus de Primeiras Impressões: ${formatSignedInteger(snapshot.firstImpressions)}`} className="flex h-8 w-full items-center justify-center text-base font-semibold tabular-nums text-foreground">
                 {formatSignedInteger(snapshot.firstImpressions)}
               </output>
             </label>

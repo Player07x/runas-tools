@@ -9,7 +9,7 @@ import { CharacterSheet, type CharacterTab } from "./character-sheet"
 const ACTIVE_TAB_STORAGE_KEY = "runas-tools:character-active-tab"
 
 function isCharacterTab(value: string | null): value is CharacterTab {
-  return value === "information" || value === "statistics" || value === "skills"
+  return value === "information" || value === "statistics" || value === "skills" || value === "bonds"
 }
 
 interface PanelContextValue {

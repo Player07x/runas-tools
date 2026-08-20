@@ -58,6 +58,14 @@ export interface CharacterSkill {
   locked: boolean
 }
 
+export interface CharacterBond {
+  id: string
+  category: string
+  name: string
+  points: number
+  modifier: number
+}
+
 export interface CharacterStats {
   pv: number
   pvBonus: number
@@ -99,6 +107,7 @@ export interface Character {
   attributes: CharacterAttributes
   stats: CharacterStats
   skills: CharacterSkill[]
+  bonds: CharacterBond[]
 }
 
 /**
@@ -110,4 +119,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 9
+export const CHARACTER_VERSION = 10

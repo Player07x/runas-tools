@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { ChevronDown, Dices, History, Sparkles, WandSparkles } from "lucide-react"
-import type { CharacterSkill, SecondaryAttributeKey } from "@/types/character"
+import type { CharacterBond, CharacterSkill, CharacterStats, SecondaryAttributeKey } from "@/types/character"
 import type { SkillRoll, SkillTestConfig, SpecialDieId } from "@/types/skillTest"
 import { damageAttributes } from "@/data/attributes"
 import { specialDice } from "@/data/skills"
@@ -21,6 +21,7 @@ import {
   rollSkillTest,
 } from "@/lib/skillCalculations"
 import { cn } from "@/lib/utils"
+import { calculateBondQuality } from "@/lib/bondCalculations"
 import { useCharacter } from "@/components/character/character-provider"
 import { SkillIntegerInput } from "./skill-integer-input"
 
@@ -40,6 +41,12 @@ function resultTextTone(outcome: SkillRoll["outcome"]): string {
   if (outcome === "success") return "text-sky-300"
   if (outcome === "critical-failure") return "text-red-300"
   return "text-amber-300"
+}
+
+function formatTestOutcome(roll: SkillRoll): string {
+  const result = formatSkillRollOutcome(roll)
+  if (normalizeSkillName(roll.skillName) !== "primeiras impressoes") return result
+  return `${result} (${calculateBondQuality(roll.margin).name})`
 }
 
 function SkillTestResultPanel({
@@ -104,7 +111,7 @@ function SkillTestResultPanel({
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-panel-muted">Resultado do teste</p>
         <p className={cn("mt-1 text-3xl font-bold tracking-tight", resultTextTone(activeRoll.outcome))}>
-          {formatSkillRollOutcome(activeRoll)}
+          {formatTestOutcome(activeRoll)}
         </p>
         <p className="mt-1 text-sm text-panel-muted">Margem {activeRoll.margin >= 0 ? "+" : ""}{activeRoll.margin}</p>
       </div>
@@ -174,6 +181,17 @@ function configFromSkill(skill: CharacterSkill): SkillTestConfig {
   }
 }
 
+function configFromBond(bond: CharacterBond, stats: CharacterStats): SkillTestConfig {
+  return {
+    attributeKey: "social",
+    skillName: "Primeiras Impressões",
+    skillModifier: calculateBondQuality(bond.points).level,
+    masterModifier: 0,
+    otherModifiers: stats.firstImpressionsBonus + bond.modifier,
+    specialDieId: "none",
+  }
+}
+
 export function SkillTestCalculator() {
   const { character, updateCharacter, isReady } = useCharacter()
   const searchParams = useSearchParams()
@@ -196,12 +214,13 @@ export function SkillTestCalculator() {
   const [activeRoll, setActiveRoll] = useState<SkillRoll | null>(null)
   const [resultMode, setResultMode] = useState<"quick" | "full" | null>(null)
   const handledRollToken = useRef<string | null>(null)
-  const { attributes, info, skills, stats } = character
+  const { attributes, info, skills, stats, bonds } = character
   const snapshot = useMemo(
     () => calculateCharacterStatSnapshot(attributes, info, stats, skills),
     [attributes, info, skills, stats],
   )
   const requestedSkillId = searchParams.get("skill")
+  const requestedBondId = searchParams.get("bond")
   const requestedRollToken = searchParams.get("roll")
 
   function clearRolls() {
@@ -250,15 +269,24 @@ export function SkillTestCalculator() {
   }
 
   useEffect(() => {
-    if (!isReady || !requestedSkillId || !requestedRollToken || handledRollToken.current === requestedRollToken) return
+    if (!isReady || (!requestedSkillId && !requestedBondId) || !requestedRollToken || handledRollToken.current === requestedRollToken) return
     handledRollToken.current = requestedRollToken
+    if (requestedBondId) {
+      const bond = bonds.find((item) => item.id === requestedBondId)
+      if (!bond) return
+      const nextConfig = configFromBond(bond, stats)
+      setConfig(nextConfig)
+      setParserMessage(`Primeiras Impressões com ${bond.name} preenchidas e roladas a partir da ficha.`)
+      performRoll(nextConfig, [], null)
+      return
+    }
     const skill = skills.find((item) => item.id === requestedSkillId)
     if (!skill?.attributeKey) return
     const nextConfig = configFromSkill(skill)
     setConfig(nextConfig)
     setParserMessage(`Teste de ${skill.name} preenchido e rolado a partir da ficha.`)
     performRoll(nextConfig, [], null)
-  }, [isReady, requestedRollToken, requestedSkillId, skills])
+  }, [bonds, isReady, requestedBondId, requestedRollToken, requestedSkillId, skills, stats])
 
   function updateStats(updates: Partial<typeof stats>) {
     updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, ...updates } }))
@@ -489,7 +517,7 @@ export function SkillTestCalculator() {
               <ol className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
                 {history.map((roll) => (
                   <li key={roll.id} className={cn("rounded-xl border px-3 py-2 text-sm", roll.id === activeRoll?.id ? "border-primary/55 bg-primary/10" : "border-border bg-background/55")}>
-                    <strong>{formatSkillRollOutcome(roll)}</strong>
+                    <strong>{formatTestOutcome(roll)}</strong>
                     <span className="ml-2 text-muted-foreground">({roll.diceRolls[0]} + {roll.diceRolls[1]} = {roll.diceSum})</span>
                   </li>
                 ))}

@@ -3,6 +3,7 @@
 import type {
   AttributeKey,
   CharacterCalendar,
+  CharacterBond,
   CharacterInfo as InfoType,
   CharacterSkill,
   CharacterStats as StatsType,
@@ -13,27 +14,29 @@ import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierTo
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { normalizeSkillName } from "@/lib/skillCalculations"
 import type { ImportedSkill } from "@/lib/skillImport"
+import type { ImportedBond } from "@/lib/bondImport"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterInfo } from "./character-info"
 import { CharacterStats } from "./character-stats"
 import { CharacterSkills } from "./character-skills"
+import { CharacterBonds } from "./character-bonds"
 import { CharacterActions } from "./character-actions"
 import { SaveIndicator } from "./save-indicator"
 
-export type CharacterTab = "information" | "statistics" | "skills"
+export type CharacterTab = "information" | "statistics" | "skills" | "bonds"
 
 interface CharacterSheetProps {
   activeTab: CharacterTab
   onActiveTabChange: (tab: CharacterTab) => void
 }
 
-const unavailableTabs = ["Vínculos", "Inventário", "Magias", "Anotações"]
-const availableTabs: { id: CharacterTab | "abilities"; label: string }[] = [
+const unavailableTabs = ["Habilidades", "Inventário", "Magias", "Anotações"]
+const availableTabs: { id: CharacterTab; label: string }[] = [
   { id: "information", label: "Informação" },
   { id: "statistics", label: "Estatísticas" },
   { id: "skills", label: "Perícias" },
-  { id: "abilities", label: "Habilidades" },
+  { id: "bonds", label: "Vínculos" },
 ]
 
 export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetProps) {
@@ -172,6 +175,45 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     updateCharacter((prev) => ({ ...prev, skills: prev.skills.filter((skill) => skill.locked || skill.id !== id) }))
   }
 
+  function setBond(id: string, updates: Partial<CharacterBond>) {
+    updateCharacter((prev) => ({
+      ...prev,
+      bonds: prev.bonds.map((bond) => bond.id === id ? {
+        ...bond,
+        ...updates,
+        points: updates.points === undefined ? bond.points : Math.trunc(updates.points),
+        modifier: updates.modifier === undefined ? bond.modifier : Math.trunc(updates.modifier),
+      } : bond),
+    }))
+  }
+
+  function addBond(bond: CharacterBond) {
+    updateCharacter((prev) => ({ ...prev, bonds: [...prev.bonds, bond] }))
+  }
+
+  function importBonds(importedBonds: ImportedBond[]) {
+    updateCharacter((prev) => {
+      const bonds = [...prev.bonds]
+      importedBonds.forEach((imported, index) => {
+        const normalizedName = normalizeSkillName(imported.name)
+        const existingIndex = bonds.findIndex((bond) => normalizeSkillName(bond.name) === normalizedName)
+        if (existingIndex >= 0) {
+          bonds[existingIndex] = { ...bonds[existingIndex], points: imported.points }
+          return
+        }
+        const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `bond-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`
+        bonds.push({ id, category: "", name: imported.name, points: imported.points, modifier: 0 })
+      })
+      return { ...prev, bonds }
+    })
+  }
+
+  function removeBond(id: string) {
+    updateCharacter((prev) => ({ ...prev, bonds: prev.bonds.filter((bond) => bond.id !== id) }))
+  }
+
   if (!isReady) {
     return <p className="px-4 py-8 text-sm text-muted-foreground">Carregando ficha…</p>
   }
@@ -186,8 +228,8 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
       </section>
 
       <div className="relative">
-        <div className="relative z-20 grid grid-cols-3 gap-x-px bg-muted sm:hidden" role="tablist" aria-label="Seções da ficha">
-          {availableTabs.filter((tab) => tab.id !== "abilities").map((tab) => {
+        <div className="relative z-20 grid grid-cols-4 gap-x-px bg-muted sm:hidden" role="tablist" aria-label="Seções da ficha">
+          {availableTabs.map((tab) => {
             const isActive = tab.id === activeTab
             return (
               <button
@@ -224,14 +266,12 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         </div>
         <div className="relative z-20 hidden grid-cols-4 gap-x-px bg-muted sm:grid" role="tablist" aria-label="Seções da ficha">
             {availableTabs.map((tab) => {
-              const isAvailable = tab.id !== "abilities"
               const isActive = tab.id === activeTab
               return (
                 <button
                   key={tab.id}
                   type="button"
-                  disabled={!isAvailable}
-                  onClick={isAvailable ? () => onActiveTabChange(tab.id as CharacterTab) : undefined}
+                  onClick={() => onActiveTabChange(tab.id)}
                   aria-selected={isActive}
                   role="tab"
                   className={cn(
@@ -239,7 +279,6 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
                     isActive
                       ? "z-10 border-border bg-card text-foreground shadow-sm after:absolute after:-bottom-0.5 after:inset-x-0 after:h-1 after:bg-card"
                       : "bg-secondary text-secondary-foreground hover:bg-accent",
-                    !isAvailable && "cursor-not-allowed opacity-60 hover:bg-secondary",
                   )}
                 >
                   {tab.label}
@@ -270,6 +309,17 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               onAddSkill={addSkill}
               onImportSkills={importSkills}
               onRemoveSkill={removeSkill}
+            />
+          )}
+          {activeTab === "bonds" && (
+            <CharacterBonds
+              attributes={character.attributes}
+              stats={character.stats}
+              bonds={character.bonds}
+              onBondChange={setBond}
+              onAddBond={addBond}
+              onImportBonds={importBonds}
+              onRemoveBond={removeBond}
             />
           )}
         </div>

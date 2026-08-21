@@ -296,6 +296,14 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
     : base.stats.weaknesses
   stats.elementId = typeof partialStats.elementId === "string" ? partialStats.elementId : base.stats.elementId
   stats.effects = typeof partialStats.effects === "string" ? partialStats.effects : base.stats.effects
+  stats.pv = integer(partialStats.pv, base.stats.pv)
+  stats.pa = Math.max(0, integer(partialStats.pa, base.stats.pa))
+  stats.pe = Math.max(0, integer(partialStats.pe, base.stats.pe))
+  stats.paExtra = Math.max(0, integer(partialStats.paExtra, base.stats.paExtra))
+  stats.peTemporary = Math.max(0, integer(partialStats.peTemporary, base.stats.peTemporary))
+  stats.determination = Math.max(0, integer(partialStats.determination, base.stats.determination))
+  stats.casualty = Math.max(0, integer(partialStats.casualty, base.stats.casualty))
+  stats.currentLoad = Math.max(0, integer(partialStats.currentLoad, base.stats.currentLoad))
   stats.mt = modifierToNumber(info.sizeModifier)
   const skills = normalizeSkills(partial.skills)
   const bonds = normalizeBonds(partial.bonds)

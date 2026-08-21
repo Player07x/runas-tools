@@ -118,9 +118,14 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     updateCharacter((prev) => {
       const stats = { ...prev.stats, ...updates }
       const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats, prev.skills, prev.abilities)
+      stats.pa = Math.max(0, stats.pa)
+      stats.pe = Math.max(0, stats.pe)
       stats.paExtra = Math.min(snapshot.paExtraMax, Math.max(0, stats.paExtra))
       stats.peTemporary = Math.min(snapshot.peTemporaryMax, Math.max(0, stats.peTemporary))
       stats.focusCurrent = Math.min(snapshot.focusMaximum, Math.max(0, stats.focusCurrent))
+      stats.determination = Math.max(0, stats.determination)
+      stats.casualty = Math.max(0, stats.casualty)
+      stats.currentLoad = Math.max(0, stats.currentLoad)
       return { ...prev, stats }
     })
   }
@@ -271,10 +276,13 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         : costType === "pe" ? "pe"
           : costType === "paExtra" ? "paExtra"
             : "peTemporary"
-    updateCharacter((prev) => ({
-      ...prev,
-      stats: { ...prev.stats, [statKey]: prev.stats[statKey] - Math.max(0, Math.trunc(amount)) },
-    }))
+    updateCharacter((prev) => {
+      const nextValue = prev.stats[statKey] - Math.max(0, Math.trunc(amount))
+      return {
+        ...prev,
+        stats: { ...prev.stats, [statKey]: costType === "pv" ? nextValue : Math.max(0, nextValue) },
+      }
+    })
   }
 
   if (!isReady) {

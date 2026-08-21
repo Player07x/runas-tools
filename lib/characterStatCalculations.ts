@@ -72,15 +72,23 @@ export function calculateCharacterStatSnapshot(
       affinityLevel * Math.ceil(attributes.power / 4) +
       finite(stats.peBonus) + abilityModifiers.pe,
   )
+  const defaultCoreSkills = createCoreSkills()
+  const coreSkillTest = (id: string, fallbackIndex: number) => {
+    const skill = skills.find((item) => item.id === id) ?? defaultCoreSkills[fallbackIndex]
+    const attributeTest = skill.attributeKey ? calculateAttributeTest(attributes, skill.attributeKey) : 0
+    return Math.max(0, attributeTest + calculateSkillModifier(skill))
+  }
+  const willSkillTest = coreSkillTest(CORE_SKILL_IDS.will, 0)
+  const chanceSkillTest = coreSkillTest(CORE_SKILL_IDS.chance, 1)
   const determinationMax = Math.max(
     0,
-    Math.ceil((attributes.mystic + attributes.faith) / 2) +
+    Math.ceil(willSkillTest / 2) +
       finite(stats.determinationBonus) +
       karmaDirection * alignmentLevel + abilityModifiers.determination,
   )
   const casualtyMax = Math.max(
     0,
-    Math.ceil((attributes.mystic + attributes.luck) / 2) +
+    Math.ceil(chanceSkillTest / 2) +
       finite(stats.casualtyBonus) -
       karmaDirection * alignmentLevel + abilityModifiers.casualty,
   )
@@ -116,14 +124,8 @@ export function calculateCharacterStatSnapshot(
       : movementBeforeSize
   const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus) + abilityModifiers.movement))
   const firstImpressions = Math.trunc(attributes.social + finite(stats.firstImpressionsBonus) + abilityModifiers.firstImpressions)
-  const defaultCoreSkills = createCoreSkills()
-  const coreSkillTest = (id: string, fallbackIndex: number) => {
-    const skill = skills.find((item) => item.id === id) ?? defaultCoreSkills[fallbackIndex]
-    const attributeTest = skill.attributeKey ? calculateAttributeTest(attributes, skill.attributeKey) : 0
-    return Math.max(0, attributeTest + calculateSkillModifier(skill))
-  }
-  const willTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.will, 0) + finite(stats.willModifier))
-  const chanceTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.chance, 1) + finite(stats.chanceModifier))
+  const willTest = Math.max(0, willSkillTest + finite(stats.willModifier))
+  const chanceTest = Math.max(0, chanceSkillTest + finite(stats.chanceModifier))
   const perceptionTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.perception, 2) + finite(stats.perceptionModifier))
   const knowledgeTest = Math.max(0, attributes.mental + attributes.knowledge)
   const focusMaximum = Math.max(0, 5 * willTest + finite(stats.focusModifier) + abilityModifiers.focus)

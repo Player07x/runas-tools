@@ -43,8 +43,19 @@ export interface DamageBreakdownItem {
 
 export interface DamageResult {
   total: number
+  /** Total antes de RDF/RDM, usado ao transferir a rolagem para a aplicação no alvo. */
+  totalBeforeReduction: number
   diceRolls: number[]
   diceSum: number
   breakdown: DamageBreakdownItem[]
   damageTypeName: string
+  damageTypeId: string
+}
+
+export type DamageResourceKey = "pv" | "pa" | "paExtra" | "pe" | "peTemporary"
+
+export interface AppliedDamageChange {
+  resource: DamageResourceKey
+  amount: number
+  note?: string
 }

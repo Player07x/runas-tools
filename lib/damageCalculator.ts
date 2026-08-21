@@ -102,8 +102,12 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
   const baseDamage = diceSum + remainingModifier
   const damageAfterMt = baseDamage * mtMultiplier
   const damageAfterReduction = damageAfterMt - (reduction || 0)
+  const rawTotalBeforeReduction = damageAfterMt * otherMultiplier
   const rawTotal = damageAfterReduction * otherMultiplier
   const total = Number.isFinite(rawTotal) ? Math.round(rawTotal) : 0
+  const totalBeforeReduction = Number.isFinite(rawTotalBeforeReduction)
+    ? Math.round(rawTotalBeforeReduction)
+    : 0
 
   const diceLabel = bonusConversion.convertedDice > 0
     ? `${diceRolls.length} dados (${bonusConversion.convertedDice} de bônus)`
@@ -133,9 +137,11 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
 
   return {
     total,
+    totalBeforeReduction,
     diceRolls,
     diceSum,
     breakdown,
     damageTypeName: damageType?.name ?? "",
+    damageTypeId: damageType?.id ?? config.damageTypeId,
   }
 }

@@ -3,7 +3,8 @@
 import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { Character } from "@/types/character"
-import { createEmptyCharacter, loadCharacter, saveCharacter } from "@/lib/characterStorage"
+import { createEmptyCharacter } from "@/lib/characterStorage"
+import { loadCharacterDatabase, saveCharacterDatabase } from "@/lib/characterDatabase"
 
 type SaveStatus = "idle" | "saving" | "saved"
 
@@ -16,7 +17,7 @@ interface CharacterContextValue {
   /** Reseta para uma ficha em branco. */
   resetCharacter: () => void
   saveStatus: SaveStatus
-  /** Indica se a ficha já foi hidratada do localStorage. */
+  /** Indica se a ficha já foi hidratada do armazenamento local. */
   isReady: boolean
 }
 
@@ -28,22 +29,27 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Hidrata a ficha a partir do localStorage no primeiro render do cliente.
+  // Hidrata a ficha do IndexedDB e migra automaticamente o formato legado.
   useEffect(() => {
-    const stored = loadCharacter()
-    if (stored) setCharacter(stored)
-    setIsReady(true)
+    let active = true
+    void loadCharacterDatabase().then((stored) => {
+      if (!active) return
+      if (stored) setCharacter(stored)
+      setIsReady(true)
+    })
+    return () => { active = false }
   }, [])
 
-  // Autosave: persiste toda alteração após a hidratação.
+  // Autosave com debounce: agrupa edições rápidas em uma única transação.
   useEffect(() => {
     if (!isReady) return
     setSaveStatus("saving")
-    saveCharacter(character)
     if (savedTimeout.current) clearTimeout(savedTimeout.current)
-    const showSaved = setTimeout(() => setSaveStatus("saved"), 250)
-    savedTimeout.current = showSaved
-    return () => clearTimeout(showSaved)
+    const saveTimeout = setTimeout(() => {
+      void saveCharacterDatabase(character).then(() => setSaveStatus("saved"))
+    }, 300)
+    savedTimeout.current = saveTimeout
+    return () => clearTimeout(saveTimeout)
   }, [character, isReady])
 
   const updateCharacter = useCallback((updater: (prev: Character) => Character) => {

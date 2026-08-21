@@ -2,10 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
+import dynamic from "next/dynamic"
 import { Eye, EyeOff, ListFilter, Plus, Save, Trash2, X } from "lucide-react"
 import type { CharacterNote } from "@/types/character"
 import { normalizeSkillName } from "@/lib/skillCalculations"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
+
+const RichTextEditor = dynamic(
+  () => import("@/components/ui/rich-text-editor").then((module) => module.RichTextEditor),
+  { ssr: false, loading: () => <div className="mt-4 min-h-52 animate-pulse rounded-[18px] border border-input bg-muted/45" aria-label="Carregando editor" /> },
+)
 
 interface Props {
   notes: CharacterNote[]
@@ -121,7 +126,7 @@ export function CharacterNotes({ notes, onAddNote, onNoteChange, onRemoveNote }:
       <div className="space-y-2 pt-3">
         <div className="hidden grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.7fr)_6.5rem_2.75rem_2.75rem] gap-2 px-3 text-center text-[0.62rem] uppercase tracking-wide text-muted-foreground md:grid"><span>Categoria</span><span>Nome</span><span>Descrição</span><span>Data</span><span>Ver</span><span>Deletar</span></div>
         {visibleNotes.length === 0 && <p className="rounded-[18px] border border-dashed border-border bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">{notes.length === 0 ? "Nenhuma anotação cadastrada." : "Nenhuma anotação corresponde às categorias visíveis."}</p>}
-        {visibleNotes.map((note) => <article key={note.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.7fr)_6.5rem_2.75rem_2.75rem] md:items-center">
+        {visibleNotes.map((note) => <article key={note.id} className="virtualized-list-item grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.7fr)_6.5rem_2.75rem_2.75rem] md:items-center">
           <span className="truncate text-xs font-semibold text-muted-foreground md:px-2">{note.category || "Sem categoria"}</span>
           <strong className="col-start-1 truncate text-sm text-foreground md:col-start-auto md:px-2">{note.name}</strong>
           <p className="col-span-3 col-start-1 truncate text-xs text-muted-foreground md:col-span-1 md:col-start-auto md:px-2">{plainText(note.description) || "Sem descrição"}</p>

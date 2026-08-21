@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
+    "lighthouse": "node scripts/prepare-lighthouse.mjs && npx --yes @lhci/cli@0.15.1 autorun"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

@@ -14,6 +14,8 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
+    ".lighthouse-dist/**",
+    ".lighthouseci/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

@@ -2,10 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
+import dynamic from "next/dynamic"
 import { Bolt, ChevronDown, Eye, EyeOff, ListFilter, Plus, Save, Trash2, X } from "lucide-react"
 import type { AbilityCostType, CharacterAbility, CharacterStats } from "@/types/character"
 import { normalizeSkillName } from "@/lib/skillCalculations"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
+
+const RichTextEditor = dynamic(
+  () => import("@/components/ui/rich-text-editor").then((module) => module.RichTextEditor),
+  { ssr: false, loading: () => <div className="mt-4 min-h-52 animate-pulse rounded-[18px] border border-input bg-muted/45" aria-label="Carregando editor" /> },
+)
 
 interface Props {
   abilities: CharacterAbility[]
@@ -233,7 +238,7 @@ export function CharacterAbilities({ abilities, stats, onAddAbility, onAbilityCh
         {visibleAbilities.map((ability) => {
           const canApplyCost = ability.costType !== "none" && ability.costType !== "other"
           return (
-            <article key={ability.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.8fr)_2.75rem_2.75rem_2.75rem] md:items-center">
+            <article key={ability.id} className="virtualized-list-item grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.8fr)_2.75rem_2.75rem_2.75rem] md:items-center">
               <span className="truncate text-xs font-semibold text-muted-foreground md:px-2">{ability.category || "Sem categoria"}</span>
               <strong className="col-start-1 truncate text-sm text-foreground md:col-start-auto md:px-2">{ability.name}</strong>
               <p className="col-span-4 col-start-1 truncate text-xs text-muted-foreground md:col-span-1 md:col-start-auto md:px-2">{plainText(ability.description) || "Sem descrição"}</p>

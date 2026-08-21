@@ -23,25 +23,30 @@ export default function HomePage() {
         </p>
       </section>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <FichaToolCard />
-        <ToolCard
-          title="Calculadora de Dano"
-          description="Role dados e calcule automaticamente modificadores, atributos e reduções de dano."
-          icon={Swords}
-          accent="blue"
-          href="/calculadora-dano"
-          actionLabel="Abrir calculadora"
-        />
-        <ToolCard
-          title="Calculadora de Testes"
-          description="Resolva testes de atributos e perícias com dados especiais e histórico de rolagens."
-          icon={ListChecks}
-          accent="yellow"
-          href="/calculadora-testes"
-          actionLabel="Abrir calculadora"
-        />
-      </div>
+      <section aria-labelledby="available-tools-heading">
+        <h2 id="available-tools-heading" className="sr-only">
+          Ferramentas disponíveis
+        </h2>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <FichaToolCard />
+          <ToolCard
+            title="Calculadora de Dano"
+            description="Role dados e calcule automaticamente modificadores, atributos e reduções de dano."
+            icon={Swords}
+            accent="blue"
+            href="/calculadora-dano"
+            actionLabel="Abrir calculadora"
+          />
+          <ToolCard
+            title="Calculadora de Testes"
+            description="Resolva testes de atributos e perícias com dados especiais e histórico de rolagens."
+            icon={ListChecks}
+            accent="yellow"
+            href="/calculadora-testes"
+            actionLabel="Abrir calculadora"
+          />
+        </div>
+      </section>
 
       <div className="mt-12">
         <div className="mb-4 flex items-center gap-3">

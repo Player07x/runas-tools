@@ -349,6 +349,13 @@ export function SkillTestCalculator() {
     performRoll(config, history, activeRoll, isChance)
   }
 
+  function rollTest() {
+    performRoll()
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "smooth" }))
+    }
+  }
+
   if (!isReady) {
     return <section className="rounded-[24px] border border-border bg-card p-6 text-sm text-muted-foreground">Carregando dados da ficha…</section>
   }
@@ -487,7 +494,7 @@ export function SkillTestCalculator() {
 
         <button
           type="button"
-          onClick={() => performRoll()}
+          onClick={rollTest}
           disabled={!config.attributeKey}
           className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 font-bold text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
         >

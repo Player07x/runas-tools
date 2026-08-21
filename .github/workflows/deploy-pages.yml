@@ -36,6 +36,12 @@ jobs:
       - name: Build static site
         run: npm run build
 
+      - name: Enforce JavaScript budget
+        run: npm run check:bundle
+
+      - name: Audit performance and accessibility
+        run: npm run lighthouse
+
       - name: Disable Jekyll processing
         run: touch out/.nojekyll
 

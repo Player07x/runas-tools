@@ -212,4 +212,10 @@
     grid-row: span 2;
     grid-template-rows: subgrid;
   }
+
+  /* Virtualização nativa: itens fora da área visível não são pintados nem diagramados. */
+  .virtualized-list-item {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 8rem;
+  }
 }

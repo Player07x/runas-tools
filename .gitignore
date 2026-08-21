@@ -6,6 +6,8 @@
 # next.js
 /.next/
 /out/
+/.lighthouseci/
+/.lighthouse-dist/
 
 # production
 /build

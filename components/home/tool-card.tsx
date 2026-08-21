@@ -41,7 +41,7 @@ export function ToolCard({
           <Icon className="size-5.5" />
         </span>
         {comingSoon && (
-          <span className="rounded-full border border-border/80 bg-muted px-2.5 py-1 text-[0.7rem] font-semibold text-muted-foreground">
+          <span className="rounded-full border border-border bg-background px-2.5 py-1 text-[0.7rem] font-semibold text-foreground">
             Em breve
           </span>
         )}
@@ -63,7 +63,7 @@ export function ToolCard({
   const interactive = "group transition-all duration-200 hover:-translate-y-1 hover:border-primary/45 hover:shadow-[0_16px_40px_rgba(30,36,55,0.12)]"
 
   if (comingSoon) {
-    return <div className={cn(base, "opacity-60")}>{content}</div>
+    return <div className={cn(base, "border-dashed bg-card/75")}>{content}</div>
   }
 
   if (onClick) {

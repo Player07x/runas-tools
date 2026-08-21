@@ -221,7 +221,7 @@ export function CharacterSkills({ attributes, skills, onSkillChange, onAddSkill,
               ? calculateAttributeTest(attributes, skill.attributeKey) + level + skill.modifier
               : null
             return (
-              <div key={skill.id} className="grid grid-cols-6 items-end gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[2.75rem_minmax(7rem,1.2fr)_3.75rem_3.5rem_minmax(7rem,1fr)_3.75rem_3.75rem_2.5rem] md:items-center">
+              <div key={skill.id} className="virtualized-list-item grid grid-cols-6 items-end gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[2.75rem_minmax(7rem,1.2fr)_3.75rem_3.5rem_minmax(7rem,1fr)_3.75rem_3.75rem_2.5rem] md:items-center">
                 <button
                   type="button"
                   onClick={() => openSkillCalculator(skill)}

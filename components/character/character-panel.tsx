@@ -88,7 +88,11 @@ function CharacterPanel() {
   const [panelWidth, setPanelWidth] = useState(800)
 
   return (
-    <div className={cn("fixed inset-0 z-50", isOpen ? "pointer-events-auto" : "pointer-events-none")} aria-hidden={!isOpen}>
+    <div
+      className={cn("fixed inset-0 z-50", isOpen ? "pointer-events-auto" : "pointer-events-none")}
+      aria-hidden={!isOpen}
+      inert={!isOpen}
+    >
       {/* Backdrop */}
       <div
         onClick={close}

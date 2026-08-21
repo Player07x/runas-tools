@@ -244,7 +244,7 @@ function normalizeNotes(partialNotes: CharacterNote[] | undefined): CharacterNot
  * Faz merge da ficha carregada com a estrutura padrão.
  * Garante que campos novos (adicionados em versões futuras) sempre existam.
  */
-function normalizeCharacter(partial: Partial<Character> | undefined): Character {
+export function normalizeCharacter(partial: Partial<Character> | undefined): Character {
   const base = createEmptyCharacter()
   if (!partial) return base
   const attributes = { ...base.attributes, ...(partial.attributes ?? {}) }

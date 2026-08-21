@@ -263,7 +263,7 @@ export function CharacterBonds({ attributes, stats, bonds, onBondChange, onAddBo
             const quality = calculateBondQuality(bond.points)
             const test = calculateBondTest(attributes, stats, bond)
             return (
-              <div key={bond.id} className="grid grid-cols-12 items-end gap-x-1.5 gap-y-2 rounded-[16px] border border-border bg-background/55 p-2 md:grid-cols-[2.5rem_minmax(7.5rem,.9fr)_minmax(5.5rem,1fr)_3.5rem_minmax(6.5rem,.9fr)_3.25rem_3.5rem_3.5rem_2.25rem] md:items-center md:gap-1.5 md:rounded-[18px]">
+              <div key={bond.id} className="virtualized-list-item grid grid-cols-12 items-end gap-x-1.5 gap-y-2 rounded-[16px] border border-border bg-background/55 p-2 md:grid-cols-[2.5rem_minmax(7.5rem,.9fr)_minmax(5.5rem,1fr)_3.5rem_minmax(6.5rem,.9fr)_3.25rem_3.5rem_3.5rem_2.25rem] md:items-center md:gap-1.5 md:rounded-[18px]">
                 <button type="button" onClick={() => openBondCalculator(bond)} aria-label={`Testar Primeiras Impressões com ${bond.name}`} title={`Testar vínculo com ${bond.name}`} className="col-span-2 inline-flex size-9 items-center justify-center self-end justify-self-start rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 md:col-auto md:size-10">
                   <Handshake className="size-4.5" />
                 </button>

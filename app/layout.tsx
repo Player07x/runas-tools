@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { CharacterProvider } from "@/components/character/character-provider"
 import { CharacterPanelProvider } from "@/components/character/character-panel"
 import { AppHeader } from "@/components/layout/app-header"
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration"
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
@@ -43,6 +44,7 @@ export default function RootLayout({
             </CharacterPanelProvider>
           </CharacterProvider>
         </ThemeProvider>
+        <ServiceWorkerRegistration />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>

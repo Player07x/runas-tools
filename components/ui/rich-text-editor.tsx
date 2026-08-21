@@ -13,9 +13,10 @@ interface RichTextEditorProps {
   onChange: (value: string) => void
   maxLength?: number
   className?: string
+  readOnly?: boolean
 }
 
-export function RichTextEditor({ label, value, onChange, maxLength = 1000, className }: RichTextEditorProps) {
+export function RichTextEditor({ label, value, onChange, maxLength = 1000, className, readOnly = false }: RichTextEditorProps) {
   const id = useId()
   const [length, setLength] = useState(0)
 
@@ -25,6 +26,7 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
       CharacterCount.configure({ limit: maxLength }),
     ],
     content: value,
+    editable: !readOnly,
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -38,7 +40,7 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
     },
     onUpdate: ({ editor: currentEditor }) => {
       setLength(currentEditor.storage.characterCount.characters())
-      onChange(currentEditor.getHTML())
+      if (!readOnly) onChange(currentEditor.getHTML())
     },
   })
 
@@ -47,6 +49,10 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
     editor.commands.setContent(value, { emitUpdate: false })
     setLength(editor.storage.characterCount.characters())
   }, [editor, value])
+
+  useEffect(() => {
+    editor?.setEditable(!readOnly)
+  }, [editor, readOnly])
 
   const tools = [
     {
@@ -91,10 +97,10 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
     <div className={cn("min-w-0", className)}>
       <div className="mb-1.5 flex items-center justify-between gap-3 px-2">
         <label id={`${id}-label`} className="text-sm font-medium text-muted-foreground">{label}</label>
-        <span className="text-[0.68rem] tabular-nums text-muted-foreground">{length}/{maxLength}</span>
+        {!readOnly && <span className="text-[0.68rem] tabular-nums text-muted-foreground">{length}/{maxLength}</span>}
       </div>
       <div className="overflow-hidden rounded-[18px] border border-input bg-background/65 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/25">
-        <div className="flex flex-wrap gap-1 border-b border-border/70 bg-muted/55 p-1.5">
+        {!readOnly && <div className="flex flex-wrap gap-1 border-b border-border/70 bg-muted/55 p-1.5">
           {tools.map(({ label: toolLabel, icon: Icon, active, run }) => (
             <button
               key={toolLabel}
@@ -112,9 +118,10 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
               <Icon className="size-4" />
             </button>
           ))}
-        </div>
+        </div>}
         <EditorContent editor={editor} />
       </div>
     </div>
   )
 }
+

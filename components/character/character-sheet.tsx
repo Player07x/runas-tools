@@ -453,4 +453,3 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     </div>
   )
 }
-

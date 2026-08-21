@@ -127,7 +127,8 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
   const steps = [`${config.damage.amount} ${damageType.name} − ${reduction} ${damageType.category === "physical" ? "RDF" : "RDM"} = ${remaining}`]
   const changes: AppliedDamageChange[] = []
 
-  for (const layer of config.layers) {
+  for (let layerIndex = 0; layerIndex < config.layers.length; layerIndex += 1) {
+    const layer = config.layers[layerIndex]
     if (remaining <= 0) break
     const isPv = layer.resource === "pv"
     const current = Math.max(0, Math.trunc(layer.current))
@@ -156,10 +157,19 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
     }
 
     const normalizedRemainder = Math.max(0, remaining - current / multiplier)
-    const breakMultiplier = parseMultiplier(layer.breakMultiplier ?? "1")
+    const nextLayer = config.layers[layerIndex + 1]
+    const skipsEmptyCurrentAura =
+      layer.resource === "paExtra" &&
+      nextLayer?.resource === "pa" &&
+      Math.max(0, Math.trunc(nextLayer.current)) === 0 &&
+      config.layers[layerIndex + 2]?.resource === "pv"
+    const breakMultiplier = parseMultiplier(
+      skipsEmptyCurrentAura ? (nextLayer.breakMultiplier ?? "1") : (layer.breakMultiplier ?? "1"),
+    )
     if (breakMultiplier === null) return { value: null, error: "Revise os multiplicadores de quebra." }
     remaining = normalizedRemainder * breakMultiplier
-    steps.push(`Excedente normalizado ${normalizedRemainder.toFixed(2).replace(/\.00$/, "")} × quebra ${breakMultiplier} = ${remaining.toFixed(2).replace(/\.00$/, "")}`)
+    const breakSource = skipsEmptyCurrentAura ? "quebra da PA atual" : "quebra"
+    steps.push(`Excedente normalizado ${normalizedRemainder.toFixed(2).replace(/\.00$/, "")} × ${breakSource} ${breakMultiplier} = ${remaining.toFixed(2).replace(/\.00$/, "")}`)
   }
 
   const resultText = formatAppliedChanges(changes)

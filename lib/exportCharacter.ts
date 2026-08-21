@@ -51,8 +51,8 @@ export function exportCharacterJSON(character: Character): void {
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
-  const { info, attributes, stats, skills, bonds, abilities, notes } = character
-  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities)
+  const { info, attributes, stats, skills, bonds, abilities, spells, notes } = character
+  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, [...abilities, ...spells])
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
 
@@ -169,6 +169,34 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- Modificadores permanentes: ${ability.permanentModifiers || "Nenhum"}`)
     lines.push(`- Custo: ${cost}`)
     const description = richTextToPlainText(ability.description)
+    if (description) lines.push("", description)
+    lines.push("")
+  }
+
+  const magicTypeLabels = { aura: "Aura", quick: "Rápida", spell: "Feitiço", ritual: "Ritual", enchantment: "Encantamento" } as const
+  const rangeTypeLabels = { touch: "Toque", personal: "Pessoal", projectile: "Projétil", targets: "Alvo(s)", area: "Área" } as const
+  lines.push("## Magias")
+  lines.push("")
+  for (const spell of spells) {
+    const cost = spell.costType === "none"
+      ? "Nenhum"
+      : spell.costType === "other"
+        ? spell.costText || "Outro"
+        : `${spell.costValue} ${spell.costType} (${spell.costMode === "fixed" ? "fixo" : "relativo"})`
+    const rangeType = rangeTypeLabels[spell.rangeType]
+    const range = spell.rangeType === "touch" || spell.rangeType === "personal" || !spell.rangeText
+      ? rangeType
+      : `${spell.rangeText}, ${rangeType}`
+    lines.push(`### ${spell.name}`)
+    lines.push(`- Categoria: ${spell.category || "Sem categoria"}`)
+    lines.push(`- Tipo: ${magicTypeLabels[spell.magicType]}`)
+    lines.push(`- Alcance: ${range}`)
+    lines.push(`- Área: ${spell.area || "Não informada"}`)
+    lines.push(`- Duração: ${spell.duration || "Não informada"}`)
+    lines.push(`- Teste de conjuração: ${spell.castingSkill || "Nenhum"}`)
+    lines.push(`- Modificadores permanentes: ${spell.permanentModifiers || "Nenhum"}`)
+    lines.push(`- Custo: ${cost}`)
+    const description = richTextToPlainText(spell.description)
     if (description) lines.push("", description)
     lines.push("")
   }

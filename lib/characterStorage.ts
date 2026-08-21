@@ -1,4 +1,4 @@
-import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterNote, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
+import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterNote, CharacterSaveFile, CharacterSkill, CharacterSpell, SecondaryAttributeKey, SpellMagicType, SpellRangeType } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
@@ -92,6 +92,7 @@ export function createEmptyCharacter(): Character {
     skills: createCoreSkills(),
     bonds: [],
     abilities: [],
+    spells: [],
     notes: [],
   }
 }
@@ -219,6 +220,47 @@ function normalizeAbilities(partialAbilities: CharacterAbility[] | undefined): C
   })
 }
 
+const spellMagicTypes = new Set<SpellMagicType>(["aura", "quick", "spell", "ritual", "enchantment"])
+const spellRangeTypes = new Set<SpellRangeType>(["touch", "personal", "projectile", "targets", "area"])
+
+function normalizeSpells(partialSpells: CharacterSpell[] | undefined): CharacterSpell[] {
+  const source = Array.isArray(partialSpells) ? partialSpells : []
+  const usedIds = new Set<string>()
+
+  return source.flatMap((spell, index) => {
+    if (!spell || typeof spell !== "object") return []
+    const name = typeof spell.name === "string" ? spell.name.trim().slice(0, 80) : ""
+    if (!name) return []
+    let id = typeof spell.id === "string" && spell.id.trim() ? spell.id.trim() : `spell-${index + 1}`
+    while (usedIds.has(id)) id = `${id}-${index + 1}`
+    usedIds.add(id)
+    const costType = abilityCostTypes.has(spell.costType as AbilityCostType)
+      ? spell.costType as AbilityCostType
+      : "none"
+    const costMode: AbilityCostMode = spell.costMode === "relative" ? "relative" : "fixed"
+    const magicType = spellMagicTypes.has(spell.magicType as SpellMagicType) ? spell.magicType : "spell"
+    const rangeType = spellRangeTypes.has(spell.rangeType as SpellRangeType) ? spell.rangeType : "personal"
+    const blocksRangeText = rangeType === "touch" || rangeType === "personal"
+    return [{
+      id,
+      category: typeof spell.category === "string" ? spell.category.trim().slice(0, 40) : "",
+      name,
+      description: typeof spell.description === "string" ? spell.description.slice(0, 5000) : "",
+      permanentModifiers: typeof spell.permanentModifiers === "string" ? spell.permanentModifiers.slice(0, 500) : "",
+      costType,
+      costMode,
+      costValue: Math.max(0, integer(spell.costValue)),
+      costText: typeof spell.costText === "string" ? spell.costText.slice(0, 50) : "",
+      magicType,
+      rangeType,
+      rangeText: blocksRangeText ? "" : typeof spell.rangeText === "string" ? spell.rangeText.trim().slice(0, 100) : "",
+      area: typeof spell.area === "string" ? spell.area.trim().slice(0, 100) : "",
+      duration: typeof spell.duration === "string" ? spell.duration.trim().slice(0, 100) : "",
+      castingSkill: typeof spell.castingSkill === "string" ? spell.castingSkill.trim().slice(0, 80) : "",
+    }]
+  })
+}
+
 function normalizeNotes(partialNotes: CharacterNote[] | undefined): CharacterNote[] {
   const source = Array.isArray(partialNotes) ? partialNotes : []
   const usedIds = new Set<string>()
@@ -330,8 +372,9 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
   const skills = normalizeSkills(partial.skills)
   const bonds = normalizeBonds(partial.bonds)
   const abilities = normalizeAbilities(partial.abilities)
+  const spells = normalizeSpells(partial.spells)
   const notes = normalizeNotes(partial.notes)
-  const abilityModifiers = sumAbilityModifiers(abilities)
+  const abilityModifiers = sumAbilityModifiers([...abilities, ...spells])
   const willSkill = skills.find((skill) => skill.id === CORE_SKILL_IDS.will) ?? createCoreSkills()[0]
   const focusMaximum = Math.max(
     0,
@@ -354,6 +397,7 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
     skills,
     bonds,
     abilities,
+    spells,
     notes,
   }
 }

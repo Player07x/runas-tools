@@ -15,7 +15,7 @@ const CharacterSheet = dynamic(
 const ACTIVE_TAB_STORAGE_KEY = "runas-tools:character-active-tab"
 
 function isCharacterTab(value: string | null): value is CharacterTab {
-  return value === "information" || value === "statistics" || value === "skills" || value === "bonds" || value === "abilities" || value === "notes"
+  return value === "information" || value === "statistics" || value === "skills" || value === "bonds" || value === "abilities" || value === "spells" || value === "notes"
 }
 
 interface PanelContextValue {

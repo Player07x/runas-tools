@@ -81,6 +81,18 @@ export interface CharacterAbility {
   costText: string
 }
 
+export type SpellMagicType = "aura" | "quick" | "spell" | "ritual" | "enchantment"
+export type SpellRangeType = "touch" | "personal" | "projectile" | "targets" | "area"
+
+export interface CharacterSpell extends CharacterAbility {
+  magicType: SpellMagicType
+  rangeType: SpellRangeType
+  rangeText: string
+  area: string
+  duration: string
+  castingSkill: string
+}
+
 export interface CharacterNote {
   id: string
   category: string
@@ -132,6 +144,7 @@ export interface Character {
   skills: CharacterSkill[]
   bonds: CharacterBond[]
   abilities: CharacterAbility[]
+  spells: CharacterSpell[]
   notes: CharacterNote[]
 }
 
@@ -144,4 +157,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 12
+export const CHARACTER_VERSION = 13

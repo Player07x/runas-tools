@@ -124,7 +124,7 @@ function ElementFields({
 export function DamageApplicationPanel({ rolledResult }: Props) {
   const { character, updateCharacter, isReady } = useCharacter()
   const snapshot = useMemo(
-    () => calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities),
+    () => calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, [...character.abilities, ...character.spells]),
     [character],
   )
   const [usingOwnSheet, setUsingOwnSheet] = useState(true)

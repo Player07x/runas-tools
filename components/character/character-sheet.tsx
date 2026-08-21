@@ -9,6 +9,7 @@ import type {
   CharacterBond,
   CharacterInfo as InfoType,
   CharacterNote,
+  CharacterSpell,
   CharacterSkill,
   CharacterStats as StatsType,
 } from "@/types/character"
@@ -20,6 +21,7 @@ import { normalizeSkillName } from "@/lib/skillCalculations"
 import type { ImportedSkill } from "@/lib/skillImport"
 import type { ImportedBond } from "@/lib/bondImport"
 import type { ImportedAbility } from "@/lib/abilityTransfer"
+import type { ImportedSpell } from "@/lib/spellTransfer"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterActions } from "./character-actions"
@@ -30,9 +32,10 @@ const CharacterStats = dynamic(() => import("./character-stats").then((module) =
 const CharacterSkills = dynamic(() => import("./character-skills").then((module) => module.CharacterSkills))
 const CharacterBonds = dynamic(() => import("./character-bonds").then((module) => module.CharacterBonds))
 const CharacterAbilities = dynamic(() => import("./character-abilities").then((module) => module.CharacterAbilities))
+const CharacterSpells = dynamic(() => import("./character-spells").then((module) => module.CharacterSpells))
 const CharacterNotes = dynamic(() => import("./character-notes").then((module) => module.CharacterNotes))
 
-export type CharacterTab = "information" | "statistics" | "skills" | "bonds" | "abilities" | "notes"
+export type CharacterTab = "information" | "statistics" | "skills" | "bonds" | "abilities" | "spells" | "notes"
 
 interface CharacterSheetProps {
   activeTab: CharacterTab
@@ -53,7 +56,7 @@ const recordTabs: CharacterTabItem[] = [
 const featureTabs: CharacterTabItem[] = [
   { id: "abilities", label: "Habilidades" },
   { id: null, label: "Inventário" },
-  { id: null, label: "Magias" },
+  { id: "spells", label: "Magias" },
   { id: "notes", label: "Anotações" },
 ]
 
@@ -77,7 +80,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
       nextInfo = deriveCharacterInfo(nextInfo)
       nextInfo.loadBase = calculateLoadBase(prev.attributes.physical, prev.attributes.strength, nextInfo.scaleMultiplier)
       const stats = { ...prev.stats, mt: modifierToNumber(nextInfo.sizeModifier) }
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, nextInfo, stats, prev.skills, prev.abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, nextInfo, stats, prev.skills, [...prev.abilities, ...prev.spells])
       stats.paExtra = Math.min(stats.paExtra, snapshot.paExtraMax)
       stats.peTemporary = Math.min(stats.peTemporary, snapshot.peTemporaryMax)
       return {
@@ -104,7 +107,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         ...prev.info,
         loadBase: calculateLoadBase(attributes.physical, attributes.strength, prev.info.scaleMultiplier),
       }
-      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats, prev.skills, prev.abilities)
+      const snapshot = calculateCharacterStatSnapshot(attributes, info, prev.stats, prev.skills, [...prev.abilities, ...prev.spells])
       return {
         ...prev,
         attributes,
@@ -122,7 +125,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function setStats(updates: Partial<StatsType>) {
     updateCharacter((prev) => {
       const stats = { ...prev.stats, ...updates }
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats, prev.skills, prev.abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, stats, prev.skills, [...prev.abilities, ...prev.spells])
       stats.pa = Math.max(0, stats.pa)
       stats.pe = Math.max(0, stats.pe)
       stats.paExtra = Math.min(snapshot.paExtraMax, Math.max(0, stats.paExtra))
@@ -138,7 +141,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function setSkill(id: string, updates: Partial<CharacterSkill>) {
     updateCharacter((prev) => {
       const skills = prev.skills.map((skill) => skill.id === id ? { ...skill, ...updates } : skill)
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills, prev.abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills, [...prev.abilities, ...prev.spells])
       return {
         ...prev,
         skills,
@@ -185,7 +188,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
         })
       })
 
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills, prev.abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, skills, [...prev.abilities, ...prev.spells])
       return {
         ...prev,
         skills,
@@ -240,7 +243,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function setAbility(id: string, updates: Partial<CharacterAbility>) {
     updateCharacter((prev) => {
       const abilities = prev.abilities.map((ability) => ability.id === id ? { ...ability, ...updates } : ability)
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, [...abilities, ...prev.spells])
       return {
         ...prev,
         abilities,
@@ -275,7 +278,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
           : `ability-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`
         abilities.push({ id, ...imported })
       })
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, [...abilities, ...prev.spells])
       return {
         ...prev,
         abilities,
@@ -292,10 +295,79 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function removeAbility(id: string) {
     updateCharacter((prev) => {
       const abilities = prev.abilities.filter((ability) => ability.id !== id)
-      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, abilities)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, [...abilities, ...prev.spells])
       return {
         ...prev,
         abilities,
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
+        },
+      }
+    })
+  }
+
+  function setSpell(id: string, updates: Partial<CharacterSpell>) {
+    updateCharacter((prev) => {
+      const spells = prev.spells.map((spell) => spell.id === id ? { ...spell, ...updates } : spell)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, [...prev.abilities, ...spells])
+      return {
+        ...prev,
+        spells,
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
+        },
+      }
+    })
+  }
+
+  function addSpell(spell: CharacterSpell) {
+    updateCharacter((prev) => ({ ...prev, spells: [...prev.spells, spell] }))
+  }
+
+  function importSpells(importedSpells: ImportedSpell[]) {
+    updateCharacter((prev) => {
+      const spells = [...prev.spells]
+      importedSpells.forEach((imported, index) => {
+        const identity = `${normalizeSkillName(imported.category)}::${normalizeSkillName(imported.name)}`
+        const existingIndex = spells.findIndex((spell) => (
+          `${normalizeSkillName(spell.category)}::${normalizeSkillName(spell.name)}` === identity
+        ))
+        if (existingIndex >= 0) {
+          spells[existingIndex] = { ...spells[existingIndex], ...imported }
+          return
+        }
+        const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `spell-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`
+        spells.push({ id, ...imported })
+      })
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, [...prev.abilities, ...spells])
+      return {
+        ...prev,
+        spells,
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
+        },
+      }
+    })
+  }
+
+  function removeSpell(id: string) {
+    updateCharacter((prev) => {
+      const spells = prev.spells.filter((spell) => spell.id !== id)
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, [...prev.abilities, ...spells])
+      return {
+        ...prev,
+        spells,
         stats: {
           ...prev.stats,
           paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
@@ -340,7 +412,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     return <p className="px-4 py-8 text-sm text-muted-foreground">Carregando ficha…</p>
   }
 
-  const featureIsActive = activeTab === "abilities" || activeTab === "notes"
+  const featureIsActive = activeTab === "abilities" || activeTab === "spells" || activeTab === "notes"
   const upperTabs = featureIsActive ? recordTabs : featureTabs
   const lowerTabs = featureIsActive ? featureTabs : recordTabs
 
@@ -402,7 +474,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               info={character.info}
               stats={character.stats}
               skills={character.skills}
-              abilities={character.abilities}
+              abilities={[...character.abilities, ...character.spells]}
               onAttributeChange={setAttribute}
               onStatsChange={setStats}
             />
@@ -437,6 +509,19 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               onImportAbilities={importAbilities}
               onAbilityChange={setAbility}
               onRemoveAbility={removeAbility}
+              onApplyCost={applyAbilityCost}
+            />
+          )}
+          {activeTab === "spells" && (
+            <CharacterSpells
+              characterName={character.name}
+              spells={character.spells}
+              skills={character.skills}
+              stats={character.stats}
+              onAddSpell={addSpell}
+              onImportSpells={importSpells}
+              onSpellChange={setSpell}
+              onRemoveSpell={removeSpell}
               onApplyCost={applyAbilityCost}
             />
           )}

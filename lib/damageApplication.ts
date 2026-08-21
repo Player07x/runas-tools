@@ -147,7 +147,7 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
     let note: string | undefined
 
     if (!isPv && loss === current && current > 0) note = "quebrou"
-    if (isPv && layer.maximum !== undefined && loss === Math.max(0, Math.trunc(layer.maximum))) note = "FULMINANTE 💀"
+    if (isPv && layer.maximum !== undefined && loss >= Math.max(0, Math.trunc(layer.maximum))) note = "FULMINANTE 💀"
     if (loss > 0) changes.push({ resource: layer.resource, amount: -loss, note })
     steps.push(`${resourceLabels[layer.resource]}: ${remaining.toFixed(2).replace(/\.00$/, "")} × ${multiplier} = ${Math.round(adjusted)}; perda ${loss}`)
 

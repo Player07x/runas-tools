@@ -50,6 +50,7 @@ function characterSections(character: Character): StoredSection[] {
     { key: "skills", value: character.skills },
     { key: "bonds", value: character.bonds },
     { key: "abilities", value: character.abilities },
+    { key: "spells", value: character.spells },
     { key: "notes", value: character.notes },
   ]
 }
@@ -72,6 +73,7 @@ async function readIndexedCharacter(): Promise<Character | null> {
       skills: sections.get("skills") as Character["skills"],
       bonds: sections.get("bonds") as Character["bonds"],
       abilities: sections.get("abilities") as Character["abilities"],
+      spells: sections.get("spells") as Character["spells"],
       notes: sections.get("notes") as Character["notes"],
     })
   } finally {

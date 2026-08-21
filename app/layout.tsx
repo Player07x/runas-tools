@@ -45,7 +45,7 @@ export default function RootLayout({
           </CharacterProvider>
         </ThemeProvider>
         <ServiceWorkerRegistration />
-        {process.env.NODE_ENV === "production" && <Analytics />}
+        {process.env.VERCEL === "1" && <Analytics />}
       </body>
     </html>
   )

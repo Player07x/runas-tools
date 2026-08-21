@@ -106,4 +106,3 @@ export function parseAbilityListFile(text: string): ImportedAbility[] {
     }
   })
 }
-

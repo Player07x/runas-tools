@@ -72,7 +72,7 @@
   --secondary-foreground: #30384f;
 
   --muted: #e9ebf1;
-  --muted-foreground: #697086;
+  --muted-foreground: #5f667a;
 
   --accent: #e2e4ff;
   --accent-foreground: #414d79;
@@ -80,8 +80,8 @@
   --destructive: #e5484d;
   --destructive-foreground: #ffffff;
 
-  --border: #dce0e9;
-  --input: #d7dce7;
+  --border: #d2d7e2;
+  --input: #c9d0dd;
   --ring: #7183b7;
 
   --purple: #7f76c9;

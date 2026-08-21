@@ -130,7 +130,7 @@ function VitalCard({
   bonus,
   onCurrentChange,
   onBonusChange,
-  accent,
+  accentClass,
 }: {
   label: string
   current: number
@@ -138,12 +138,12 @@ function VitalCard({
   bonus: number
   onCurrentChange: (value: number) => void
   onBonusChange: (value: number) => void
-  accent: string
+  accentClass: string
 }) {
   return (
     <article className="overflow-hidden rounded-[24px] border border-border bg-muted/35 shadow-sm">
       <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3">
-        <h3 className="font-bold" style={{ color: accent }}>{label} Atual</h3>
+        <h3 className={cn("font-bold", accentClass)}>{label} Atual</h3>
         <span className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">recurso</span>
       </div>
       <div className="grid grid-cols-3 divide-x divide-border border-t border-border bg-card/70">
@@ -171,7 +171,7 @@ function ResourceRow({
   bonus,
   onCurrentChange,
   onBonusChange,
-  color,
+  colorClass,
 }: {
   label: string
   current: number
@@ -179,11 +179,11 @@ function ResourceRow({
   bonus: number
   onCurrentChange: (value: number) => void
   onBonusChange: (value: number) => void
-  color: string
+  colorClass: string
 }) {
   return (
     <div className="overflow-hidden rounded-[18px] border border-border bg-background/60">
-      <span className="block px-3 py-2 text-sm font-bold" style={{ color }}>{label}</span>
+      <span className={cn("block px-3 py-2 text-sm font-bold", colorClass)}>{label}</span>
       <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
         <label className="flex min-w-0 flex-col items-center justify-center px-1 py-2">
           <span className="text-[0.62rem] text-muted-foreground">Atual</span>
@@ -322,9 +322,9 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
       </div>
 
       <div className="my-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <VitalCard label="PV" current={stats.pv} maximum={snapshot.pvMax} bonus={stats.pvBonus} onCurrentChange={(pv) => onStatsChange({ pv })} onBonusChange={(pvBonus) => onStatsChange({ pvBonus })} accent="#d88787" />
-        <VitalCard label="PA" current={stats.pa} maximum={snapshot.paMax} bonus={stats.paBonus} onCurrentChange={(pa) => onStatsChange({ pa })} onBonusChange={(paBonus) => onStatsChange({ paBonus })} accent="#6fbbb9" />
-        <VitalCard label="PE" current={stats.pe} maximum={snapshot.peMax} bonus={stats.peBonus} onCurrentChange={(pe) => onStatsChange({ pe })} onBonusChange={(peBonus) => onStatsChange({ peBonus })} accent="#94a6db" />
+        <VitalCard label="PV" current={stats.pv} maximum={snapshot.pvMax} bonus={stats.pvBonus} onCurrentChange={(pv) => onStatsChange({ pv })} onBonusChange={(pvBonus) => onStatsChange({ pvBonus })} accentClass="text-[#9f4d4d] dark:text-[#ef9696]" />
+        <VitalCard label="PA" current={stats.pa} maximum={snapshot.paMax} bonus={stats.paBonus} onCurrentChange={(pa) => onStatsChange({ pa })} onBonusChange={(paBonus) => onStatsChange({ paBonus })} accentClass="text-[#397d75] dark:text-[#79cfca]" />
+        <VitalCard label="PE" current={stats.pe} maximum={snapshot.peMax} bonus={stats.peBonus} onCurrentChange={(pe) => onStatsChange({ pe })} onBonusChange={(peBonus) => onStatsChange({ peBonus })} accentClass="text-[#586b9f] dark:text-[#c7d1f5]" />
       </div>
 
       <div className="mb-7 grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
@@ -480,8 +480,8 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
             </label>
 
             <div className="space-y-2">
-              <ResourceRow label="Determinação" current={stats.determination} maximum={snapshot.determinationMax} bonus={stats.determinationBonus} onCurrentChange={(determination) => onStatsChange({ determination })} onBonusChange={(determinationBonus) => onStatsChange({ determinationBonus })} color="#aaa438" />
-              <ResourceRow label="Casualidade" current={stats.casualty} maximum={snapshot.casualtyMax} bonus={stats.casualtyBonus} onCurrentChange={(casualty) => onStatsChange({ casualty })} onBonusChange={(casualtyBonus) => onStatsChange({ casualtyBonus })} color="#b95c9b" />
+              <ResourceRow label="Determinação" current={stats.determination} maximum={snapshot.determinationMax} bonus={stats.determinationBonus} onCurrentChange={(determination) => onStatsChange({ determination })} onBonusChange={(determinationBonus) => onStatsChange({ determinationBonus })} colorClass="text-[#706d1f] dark:text-[#e2c56d]" />
+              <ResourceRow label="Casualidade" current={stats.casualty} maximum={snapshot.casualtyMax} bonus={stats.casualtyBonus} onCurrentChange={(casualty) => onStatsChange({ casualty })} onBonusChange={(casualtyBonus) => onStatsChange({ casualtyBonus })} colorClass="text-[#93447d] dark:text-[#eca9ea]" />
             </div>
 
             <div className="rounded-[20px] border border-border bg-background/55 p-3">

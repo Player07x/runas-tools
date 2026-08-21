@@ -7,7 +7,7 @@ export function SaveIndicator() {
   const { saveStatus } = useCharacter()
 
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-panel-muted">
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
       {saveStatus === "saving" ? (
         <>
           <Loader2 className="size-3.5 animate-spin" />
@@ -15,7 +15,7 @@ export function SaveIndicator() {
         </>
       ) : (
         <>
-          <Check className="size-3.5 text-highlight" />
+          <Check className="size-3.5 text-primary" />
           <span className="sm:hidden">Salvo</span>
           <span className="hidden sm:inline">Salvo localmente</span>
         </>

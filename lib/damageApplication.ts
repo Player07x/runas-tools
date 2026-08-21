@@ -129,11 +129,19 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
 
   for (const layer of config.layers) {
     if (remaining <= 0) break
+    const isPv = layer.resource === "pv"
+    const current = Math.max(0, Math.trunc(layer.current))
+
+    // Uma aura zerada não absorve dano e, portanto, também não aciona sua quebra.
+    // O dano preservado segue integralmente para a próxima camada.
+    if (!isPv && current === 0) {
+      steps.push(`${resourceLabels[layer.resource]}: valor atual 0; camada ignorada`)
+      continue
+    }
+
     const multiplier = layerMultiplier(layer, damageType.name, damageType.category)
     if (multiplier === null) return { value: null, error: "Revise os multiplicadores. Use valores como 2x, 1,5 ou 1/2." }
-    const current = Math.max(0, Math.trunc(layer.current))
     const adjusted = remaining * multiplier
-    const isPv = layer.resource === "pv"
     const loss = isPv ? Math.max(0, Math.round(adjusted)) : Math.min(current, Math.max(0, Math.round(adjusted)))
     let note: string | undefined
 

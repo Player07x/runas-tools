@@ -2,7 +2,7 @@
   "ci": {
     "collect": {
       "staticDistDir": "./.lighthouse-dist",
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "url": [
         "http://localhost/runas-tools/",
         "http://localhost/runas-tools/calculadora-dano/",
@@ -10,6 +10,7 @@
       ]
     },
     "assert": {
+      "aggregationMethod": "median",
       "assertions": {
         "categories:performance": ["error", { "minScore": 0.75 }],
         "categories:accessibility": ["error", { "minScore": 0.9 }],

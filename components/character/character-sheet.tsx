@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import type {
   AttributeKey,
   AbilityCostType,
@@ -7,6 +8,7 @@ import type {
   CharacterCalendar,
   CharacterBond,
   CharacterInfo as InfoType,
+  CharacterNote,
   CharacterSkill,
   CharacterStats as StatsType,
 } from "@/types/character"
@@ -19,15 +21,17 @@ import type { ImportedSkill } from "@/lib/skillImport"
 import type { ImportedBond } from "@/lib/bondImport"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
-import { CharacterInfo } from "./character-info"
-import { CharacterStats } from "./character-stats"
-import { CharacterSkills } from "./character-skills"
-import { CharacterBonds } from "./character-bonds"
 import { CharacterActions } from "./character-actions"
-import { CharacterAbilities } from "./character-abilities"
 import { SaveIndicator } from "./save-indicator"
 
-export type CharacterTab = "information" | "statistics" | "skills" | "bonds" | "abilities"
+const CharacterInfo = dynamic(() => import("./character-info").then((module) => module.CharacterInfo))
+const CharacterStats = dynamic(() => import("./character-stats").then((module) => module.CharacterStats))
+const CharacterSkills = dynamic(() => import("./character-skills").then((module) => module.CharacterSkills))
+const CharacterBonds = dynamic(() => import("./character-bonds").then((module) => module.CharacterBonds))
+const CharacterAbilities = dynamic(() => import("./character-abilities").then((module) => module.CharacterAbilities))
+const CharacterNotes = dynamic(() => import("./character-notes").then((module) => module.CharacterNotes))
+
+export type CharacterTab = "information" | "statistics" | "skills" | "bonds" | "abilities" | "notes"
 
 interface CharacterSheetProps {
   activeTab: CharacterTab
@@ -49,7 +53,7 @@ const featureTabs: CharacterTabItem[] = [
   { id: "abilities", label: "Habilidades" },
   { id: null, label: "Inventário" },
   { id: null, label: "Magias" },
-  { id: null, label: "Anotações" },
+  { id: "notes", label: "Anotações" },
 ]
 
 export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetProps) {
@@ -270,6 +274,21 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     })
   }
 
+  function setNote(id: string, updates: Partial<CharacterNote>) {
+    updateCharacter((prev) => ({
+      ...prev,
+      notes: prev.notes.map((note) => note.id === id ? { ...note, ...updates } : note),
+    }))
+  }
+
+  function addNote(note: CharacterNote) {
+    updateCharacter((prev) => ({ ...prev, notes: [...prev.notes, note] }))
+  }
+
+  function removeNote(id: string) {
+    updateCharacter((prev) => ({ ...prev, notes: prev.notes.filter((note) => note.id !== id) }))
+  }
+
   function applyAbilityCost(costType: Exclude<AbilityCostType, "none" | "other">, amount: number) {
     const statKey = costType === "pv" ? "pv"
       : costType === "pa" ? "pa"
@@ -289,7 +308,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     return <p className="px-4 py-8 text-sm text-muted-foreground">Carregando ficha…</p>
   }
 
-  const featureIsActive = activeTab === "abilities"
+  const featureIsActive = activeTab === "abilities" || activeTab === "notes"
   const upperTabs = featureIsActive ? recordTabs : featureTabs
   const lowerTabs = featureIsActive ? featureTabs : recordTabs
 
@@ -385,6 +404,14 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               onAbilityChange={setAbility}
               onRemoveAbility={removeAbility}
               onApplyCost={applyAbilityCost}
+            />
+          )}
+          {activeTab === "notes" && (
+            <CharacterNotes
+              notes={character.notes}
+              onAddNote={addNote}
+              onNoteChange={setNote}
+              onRemoveNote={removeNote}
             />
           )}
         </div>

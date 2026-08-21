@@ -1,4 +1,4 @@
-import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
+import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterNote, CharacterSaveFile, CharacterSkill, SecondaryAttributeKey } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
@@ -92,6 +92,7 @@ export function createEmptyCharacter(): Character {
     skills: createCoreSkills(),
     bonds: [],
     abilities: [],
+    notes: [],
   }
 }
 
@@ -218,6 +219,27 @@ function normalizeAbilities(partialAbilities: CharacterAbility[] | undefined): C
   })
 }
 
+function normalizeNotes(partialNotes: CharacterNote[] | undefined): CharacterNote[] {
+  const source = Array.isArray(partialNotes) ? partialNotes : []
+  const usedIds = new Set<string>()
+
+  return source.flatMap((note, index) => {
+    if (!note || typeof note !== "object") return []
+    const name = typeof note.name === "string" ? note.name.trim().slice(0, 80) : ""
+    if (!name) return []
+    let id = typeof note.id === "string" && note.id.trim() ? note.id.trim() : `note-${index + 1}`
+    while (usedIds.has(id)) id = `${id}-${index + 1}`
+    usedIds.add(id)
+    return [{
+      id,
+      category: typeof note.category === "string" ? note.category.trim().slice(0, 40) : "",
+      name,
+      description: typeof note.description === "string" ? note.description.slice(0, 5000) : "",
+      date: typeof note.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(note.date) ? note.date : "",
+    }]
+  })
+}
+
 /**
  * Faz merge da ficha carregada com a estrutura padrão.
  * Garante que campos novos (adicionados em versões futuras) sempre existam.
@@ -308,6 +330,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
   const skills = normalizeSkills(partial.skills)
   const bonds = normalizeBonds(partial.bonds)
   const abilities = normalizeAbilities(partial.abilities)
+  const notes = normalizeNotes(partial.notes)
   const abilityModifiers = sumAbilityModifiers(abilities)
   const willSkill = skills.find((skill) => skill.id === CORE_SKILL_IDS.will) ?? createCoreSkills()[0]
   const focusMaximum = Math.max(
@@ -331,6 +354,7 @@ function normalizeCharacter(partial: Partial<Character> | undefined): Character 
     skills,
     bonds,
     abilities,
+    notes,
   }
 }
 

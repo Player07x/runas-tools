@@ -81,6 +81,14 @@ export interface CharacterAbility {
   costText: string
 }
 
+export interface CharacterNote {
+  id: string
+  category: string
+  name: string
+  description: string
+  date: string
+}
+
 export interface CharacterStats {
   pv: number
   pvBonus: number
@@ -124,6 +132,7 @@ export interface Character {
   skills: CharacterSkill[]
   bonds: CharacterBond[]
   abilities: CharacterAbility[]
+  notes: CharacterNote[]
 }
 
 /**
@@ -135,4 +144,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 11
+export const CHARACTER_VERSION = 12

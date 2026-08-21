@@ -51,7 +51,7 @@ export function exportCharacterJSON(character: Character): void {
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
-  const { info, attributes, stats, skills, bonds, abilities } = character
+  const { info, attributes, stats, skills, bonds, abilities, notes } = character
   const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities)
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
@@ -169,6 +169,17 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- Modificadores permanentes: ${ability.permanentModifiers || "Nenhum"}`)
     lines.push(`- Custo: ${cost}`)
     const description = richTextToPlainText(ability.description)
+    if (description) lines.push("", description)
+    lines.push("")
+  }
+
+  lines.push("## Anotações")
+  lines.push("")
+  for (const note of notes) {
+    lines.push(`### ${note.name}`)
+    lines.push(`- Categoria: ${note.category || "Sem categoria"}`)
+    lines.push(`- Data: ${note.date || "Sem data"}`)
+    const description = richTextToPlainText(note.description)
     if (description) lines.push("", description)
     lines.push("")
   }

@@ -2,14 +2,20 @@
 
 import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { Dices, PanelLeftClose, PanelLeftOpen, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { CharacterSheet, type CharacterTab } from "./character-sheet"
+import type { CharacterTab } from "./character-sheet"
+
+const CharacterSheet = dynamic(
+  () => import("./character-sheet").then((module) => module.CharacterSheet),
+  { ssr: false, loading: () => <p className="px-4 py-8 text-sm text-panel-muted">Carregando ficha…</p> },
+)
 
 const ACTIVE_TAB_STORAGE_KEY = "runas-tools:character-active-tab"
 
 function isCharacterTab(value: string | null): value is CharacterTab {
-  return value === "information" || value === "statistics" || value === "skills" || value === "bonds" || value === "abilities"
+  return value === "information" || value === "statistics" || value === "skills" || value === "bonds" || value === "abilities" || value === "notes"
 }
 
 interface PanelContextValue {

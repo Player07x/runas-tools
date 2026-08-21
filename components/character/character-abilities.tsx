@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import dynamic from "next/dynamic"
-import { Bolt, ChevronDown, Eye, EyeOff, ListFilter, Plus, Save, Trash2, X } from "lucide-react"
+import { Bolt, ChevronDown, Download, Eye, EyeOff, ListFilter, Plus, Save, Trash2, Upload, X } from "lucide-react"
 import type { AbilityCostType, CharacterAbility, CharacterStats } from "@/types/character"
 import { normalizeSkillName } from "@/lib/skillCalculations"
+import { exportAbilityList, parseAbilityListFile, type ImportedAbility } from "@/lib/abilityTransfer"
 
 const RichTextEditor = dynamic(
   () => import("@/components/ui/rich-text-editor").then((module) => module.RichTextEditor),
@@ -13,9 +14,11 @@ const RichTextEditor = dynamic(
 )
 
 interface Props {
+  characterName: string
   abilities: CharacterAbility[]
   stats: CharacterStats
   onAddAbility: (ability: CharacterAbility) => void
+  onImportAbilities: (abilities: ImportedAbility[]) => void
   onAbilityChange: (id: string, updates: Partial<CharacterAbility>) => void
   onRemoveAbility: (id: string) => void
   onApplyCost: (costType: Exclude<AbilityCostType, "none" | "other">, amount: number) => void
@@ -105,13 +108,20 @@ function costLabel(costType: AbilityCostType): string {
   return costOptions.find((option) => option.value === costType)?.label ?? "Custo"
 }
 
-export function CharacterAbilities({ abilities, stats, onAddAbility, onAbilityChange, onRemoveAbility, onApplyCost }: Props) {
+export function CharacterAbilities({ characterName, abilities, stats, onAddAbility, onImportAbilities, onAbilityChange, onRemoveAbility, onApplyCost }: Props) {
   const [initialFilters] = useState(loadFilters)
   const [hiddenCategories, setHiddenCategories] = useState(initialFilters.hiddenCategories)
   const [showFilters, setShowFilters] = useState(initialFilters.showFilters)
   const [editingAbility, setEditingAbility] = useState<CharacterAbility | null>(null)
   const [isNewAbility, setIsNewAbility] = useState(false)
   const [costDialog, setCostDialog] = useState<CostDialogState | null>(null)
+  const [showImport, setShowImport] = useState(false)
+  const [importedAbilities, setImportedAbilities] = useState<ImportedAbility[]>([])
+  const [selectedAbilities, setSelectedAbilities] = useState<Set<number>>(() => new Set())
+  const [previewAbility, setPreviewAbility] = useState<ImportedAbility | null>(null)
+  const [importFilename, setImportFilename] = useState("")
+  const [importError, setImportError] = useState<string | null>(null)
+  const abilityFileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     try {
@@ -152,6 +162,51 @@ export function CharacterAbilities({ abilities, stats, onAddAbility, onAbilityCh
   function openNewAbility() {
     setEditingAbility(createAbility())
     setIsNewAbility(true)
+  }
+
+  function openImport() {
+    setImportedAbilities([])
+    setSelectedAbilities(new Set())
+    setPreviewAbility(null)
+    setImportFilename("")
+    setImportError(null)
+    setShowImport(true)
+  }
+
+  async function loadAbilityFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setImportError(null)
+    try {
+      const imported = parseAbilityListFile(await file.text())
+      setImportedAbilities(imported)
+      setSelectedAbilities(new Set(imported.map((_, index) => index)))
+      setImportFilename(file.name)
+    } catch (error) {
+      setImportedAbilities([])
+      setSelectedAbilities(new Set())
+      setImportFilename("")
+      setImportError(error instanceof Error ? error.message : "Não foi possível ler a lista de habilidades.")
+    } finally {
+      event.target.value = ""
+    }
+  }
+
+  function toggleImportedAbility(index: number) {
+    setSelectedAbilities((current) => {
+      const next = new Set(current)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
+  function confirmImport(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const selected = importedAbilities.filter((_, index) => selectedAbilities.has(index))
+    if (selected.length === 0) return
+    onImportAbilities(selected)
+    setShowImport(false)
   }
 
   function saveAbility(event: React.FormEvent<HTMLFormElement>) {
@@ -202,6 +257,12 @@ export function CharacterAbilities({ abilities, stats, onAddAbility, onAbilityCh
       </datalist>
 
       <div className="flex flex-col gap-3 border-b border-border px-0.5 pb-3 sm:flex-row sm:items-center sm:justify-end sm:px-0">
+        <button type="button" onClick={() => exportAbilityList(abilities, characterName)} disabled={abilities.length === 0} title={abilities.length === 0 ? "Adicione uma habilidade antes de exportar" : "Exportar todas as habilidades"} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40">
+          <Download className="size-4" /> Exportar todas
+        </button>
+        <button type="button" onClick={openImport} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
+          <Upload className="size-4" /> Importar lista
+        </button>
         <button type="button" onClick={() => setShowFilters((current) => !current)} aria-expanded={showFilters} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:text-foreground">
           <ListFilter className="size-4" /> Categorias
         </button>
@@ -209,6 +270,81 @@ export function CharacterAbilities({ abilities, stats, onAddAbility, onAbilityCh
           <Plus className="size-4" /> Adicionar habilidade
         </button>
       </div>
+
+      {showImport && createPortal((
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowImport(false) }}>
+          <form onSubmit={confirmImport} role="dialog" aria-modal="true" aria-labelledby="ability-import-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-6">
+              <div>
+                <h2 id="ability-import-title" className="text-lg font-bold text-foreground">Importar habilidades</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Escolha uma lista e selecione somente as habilidades que deseja adicionar à ficha.</p>
+              </div>
+              <button type="button" onClick={() => setShowImport(false)} aria-label="Fechar importação de habilidades" className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"><X className="size-5" /></button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <input ref={abilityFileRef} type="file" accept="application/json,.json" onChange={loadAbilityFile} className="hidden" />
+              <button type="button" onClick={() => abilityFileRef.current?.click()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-input bg-background/65 px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:border-primary/55 hover:text-foreground">
+                <Upload className="size-4" /> {importFilename ? "Escolher outro arquivo" : "Escolher arquivo de habilidades"}
+              </button>
+              {importFilename && <p className="mt-2 truncate text-xs text-muted-foreground">Arquivo: <strong>{importFilename}</strong></p>}
+
+              {importedAbilities.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{selectedAbilities.size} de {importedAbilities.length} selecionadas</p>
+                    <div className="flex flex-wrap gap-1">
+                      <button type="button" onClick={() => setSelectedAbilities(new Set(importedAbilities.map((_, index) => index)))} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10">Selecionar todas</button>
+                      <button type="button" onClick={() => setSelectedAbilities(new Set())} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground">Limpar seleção</button>
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {importedAbilities.map((ability, index) => {
+                      const selected = selectedAbilities.has(index)
+                      return (
+                        <article key={`${ability.category}-${ability.name}-${index}`} className={`flex items-center gap-3 rounded-[18px] border p-3 transition ${selected ? "border-primary/45 bg-primary/5" : "border-border bg-background/45"}`}>
+                          <input type="checkbox" checked={selected} onChange={() => toggleImportedAbility(index)} aria-label={`Selecionar ${ability.name}`} className="size-5 shrink-0 accent-primary" />
+                          <button type="button" onClick={() => toggleImportedAbility(index)} className="min-w-0 flex-1 text-left">
+                            <span className="block truncate text-sm font-semibold text-foreground">{ability.name}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{ability.category || "Sem categoria"} · {plainText(ability.description) || "Sem descrição"}</span>
+                          </button>
+                          <button type="button" onClick={() => setPreviewAbility(ability)} aria-label={`Visualizar ${ability.name}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-input bg-background px-3 text-xs font-semibold text-muted-foreground transition hover:text-foreground"><Eye className="size-4" /><span className="hidden sm:inline">Visualizar</span></button>
+                        </article>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {importError && <div role="alert" className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{importError}</div>}
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:justify-end sm:px-6">
+              <button type="button" onClick={() => setShowImport(false)} className="h-11 rounded-xl border border-input bg-background px-4 text-sm font-semibold text-muted-foreground">Cancelar</button>
+              <button type="submit" disabled={selectedAbilities.size === 0} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-40"><Upload className="size-4" /> Importar {selectedAbilities.size > 0 ? selectedAbilities.size : "selecionadas"}</button>
+            </div>
+          </form>
+        </div>
+      ), document.body)}
+
+      {previewAbility && createPortal((
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setPreviewAbility(null) }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="ability-preview-title" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto rounded-[24px] border border-border bg-card p-4 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Visualização somente leitura</p><h2 id="ability-preview-title" className="mt-1 text-lg font-bold text-foreground">{previewAbility.name}</h2></div>
+              <button type="button" onClick={() => setPreviewAbility(null)} aria-label="Fechar visualização da habilidade" className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"><X className="size-5" /></button>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-input bg-background/65 px-3 py-2"><span className="text-xs font-medium text-muted-foreground">Categoria</span><p className="mt-0.5 text-sm font-semibold text-foreground">{previewAbility.category || "Sem categoria"}</p></div>
+              <div className="rounded-xl border border-input bg-background/65 px-3 py-2"><span className="text-xs font-medium text-muted-foreground">Nome</span><p className="mt-0.5 text-sm font-semibold text-foreground">{previewAbility.name}</p></div>
+            </div>
+            <RichTextEditor label="Descrição" value={previewAbility.description} onChange={() => undefined} maxLength={5000} readOnly className="mt-4" />
+            <div className="mt-4 rounded-xl border border-input bg-background/65 px-3 py-2"><span className="text-xs font-medium text-muted-foreground">Modificadores permanentes</span><p className="mt-0.5 whitespace-pre-wrap text-sm text-foreground">{previewAbility.permanentModifiers || "Nenhum"}</p></div>
+            <div className="mt-3 rounded-xl border border-input bg-background/65 px-3 py-2"><span className="text-xs font-medium text-muted-foreground">Custo</span><p className="mt-0.5 text-sm text-foreground">{previewAbility.costType === "none" ? "Nenhum" : previewAbility.costType === "other" ? previewAbility.costText || "Outro" : `${costLabel(previewAbility.costType)} · ${previewAbility.costMode === "fixed" ? `Fixo (${previewAbility.costValue})` : "Relativo"}`}</p></div>
+            <div className="mt-5 flex justify-end"><button type="button" onClick={() => setPreviewAbility(null)} className="h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground">Voltar à seleção</button></div>
+          </div>
+        </div>
+      ), document.body)}
 
       {showFilters && (
         <div className="mt-3 flex flex-wrap gap-2 rounded-xl border border-border bg-background/45 p-2" aria-label="Filtrar categorias de habilidades">

@@ -19,6 +19,7 @@ import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { normalizeSkillName } from "@/lib/skillCalculations"
 import type { ImportedSkill } from "@/lib/skillImport"
 import type { ImportedBond } from "@/lib/bondImport"
+import type { ImportedAbility } from "@/lib/abilityTransfer"
 import { cn } from "@/lib/utils"
 import { useCharacter } from "./character-provider"
 import { CharacterActions } from "./character-actions"
@@ -257,6 +258,37 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     updateCharacter((prev) => ({ ...prev, abilities: [...prev.abilities, ability] }))
   }
 
+  function importAbilities(importedAbilities: ImportedAbility[]) {
+    updateCharacter((prev) => {
+      const abilities = [...prev.abilities]
+      importedAbilities.forEach((imported, index) => {
+        const identity = `${normalizeSkillName(imported.category)}::${normalizeSkillName(imported.name)}`
+        const existingIndex = abilities.findIndex((ability) => (
+          `${normalizeSkillName(ability.category)}::${normalizeSkillName(ability.name)}` === identity
+        ))
+        if (existingIndex >= 0) {
+          abilities[existingIndex] = { ...abilities[existingIndex], ...imported }
+          return
+        }
+        const id = typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `ability-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`
+        abilities.push({ id, ...imported })
+      })
+      const snapshot = calculateCharacterStatSnapshot(prev.attributes, prev.info, prev.stats, prev.skills, abilities)
+      return {
+        ...prev,
+        abilities,
+        stats: {
+          ...prev.stats,
+          paExtra: Math.min(prev.stats.paExtra, snapshot.paExtraMax),
+          peTemporary: Math.min(prev.stats.peTemporary, snapshot.peTemporaryMax),
+          focusCurrent: Math.min(prev.stats.focusCurrent, snapshot.focusMaximum),
+        },
+      }
+    })
+  }
+
   function removeAbility(id: string) {
     updateCharacter((prev) => {
       const abilities = prev.abilities.filter((ability) => ability.id !== id)
@@ -398,9 +430,11 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
           )}
           {activeTab === "abilities" && (
             <CharacterAbilities
+              characterName={character.name}
               abilities={character.abilities}
               stats={character.stats}
               onAddAbility={addAbility}
+              onImportAbilities={importAbilities}
               onAbilityChange={setAbility}
               onRemoveAbility={removeAbility}
               onApplyCost={applyAbilityCost}
@@ -419,3 +453,4 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     </div>
   )
 }
+

@@ -124,4 +124,3 @@ export function RichTextEditor({ label, value, onChange, maxLength = 1000, class
     </div>
   )
 }
-

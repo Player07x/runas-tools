@@ -423,4 +423,3 @@ export function CharacterAbilities({ characterName, abilities, stats, onAddAbili
     </section>
   )
 }
-

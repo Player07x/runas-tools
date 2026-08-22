@@ -99,7 +99,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const saveCurrentToGallery = useCallback(() => {
-    if (galleryEntries.length >= 10) return false
+    if (galleryEntries.length >= 20) return false
     const id = crypto.randomUUID()
     setStoredGalleryEntries((current) => [...current, { id, character, updatedAt: Date.now() }])
     setActiveGalleryId(id)
@@ -107,7 +107,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [character, galleryEntries.length])
 
   const createGalleryCharacter = useCallback(() => {
-    if (galleryEntries.length >= 10) return false
+    if (galleryEntries.length >= 20) return false
     const id = crypto.randomUUID()
     const next = createEmptyCharacter()
     setStoredGalleryEntries((current) => [
@@ -120,7 +120,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [activeGalleryId, character, galleryEntries.length])
 
   const importGalleryCharacter = useCallback((imported: Character) => {
-    if (galleryEntries.length >= 10) return false
+    if (galleryEntries.length >= 20) return false
     const id = crypto.randomUUID()
     setStoredGalleryEntries((current) => [...current, { id, character: imported, updatedAt: Date.now() }])
     return true

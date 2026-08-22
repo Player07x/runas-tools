@@ -32,12 +32,12 @@ export function CharacterGallery() {
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const previewEntry = useMemo(() => galleryEntries.find((entry) => entry.id === previewId) ?? null, [galleryEntries, previewId])
-  const isFull = galleryEntries.length >= 10
+  const isFull = galleryEntries.length >= 20
   const currentIsSaved = Boolean(activeGalleryId && galleryEntries.some((entry) => entry.id === activeGalleryId))
 
   function createCharacter() {
     if (!createGalleryCharacter()) {
-      setMessage("A galeria já atingiu o limite de 10 fichas.")
+      setMessage("A galeria já atingiu o limite de 20 fichas.")
       return
     }
     setMessage("Nova ficha criada e marcada como ativa.")
@@ -46,7 +46,7 @@ export function CharacterGallery() {
 
   function saveCurrent() {
     if (!saveCurrentToGallery()) {
-      setMessage("A galeria já atingiu o limite de 10 fichas.")
+      setMessage("A galeria já atingiu o limite de 20 fichas.")
       return
     }
     setMessage("Ficha atual salva na galeria.")
@@ -58,7 +58,7 @@ export function CharacterGallery() {
     try {
       const imported = parseCharacterFile(await file.text())
       if (!importGalleryCharacter(imported)) {
-        setMessage("A galeria já atingiu o limite de 10 fichas.")
+        setMessage("A galeria já atingiu o limite de 20 fichas.")
         return
       }
       setMessage(`“${imported.name || "Personagem sem nome"}” foi importado.`)
@@ -80,7 +80,7 @@ export function CharacterGallery() {
   return <div className="min-w-0 max-w-full overflow-x-clip">
     <section className="min-w-0 max-w-full rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div><p className="text-sm font-semibold text-muted-foreground">{galleryEntries.length} de 10 fichas salvas</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">A ficha ativa é sincronizada automaticamente sempre que você a altera.</p></div>
+        <div><p className="text-sm font-semibold text-muted-foreground">{galleryEntries.length} de 20 fichas salvas</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">A ficha ativa é sincronizada automaticamente sempre que você a altera.</p></div>
         <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:justify-end">
           {!currentIsSaved && <Button type="button" variant="secondary" onClick={saveCurrent} disabled={isFull}><UserCheck /> Salvar ficha atual</Button>}
           <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isFull}><Upload /> Importar ficha</Button>

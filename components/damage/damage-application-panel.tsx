@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import { AlertTriangle, ClipboardCheck, RotateCcw, Sparkles } from "lucide-react"
+import { AlertTriangle, ClipboardCheck, Eraser, RotateCcw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NumberInput } from "@/components/ui/number-input"
 import { SegmentedToggle } from "@/components/ui/segmented-toggle"
@@ -192,6 +192,36 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     setApplyMessage(null)
   }
 
+  function clearTargetFields() {
+    setUsingOwnSheet(false)
+    setTargetName("")
+    setDamageInput("")
+    setPv(0)
+    setPvMaximum(null)
+    setPa(0)
+    setPe(0)
+    setPeTemporary(0)
+    setPaExtra(0)
+    setLifeHasElement(false)
+    setLifeElement({ ...emptyElement })
+    setAuraElement({ ...emptyElement })
+    setExtraAuraElement({ ...emptyElement })
+    setLifeMultiplier("1x")
+    setAuraMultiplier("1x")
+    setExtraAuraMultiplier("1x")
+    setAuraBreak("1/2")
+    setExtraAuraBreak("1x")
+    setRdf(0)
+    setRdm(0)
+    setMtEnabled(false)
+    setMtValue(0)
+    setSimulationSteps([])
+    setResultText("")
+    setSimulationError(null)
+    setApplyMessage(null)
+    setConfirmation(null)
+  }
+
   function useRolledDamage() {
     if (!rolledResult) return
     setDamageInput(`${Math.max(0, rolledResult.totalBeforeReduction)} ${rolledResult.damageTypeName}`)
@@ -309,9 +339,14 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
                     {usingOwnSheet ? "Vinculado à ficha atual. Os valores abaixo foram importados." : "Alvo externo: somente a simulação está disponível."}
                   </p>
                 </div>
-                <Button type="button" variant="outline" onClick={loadOwnSheet} disabled={!isReady}>
-                  <RotateCcw /> Usar minha ficha
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" onClick={loadOwnSheet} disabled={!isReady}>
+                    <RotateCcw /> Usar minha ficha
+                  </Button>
+                  <Button type="button" variant="outline" onClick={clearTargetFields}>
+                    <Eraser /> Limpar
+                  </Button>
+                </div>
               </div>
             </div>
 

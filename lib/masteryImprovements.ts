@@ -9,8 +9,8 @@ export const masteryImprovementOptions: ReadonlyArray<{
   description: string
   color: string
 }> = [
-  { key: "aura", name: "Aura", cost: 2, description: "+1 no PA máximo", color: "text-blue-700 dark:text-blue-300" },
-  { key: "life", name: "Vida", cost: 3, description: "+1 no PV máximo", color: "text-red-700 dark:text-red-300" },
+  { key: "life", name: "Vida", cost: 2, description: "+1 no PV máximo", color: "text-red-700 dark:text-red-300" },
+  { key: "aura", name: "Aura", cost: 3, description: "+1 no PA máximo", color: "text-blue-700 dark:text-blue-300" },
   { key: "energy", name: "Energia", cost: 4, description: "+1 no PE máximo", color: "text-cyan-700 dark:text-cyan-200" },
   { key: "determination", name: "Determinação", cost: 4, description: "+1 na Determinação máxima", color: "text-amber-700 dark:text-amber-200" },
   { key: "casualty", name: "Casualidade", cost: 4, description: "+1 na Casualidade máxima", color: "text-fuchsia-700 dark:text-fuchsia-200" },

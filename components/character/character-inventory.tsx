@@ -332,12 +332,12 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
         </div>
       )}
 
-      <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-        <div><h3 className="font-bold text-foreground">Todos os itens</h3><p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground"><strong>Equipado</strong> está sendo usado agora; <strong>Armazenado</strong> está nos bolsos ou mochila; <strong>Ausente</strong> está em outro lugar, mas continua sob posse ou registrado pelo jogador.</p></div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <Button type="button" variant="outline" onClick={() => exportInventoryList(items, characterName, spells, bonds, abilities, skills)} disabled={items.length === 0}><Download /> Exportar todos</Button>
-          <Button type="button" variant="outline" onClick={openImport}><Upload /> Importar lista</Button>
-          <Button type="button" onClick={addItem}><Plus /> Adicionar item</Button>
+      <div className="mt-5 flex flex-col gap-4 border-t border-border pt-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 lg:flex-1"><h3 className="font-bold text-foreground">Todos os itens</h3><p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground"><strong>Equipado</strong> está sendo usado agora; <strong>Armazenado</strong> está nos bolsos ou mochila; <strong>Ausente</strong> está em outro lugar, mas continua sob posse ou registrado pelo jogador.</p></div>
+        <div className="grid w-full grid-cols-1 gap-2 min-[520px]:grid-cols-3 lg:w-auto lg:shrink-0">
+          <Button type="button" variant="outline" className="w-full" onClick={() => exportInventoryList(items, characterName, spells, bonds, abilities, skills)} disabled={items.length === 0}><Download /> Exportar todos</Button>
+          <Button type="button" variant="outline" className="w-full" onClick={openImport}><Upload /> Importar lista</Button>
+          <Button type="button" className="w-full" onClick={addItem}><Plus /> Adicionar item</Button>
         </div>
       </div>
 

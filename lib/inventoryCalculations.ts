@@ -42,10 +42,11 @@ export function parseScaleMultiplier(value: string): number {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1
 }
 
-export function calculateItemRealWeight(item: Pick<CharacterInventoryItem, "baseWeight" | "applyScaleWeight">, scaleMultiplier: string): number {
+export function calculateItemRealWeight(item: Pick<CharacterInventoryItem, "baseWeight" | "quantity" | "applyScaleWeight">, scaleMultiplier: string): number {
   const baseWeight = Math.max(0, Number.isFinite(item.baseWeight) ? item.baseWeight : 0)
+  const quantity = Math.max(1, Number.isFinite(item.quantity) ? Math.trunc(item.quantity) : 1)
   const multiplier = item.applyScaleWeight ? parseScaleMultiplier(scaleMultiplier) : 1
-  return Number((baseWeight * multiplier).toFixed(3))
+  return Number((baseWeight * multiplier * quantity).toFixed(3))
 }
 
 export function calculateInventoryLoad(items: CharacterInventoryItem[], scaleMultiplier: string): number {

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { Character, CharacterGalleryEntry } from "@/types/character"
 import { createEmptyCharacter } from "@/lib/characterStorage"
 import { loadCharacterDatabase, loadCharacterGalleryDatabase, saveCharacterDatabase, saveCharacterGalleryDatabase } from "@/lib/characterDatabase"
@@ -73,9 +73,14 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(saveTimeout)
   }, [character, isReady])
 
-  const galleryEntries = useMemo(() => storedGalleryEntries.map((entry) => entry.id === activeGalleryId
-    ? { ...entry, character, updatedAt: Date.now() }
-    : entry), [activeGalleryId, character, storedGalleryEntries])
+  useEffect(() => {
+    if (!isReady || !activeGalleryId) return
+    setStoredGalleryEntries((current) => current.map((entry) => entry.id === activeGalleryId
+      ? { ...entry, character, updatedAt: Date.now() }
+      : entry))
+  }, [activeGalleryId, character, isReady])
+
+  const galleryEntries = storedGalleryEntries
 
   useEffect(() => {
     if (!isReady) return

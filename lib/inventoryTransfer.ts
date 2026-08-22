@@ -60,11 +60,18 @@ export function exportInventoryList(
   const file: InventoryListFile = {
     kind: INVENTORY_LIST_KIND,
     version: INVENTORY_LIST_VERSION,
-    items: items.map(({ id: _id, enchantmentSpellId, bondId, bondAbilityId, skillId, ...item }) => {
+    items: items.map(({ id, enchantmentSpellId, bondId, bondAbilityId, skillId, ...item }) => {
+      void id
       const enchantment = spells.find((spell) => spell.id === enchantmentSpellId && spell.magicType === "enchantment")
+      const exportedEnchantment = enchantment
+        ? (({ id: spellId, ...spell }) => {
+            void spellId
+            return spell
+          })(enchantment)
+        : null
       return {
         ...item,
-        enchantment: enchantment ? (({ id: _spellId, ...spell }) => spell)(enchantment) : null,
+        enchantment: exportedEnchantment,
         bondName: bonds.find((bond) => bond.id === bondId)?.name ?? "",
         bondAbilityName: abilities.find((ability) => ability.id === bondAbilityId)?.name ?? "",
         skillName: skills.find((skill) => skill.id === skillId)?.name ?? "",
@@ -111,6 +118,8 @@ export function parseInventoryListFile(text: string): ImportedInventoryItem[] {
     if (!itemTypes.has(value.type as InventoryItemType)) throw new Error(`O item “${name}” possui um tipo inválido.`)
     if (!Number.isInteger(value.affinity) || Number(value.affinity) < 0 || Number(value.affinity) > 4) throw new Error(`O item “${name}” possui afinidade inválida.`)
     if (typeof value.applyScaleWeight !== "boolean") throw new Error(`O item “${name}” possui aplicação de peso inválida.`)
+    const quantity = value.quantity === undefined ? 1 : nonNegativeNumber(value.quantity, "quantidade", name)
+    if (!Number.isInteger(quantity) || quantity < 1) throw new Error(`O item “${name}” possui quantidade inválida.`)
     const prMaximum = optionalInteger(value.prMaximum, "PR máximo", name)
     const parsedPrCurrent = optionalInteger(value.prCurrent, "PR atual", name)
     const prCurrent = parsedPrCurrent === null ? null : Math.min(prMaximum ?? Number.POSITIVE_INFINITY, parsedPrCurrent)
@@ -125,6 +134,7 @@ export function parseInventoryListFile(text: string): ImportedInventoryItem[] {
       affinity: Number(value.affinity) as CharacterInventoryItem["affinity"],
       bondPoints: Math.trunc(nonNegativeNumber(value.bondPoints, "pontos de vínculo", name)),
       baseWeight: nonNegativeNumber(value.baseWeight, "peso base", name),
+      quantity,
       applyScaleWeight: value.applyScaleWeight,
       damage: textField(value.damage, 160, "dano", position).trim(),
       rdf: Math.trunc(nonNegativeNumber(value.rdf, "RDF", name)),

@@ -123,6 +123,7 @@ export interface CharacterInventoryItem {
   affinity: 0 | 1 | 2 | 3 | 4
   bondPoints: number
   baseWeight: number
+  quantity: number
   applyScaleWeight: boolean
   damage: string
   rdf: number
@@ -213,4 +214,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 16
+export const CHARACTER_VERSION = 17

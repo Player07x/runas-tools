@@ -430,6 +430,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
           affinity: item.affinity,
           bondPoints: item.bondPoints,
           baseWeight: item.baseWeight,
+          quantity: item.quantity,
           applyScaleWeight: item.applyScaleWeight,
           damage: item.damage,
           rdf: item.rdf,

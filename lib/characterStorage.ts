@@ -322,6 +322,7 @@ function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined):
       affinity,
       bondPoints: Math.max(0, integer(item.bondPoints)),
       baseWeight: nonNegativeNumber(item.baseWeight),
+      quantity: Math.max(1, integer(item.quantity, 1)),
       applyScaleWeight: Boolean(item.applyScaleWeight),
       damage: typeof item.damage === "string" ? item.damage.trim().slice(0, 160) : "",
       rdf: Math.max(0, integer(item.rdf)),

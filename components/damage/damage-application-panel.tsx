@@ -5,7 +5,6 @@ import { createPortal } from "react-dom"
 import { AlertTriangle, ClipboardCheck, RotateCcw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NumberInput } from "@/components/ui/number-input"
-import { SectionCard } from "@/components/ui/section-card"
 import { SegmentedToggle } from "@/components/ui/segmented-toggle"
 import { SelectField } from "@/components/ui/select-field"
 import { TextField } from "@/components/ui/text-field"
@@ -124,7 +123,7 @@ function ElementFields({
 export function DamageApplicationPanel({ rolledResult }: Props) {
   const { character, updateCharacter, isReady } = useCharacter()
   const snapshot = useMemo(
-    () => calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, [...character.abilities, ...character.spells]),
+    () => calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities),
     [character],
   )
   const [usingOwnSheet, setUsingOwnSheet] = useState(true)
@@ -151,6 +150,8 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
   const [extraAuraBreak, setExtraAuraBreak] = useState("1x")
   const [rdf, setRdf] = useState(Math.max(0, character.stats.armorRdf + character.stats.naturalRdf))
   const [rdm, setRdm] = useState(Math.max(0, character.stats.armorRdm + character.stats.naturalRdm))
+  const [mtEnabled, setMtEnabled] = useState(true)
+  const [mtValue, setMtValue] = useState(character.stats.mt)
   const [simulationSteps, setSimulationSteps] = useState<string[]>([])
   const [resultText, setResultText] = useState("")
   const [simulationError, setSimulationError] = useState<string | null>(null)
@@ -182,6 +183,11 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     })
     setRdf(Math.max(0, character.stats.armorRdf + character.stats.naturalRdf))
     setRdm(Math.max(0, character.stats.armorRdm + character.stats.naturalRdm))
+    setMtEnabled(true)
+    setMtValue(character.stats.mt)
+    if (rolledResult) {
+      setDamageInput(`${Math.max(0, rolledResult.totalBeforeReduction)} ${rolledResult.damageTypeName}`)
+    }
     setUsingOwnSheet(true)
     setApplyMessage(null)
   }
@@ -202,6 +208,8 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     }
     const simulation = simulateDamageApplication({
       damage: parsed.value,
+      mtEnabled,
+      mtValue,
       rdf,
       rdm,
       layers: [
@@ -291,7 +299,7 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
 
   return (
     <div>
-        <SectionCard title={`Aplicar dano em ${target}`} description="Simule a passagem do dano pela aura extra, aura atual e vida antes de alterar a ficha.">
+        <section aria-label="Aplicação de dano" className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-5">
             <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -338,9 +346,11 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
               {lifeHasElement && <div className="mt-4"><ElementFields title="Vida" state={lifeElement} multiplier={lifeMultiplier} onStateChange={setLifeElement} onMultiplierChange={setLifeMultiplier} /></div>}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <TextField label="Quebra da Aura Extra" value={extraAuraBreak} onChange={setExtraAuraBreak} placeholder="1x" />
               <TextField label="Quebra da Aura" value={auraBreak} onChange={setAuraBreak} placeholder="1/2" />
+              <SegmentedToggle label="Aplicar MT?" value={mtEnabled ? "yes" : "no"} onChange={(value) => setMtEnabled(value === "yes")} options={[{ value: "yes", label: "Sim" }, { value: "no", label: "Não" }]} />
+              <NumberInput label="MT do Alvo" value={mtValue} onChange={(value) => setMtValue(Math.trunc(value))} />
               <NumberInput label="RDF do Alvo" value={rdf} min={0} onChange={(value) => setRdf(Math.trunc(value))} />
               <NumberInput label="RDM do Alvo" value={rdm} min={0} onChange={(value) => setRdm(Math.trunc(value))} />
             </div>
@@ -383,7 +393,7 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
               </div>
             )}
           </div>
-        </SectionCard>
+        </section>
 
       {confirmation && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-3 backdrop-blur-[2px]">

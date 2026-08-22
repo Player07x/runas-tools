@@ -21,11 +21,11 @@ export function AppHeader() {
   return (
     <>
       {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-border/80 bg-background/88 shadow-[0_1px_0_rgba(20,25,40,0.02)] backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-background/95 shadow-[0_1px_0_rgba(20,25,40,0.02)] sm:bg-background/88 sm:backdrop-blur-xl">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" className="group flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
             <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-black shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition-transform group-hover:-rotate-3">
-              <Image src={logo} alt="Logo Runas Tools" priority className="size-full object-cover" />
+              <Image src={logo} alt="Logo Runas Tools" className="size-full object-cover" />
             </span>
             <span className="text-sm font-bold tracking-tight text-foreground sm:text-base">Runas Tools</span>
           </Link>
@@ -78,7 +78,7 @@ export function AppHeader() {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-3 bottom-3 z-30 rounded-2xl border border-border bg-card/95 p-1.5 shadow-[0_14px_40px_rgba(24,29,45,0.2)] backdrop-blur-xl sm:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 rounded-2xl border border-border bg-card p-1.5 shadow-[0_10px_24px_rgba(24,29,45,0.16)] sm:hidden">
         <div className="mx-auto flex max-w-md items-stretch justify-around">
           {navItems.map((item) => {
             const active = isActive(pathname, item.href)

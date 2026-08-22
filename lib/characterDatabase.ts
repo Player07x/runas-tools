@@ -1,10 +1,11 @@
-import type { Character } from "@/types/character"
+import type { Character, CharacterGallery } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { loadCharacter, normalizeCharacter, saveCharacter } from "@/lib/characterStorage"
 
 const DATABASE_NAME = "runas-tools"
 const DATABASE_VERSION = 1
 const SECTION_STORE = "character-sections"
+const GALLERY_KEY = "character-gallery"
 
 interface StoredSection {
   key: string
@@ -51,6 +52,7 @@ function characterSections(character: Character): StoredSection[] {
     { key: "bonds", value: character.bonds },
     { key: "abilities", value: character.abilities },
     { key: "spells", value: character.spells },
+    { key: "inventory", value: character.inventory },
     { key: "notes", value: character.notes },
   ]
 }
@@ -74,6 +76,7 @@ async function readIndexedCharacter(): Promise<Character | null> {
       bonds: sections.get("bonds") as Character["bonds"],
       abilities: sections.get("abilities") as Character["abilities"],
       spells: sections.get("spells") as Character["spells"],
+      inventory: sections.get("inventory") as Character["inventory"],
       notes: sections.get("notes") as Character["notes"],
     })
   } finally {
@@ -115,5 +118,45 @@ export async function saveCharacterDatabase(character: Character): Promise<void>
     await writeIndexedCharacter(character)
   } catch {
     saveCharacter(character)
+  }
+}
+
+export async function loadCharacterGalleryDatabase(): Promise<CharacterGallery> {
+  try {
+    const database = await openDatabase()
+    try {
+      const transaction = database.transaction(SECTION_STORE, "readonly")
+      const record = await requestResult(transaction.objectStore(SECTION_STORE).get(GALLERY_KEY)) as StoredSection | undefined
+      const value = record?.value as Partial<CharacterGallery> | undefined
+      const entries = Array.isArray(value?.entries)
+        ? value.entries.slice(0, 10).flatMap((entry) => {
+            if (!entry || typeof entry !== "object" || typeof entry.id !== "string" || !entry.character) return []
+            return [{ id: entry.id, character: normalizeCharacter(entry.character), updatedAt: Number(entry.updatedAt) || Date.now() }]
+          })
+        : []
+      const activeId = typeof value?.activeId === "string" && entries.some((entry) => entry.id === value.activeId)
+        ? value.activeId
+        : null
+      return { activeId, entries }
+    } finally {
+      database.close()
+    }
+  } catch {
+    return { activeId: null, entries: [] }
+  }
+}
+
+export async function saveCharacterGalleryDatabase(gallery: CharacterGallery): Promise<void> {
+  try {
+    const database = await openDatabase()
+    try {
+      const transaction = database.transaction(SECTION_STORE, "readwrite")
+      transaction.objectStore(SECTION_STORE).put({ key: GALLERY_KEY, value: gallery } satisfies StoredSection)
+      await transactionComplete(transaction)
+    } finally {
+      database.close()
+    }
+  } catch {
+    // Mantém a galeria na sessão quando o IndexedDB estiver indisponível.
   }
 }

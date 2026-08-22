@@ -214,10 +214,10 @@ export function SkillTestCalculator() {
   const [activeRoll, setActiveRoll] = useState<SkillRoll | null>(null)
   const [resultMode, setResultMode] = useState<"quick" | "full" | null>(null)
   const handledRollToken = useRef<string | null>(null)
-  const { attributes, info, skills, stats, bonds, abilities, spells } = character
+  const { attributes, info, skills, stats, bonds, abilities } = character
   const snapshot = useMemo(
-    () => calculateCharacterStatSnapshot(attributes, info, stats, skills, [...abilities, ...spells]),
-    [abilities, attributes, info, skills, spells, stats],
+    () => calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities),
+    [abilities, attributes, info, skills, stats],
   )
   const requestedSkillId = searchParams.get("skill")
   const requestedBondId = searchParams.get("bond")

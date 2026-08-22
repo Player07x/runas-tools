@@ -304,11 +304,10 @@ export function CharacterAbilities({ characterName, abilities, stats, onAddAbili
                       return (
                         <article key={`${ability.category}-${ability.name}-${index}`} className={`flex items-center gap-3 rounded-[18px] border p-3 transition ${selected ? "border-primary/45 bg-primary/5" : "border-border bg-background/45"}`}>
                           <input type="checkbox" checked={selected} onChange={() => toggleImportedAbility(index)} aria-label={`Selecionar ${ability.name}`} className="size-5 shrink-0 accent-primary" />
-                          <button type="button" onClick={() => toggleImportedAbility(index)} className="min-w-0 flex-1 text-left">
-                            <span className="block truncate text-sm font-semibold text-foreground">{ability.name}</span>
+                          <div className="min-w-0 flex-1 text-left">
+                            <button type="button" onClick={() => setPreviewAbility(ability)} className="block max-w-full truncate text-sm font-semibold text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{ability.name}</button>
                             <span className="block truncate text-xs text-muted-foreground">{ability.category || "Sem categoria"} · {plainText(ability.description) || "Sem descrição"}</span>
-                          </button>
-                          <button type="button" onClick={() => setPreviewAbility(ability)} aria-label={`Visualizar ${ability.name}`} className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-input bg-background px-3 text-xs font-semibold text-muted-foreground transition hover:text-foreground"><Eye className="size-4" /><span className="hidden sm:inline">Visualizar</span></button>
+                          </div>
                         </article>
                       )
                     })}
@@ -363,8 +362,8 @@ export function CharacterAbilities({ characterName, abilities, stats, onAddAbili
       )}
 
       <div className="space-y-2 pt-3">
-        <div className="hidden grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.8fr)_2.75rem_2.75rem_2.75rem] gap-2 px-3 text-center text-[0.62rem] uppercase tracking-wide text-muted-foreground md:grid">
-          <span>Categoria</span><span>Nome</span><span>Descrição</span><span>Custo</span><span>Ver</span><span />
+        <div className="hidden grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.8fr)_2.75rem_2.75rem] gap-2 px-3 text-center text-[0.62rem] uppercase tracking-wide text-muted-foreground md:grid">
+          <span>Categoria</span><span>Nome</span><span>Descrição</span><span>Custo</span><span />
         </div>
         {visibleAbilities.length === 0 && (
           <p className="rounded-[18px] border border-dashed border-border bg-background/35 px-4 py-10 text-center text-sm text-muted-foreground">
@@ -374,15 +373,14 @@ export function CharacterAbilities({ characterName, abilities, stats, onAddAbili
         {visibleAbilities.map((ability) => {
           const canApplyCost = ability.costType !== "none" && ability.costType !== "other"
           return (
-            <article key={ability.id} className="virtualized-list-item grid grid-cols-[minmax(0,1fr)_auto_auto_auto] gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.8fr)_2.75rem_2.75rem_2.75rem] md:items-center">
+            <article key={ability.id} className="virtualized-list-item grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[18px] border border-border bg-background/55 p-2 md:grid-cols-[minmax(6rem,.75fr)_minmax(7rem,1fr)_minmax(10rem,1.8fr)_2.75rem_2.75rem] md:items-center">
               <span className="truncate text-xs font-semibold text-muted-foreground md:px-2">{ability.category || "Sem categoria"}</span>
-              <strong className="col-start-1 truncate text-sm text-foreground md:col-start-auto md:px-2">{ability.name}</strong>
-              <p className="col-span-4 col-start-1 truncate text-xs text-muted-foreground md:col-span-1 md:col-start-auto md:px-2">{plainText(ability.description) || "Sem descrição"}</p>
+              <button type="button" onClick={() => { setEditingAbility({ ...ability }); setIsNewAbility(false) }} className="col-start-1 max-w-full truncate text-left text-sm font-bold text-foreground underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:col-start-auto md:px-2">{ability.name}</button>
+              <p className="col-span-3 col-start-1 truncate text-xs text-muted-foreground md:col-span-1 md:col-start-auto md:px-2">{plainText(ability.description) || "Sem descrição"}</p>
               {canApplyCost
                 ? <button type="button" onClick={() => beginApplyCost(ability)} title={`Aplicar custo: ${costLabel(ability.costType)}`} aria-label={`Aplicar custo de ${ability.name}`} className="col-start-2 row-start-1 inline-flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110 md:col-start-auto md:row-start-auto"><Bolt className="size-4" /></button>
                 : <span className="hidden md:block" />}
-              <button type="button" onClick={() => { setEditingAbility({ ...ability }); setIsNewAbility(false) }} aria-label={`Visualizar e editar ${ability.name}`} className="col-start-3 row-start-1 inline-flex size-10 items-center justify-center rounded-xl border border-input bg-background text-muted-foreground transition hover:text-foreground md:col-start-auto md:row-start-auto"><Eye className="size-4" /></button>
-              <button type="button" onClick={() => onRemoveAbility(ability.id)} aria-label={`Remover ${ability.name}`} className="col-start-4 row-start-1 inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive md:col-start-auto md:row-start-auto"><Trash2 className="size-4" /></button>
+              <button type="button" onClick={() => onRemoveAbility(ability.id)} aria-label={`Remover ${ability.name}`} className="col-start-3 row-start-1 inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive md:col-start-auto md:row-start-auto"><Trash2 className="size-4" /></button>
             </article>
           )
         })}

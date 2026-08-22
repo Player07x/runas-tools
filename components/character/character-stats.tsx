@@ -484,36 +484,6 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
               <ResourceRow label="Casualidade" current={stats.casualty} maximum={snapshot.casualtyMax} bonus={stats.casualtyBonus} onCurrentChange={(casualty) => onStatsChange({ casualty })} onBonusChange={(casualtyBonus) => onStatsChange({ casualtyBonus })} colorClass="text-[#93447d] dark:text-[#eca9ea]" />
             </div>
 
-            <div className="rounded-[20px] border border-border bg-background/55 p-3">
-              <div className="overflow-hidden rounded-[16px] border border-border">
-                <span className="block px-3 py-2 text-sm font-semibold text-muted-foreground">Carga (kg)</span>
-                <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
-                  <label className="flex min-w-0 flex-col items-center px-1 py-2">
-                    <span className="text-[0.62rem] text-muted-foreground">Atual</span>
-                    <NumericInput label="Carga atual" value={stats.currentLoad} min={0} onChange={(currentLoad) => onStatsChange({ currentLoad })} className="w-full font-semibold" />
-                  </label>
-                  <label className="flex min-w-0 flex-col items-center bg-muted/35 px-1 py-2">
-                    <span className="text-[0.62rem] text-muted-foreground">Base</span>
-                    <NumericInput label="Carga base" value={snapshot.loadCapacity} readOnly className="w-full text-muted-foreground" />
-                  </label>
-                  <label className="flex min-w-0 flex-col items-center px-1 py-2">
-                    <span className="text-[0.62rem] text-muted-foreground">Mod.</span>
-                    <NumericInput label="Modificador de carga" value={stats.loadBonus} onChange={(loadBonus) => onStatsChange({ loadBonus })} className="w-full" />
-                  </label>
-                </div>
-              </div>
-              {snapshot.overweightLevel > 0 && (
-                <div className="mt-3 px-2 text-sm italic leading-relaxed">
-                  <p className="font-semibold text-yellow-foreground">
-                    Sobrepeso {snapshot.overweightLevel}: -{snapshot.physicalPenalty} Físico, -{snapshot.movementPenalty} Desloc.
-                  </p>
-                  {snapshot.overweightWarnings.length > 0 && (
-                    <p className="font-bold text-destructive">{snapshot.overweightWarnings.join(", ")}</p>
-                  )}
-                </div>
-              )}
-            </div>
-
           </div>
 
           <RichTextEditor label="Efeitos" value={stats.effects} onChange={(effects) => onStatsChange({ effects })} maxLength={1000} />

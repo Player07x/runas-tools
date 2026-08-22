@@ -7,6 +7,7 @@ import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { calculateAttributeTest, calculateSkillLevel } from "@/lib/skillCalculations"
 import { calculateBondQuality, calculateBondTest, formatSigned } from "@/lib/bondCalculations"
 import { getAttributeDef } from "@/data/attributes"
+import { calculateItemRealWeight, inventoryTypeLabel, inventoryUsageLabel, itemRarity } from "@/lib/inventoryCalculations"
 
 function downloadBlob(content: string, filename: string, mime: string): void {
   if (typeof window === "undefined") return
@@ -51,8 +52,8 @@ export function exportCharacterJSON(character: Character): void {
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
 export function characterToMarkdown(character: Character): string {
-  const { info, attributes, stats, skills, bonds, abilities, spells, notes } = character
-  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, [...abilities, ...spells])
+  const { info, attributes, stats, skills, bonds, abilities, spells, inventory, notes } = character
+  const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities)
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
 
@@ -194,10 +195,24 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- Área: ${spell.area || "Não informada"}`)
     lines.push(`- Duração: ${spell.duration || "Não informada"}`)
     lines.push(`- Teste de conjuração: ${spell.castingSkill || "Nenhum"}`)
-    lines.push(`- Modificadores permanentes: ${spell.permanentModifiers || "Nenhum"}`)
     lines.push(`- Custo: ${cost}`)
     const description = richTextToPlainText(spell.description)
     if (description) lines.push("", description)
+    lines.push("")
+  }
+
+  lines.push("## Inventário")
+  lines.push("")
+  for (const item of inventory) {
+    lines.push(`### ${item.name}`)
+    lines.push(`- Uso: ${inventoryUsageLabel(item.usage)}`)
+    lines.push(`- Tipo: ${inventoryTypeLabel(item.type)}`)
+    lines.push(`- Afinidade: ${item.affinity}`)
+    lines.push(`- Pontos de vínculo: ${item.bondPoints}; raridade ${itemRarity(item.bondPoints)}`)
+    lines.push(`- Peso real: ${calculateItemRealWeight(item, info.scaleMultiplier)} kg`)
+    if (item.damage) lines.push(`- Dano: ${item.damage}`)
+    if (item.rdf || item.rdm) lines.push(`- RDF: ${item.rdf}; RDM: ${item.rdm}`)
+    if (item.description) lines.push("", item.description)
     lines.push("")
   }
 

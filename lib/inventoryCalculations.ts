@@ -1,0 +1,77 @@
+import type { CharacterInventoryItem, InventoryItemType, InventoryUsage } from "@/types/character"
+import { calculateLegacyRarity } from "@/lib/characterCalculations"
+
+export const inventoryUsageOptions: { value: InventoryUsage; label: string }[] = [
+  { value: "equipped", label: "Equipado" },
+  { value: "stored", label: "Armazenado" },
+  { value: "absent", label: "Ausente" },
+]
+
+export const inventoryTypeOptions: { value: InventoryItemType; label: string }[] = [
+  { value: "weapon", label: "Arma" },
+  { value: "armor", label: "Armadura" },
+  { value: "shield", label: "Escudo" },
+  { value: "artifact", label: "Artefato" },
+  { value: "material", label: "Material" },
+  { value: "consumable", label: "Consumível" },
+  { value: "tool", label: "Ferramenta" },
+  { value: "utility", label: "Utilitário" },
+  { value: "accessory", label: "Acessório" },
+  { value: "currency", label: "Moeda" },
+  { value: "other", label: "Outro" },
+]
+
+export const itemAffinityOptions = [
+  { value: 0, label: "Ordinário (0)" },
+  { value: 1, label: "Notável (1)" },
+  { value: 2, label: "Impressionante (2)" },
+  { value: 3, label: "Excepcional (3)" },
+  { value: 4, label: "Extraordinário (4)" },
+] as const
+
+export function inventoryUsageLabel(value: InventoryUsage): string {
+  return inventoryUsageOptions.find((option) => option.value === value)?.label ?? "Armazenado"
+}
+
+export function inventoryTypeLabel(value: InventoryItemType): string {
+  return inventoryTypeOptions.find((option) => option.value === value)?.label ?? "Outro"
+}
+
+export function parseScaleMultiplier(value: string): number {
+  const parsed = Number(value.trim().replace(/x/gi, "").replace(",", "."))
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 1
+}
+
+export function calculateItemRealWeight(item: Pick<CharacterInventoryItem, "baseWeight" | "applyScaleWeight">, scaleMultiplier: string): number {
+  const baseWeight = Math.max(0, Number.isFinite(item.baseWeight) ? item.baseWeight : 0)
+  const multiplier = item.applyScaleWeight ? parseScaleMultiplier(scaleMultiplier) : 1
+  return Number((baseWeight * multiplier).toFixed(3))
+}
+
+export function calculateInventoryLoad(items: CharacterInventoryItem[], scaleMultiplier: string): number {
+  const total = items.reduce((sum, item) => (
+    item.usage === "absent" ? sum : sum + calculateItemRealWeight(item, scaleMultiplier)
+  ), 0)
+  return Number(total.toFixed(3))
+}
+
+export function calculateEquippedDefense(items: CharacterInventoryItem[]): { rdf: number; rdm: number } {
+  return items.reduce((total, item) => {
+    if (item.usage !== "equipped" || (item.type !== "armor" && item.type !== "shield")) return total
+    total.rdf += Math.max(0, Math.trunc(item.rdf))
+    total.rdm += Math.max(0, Math.trunc(item.rdm))
+    return total
+  }, { rdf: 0, rdm: 0 })
+}
+
+export function itemRarity(points: number): string {
+  return calculateLegacyRarity(String(Math.max(0, Math.trunc(points))))
+}
+
+export function isBondAbilityCategory(category: string): boolean {
+  return category.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR") === "vinculo"
+}
+
+export function formatWeight(value: number): string {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value)
+}

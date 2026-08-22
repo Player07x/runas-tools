@@ -7,7 +7,10 @@ export default function DamagePage() {
       title="Calculadora de Dano"
       description="Monte o dano, aplique modificadores e reduções, e role os dados."
     >
-      <DamageCalculator />
+      <Suspense fallback={<div className="h-72 animate-pulse rounded-[24px] border border-border bg-card" />}>
+        <DamageCalculator />
+      </Suspense>
     </PageContainer>
   )
 }
+import { Suspense } from "react"

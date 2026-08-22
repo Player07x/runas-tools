@@ -1,5 +1,6 @@
 import type { DamageBreakdownItem, DamageConfig, DamageResult } from "@/types/damage"
 import { getDamageType } from "@/data/damageTypes"
+import { getMtDamageMultiplier } from "@/lib/damageMt"
 
 /** Rola N dados de 6 faces no navegador. */
 export function rollDice(numDice: number): number[] {
@@ -87,11 +88,7 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
   const isPhysical = category === "physical"
   const reduction = category === "special" ? 0 : isPhysical ? config.rdf : config.rdm
 
-  const mtMultiplier = config.mtEnabled
-    ? config.mtValue === 1
-      ? 1.5
-      : config.mtValue || 1
-    : 1
+  const mtMultiplier = config.mtEnabled ? getMtDamageMultiplier(config.mtValue) : 1
   const otherMultiplier = normalizeMultiplier(config.otherMultiplier)
 
   const attr = config.attributeKey !== "none" ? attributeValue || 0 : 0

@@ -1,4 +1,4 @@
-const CACHE_NAME = "runas-tools-runtime-v1"
+const CACHE_NAME = "runas-tools-runtime-v2"
 const MAX_CACHE_ENTRIES = 80
 const BASE_URL = new URL("./", self.location.href)
 const OFFLINE_URL = new URL("./", BASE_URL).href
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./",
   "./calculadora-dano/",
   "./calculadora-testes/",
+  "./galeria-personagens/",
   "./manifest.webmanifest",
   "./icon.png",
 ].map((path) => new URL(path, BASE_URL).href)

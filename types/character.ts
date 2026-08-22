@@ -84,7 +84,7 @@ export interface CharacterAbility {
 export type SpellMagicType = "aura" | "quick" | "spell" | "ritual" | "enchantment"
 export type SpellRangeType = "touch" | "personal" | "projectile" | "targets" | "area"
 
-export interface CharacterSpell extends CharacterAbility {
+export interface CharacterSpell extends Omit<CharacterAbility, "permanentModifiers"> {
   magicType: SpellMagicType
   rangeType: SpellRangeType
   rangeText: string
@@ -99,6 +99,39 @@ export interface CharacterNote {
   name: string
   description: string
   date: string
+}
+
+export type InventoryUsage = "equipped" | "stored" | "absent"
+export type InventoryItemType =
+  | "weapon"
+  | "armor"
+  | "shield"
+  | "artifact"
+  | "material"
+  | "consumable"
+  | "tool"
+  | "utility"
+  | "accessory"
+  | "currency"
+  | "other"
+
+export interface CharacterInventoryItem {
+  id: string
+  usage: InventoryUsage
+  name: string
+  type: InventoryItemType
+  affinity: 0 | 1 | 2 | 3 | 4
+  bondPoints: number
+  baseWeight: number
+  applyScaleWeight: boolean
+  damage: string
+  rdf: number
+  rdm: number
+  enchantmentSpellId: string
+  bondId: string
+  bondAbilityId: string
+  skillId: string
+  description: string
 }
 
 export interface CharacterStats {
@@ -145,7 +178,19 @@ export interface Character {
   bonds: CharacterBond[]
   abilities: CharacterAbility[]
   spells: CharacterSpell[]
+  inventory: CharacterInventoryItem[]
   notes: CharacterNote[]
+}
+
+export interface CharacterGalleryEntry {
+  id: string
+  character: Character
+  updatedAt: number
+}
+
+export interface CharacterGallery {
+  activeId: string | null
+  entries: CharacterGalleryEntry[]
 }
 
 /**
@@ -157,4 +202,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 13
+export const CHARACTER_VERSION = 14

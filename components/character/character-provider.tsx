@@ -1,10 +1,10 @@
 "use client"
 
 import type React from "react"
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
-import type { Character } from "@/types/character"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import type { Character, CharacterGalleryEntry } from "@/types/character"
 import { createEmptyCharacter } from "@/lib/characterStorage"
-import { loadCharacterDatabase, saveCharacterDatabase } from "@/lib/characterDatabase"
+import { loadCharacterDatabase, loadCharacterGalleryDatabase, saveCharacterDatabase, saveCharacterGalleryDatabase } from "@/lib/characterDatabase"
 
 type SaveStatus = "idle" | "saving" | "saved"
 
@@ -19,6 +19,13 @@ interface CharacterContextValue {
   saveStatus: SaveStatus
   /** Indica se a ficha já foi hidratada do armazenamento local. */
   isReady: boolean
+  galleryEntries: CharacterGalleryEntry[]
+  activeGalleryId: string | null
+  saveCurrentToGallery: () => boolean
+  createGalleryCharacter: () => boolean
+  importGalleryCharacter: (character: Character) => boolean
+  useGalleryCharacter: (id: string) => void
+  deleteGalleryCharacter: (id: string) => void
 }
 
 const CharacterContext = createContext<CharacterContextValue | null>(null)
@@ -27,14 +34,27 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   const [character, setCharacter] = useState<Character>(() => createEmptyCharacter())
   const [isReady, setIsReady] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  const [storedGalleryEntries, setStoredGalleryEntries] = useState<CharacterGalleryEntry[]>([])
+  const [activeGalleryId, setActiveGalleryId] = useState<string | null>(null)
   const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const galleryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Hidrata a ficha do IndexedDB e migra automaticamente o formato legado.
   useEffect(() => {
     let active = true
-    void loadCharacterDatabase().then((stored) => {
+    void Promise.all([loadCharacterDatabase(), loadCharacterGalleryDatabase()]).then(([stored, gallery]) => {
       if (!active) return
-      if (stored) setCharacter(stored)
+      let entries = gallery.entries
+      let activeId = gallery.activeId
+      if (entries.length === 0 && stored) {
+        activeId = crypto.randomUUID()
+        entries = [{ id: activeId, character: stored, updatedAt: Date.now() }]
+      }
+      const activeEntry = entries.find((entry) => entry.id === activeId)
+      const loadedCharacter = stored ?? activeEntry?.character ?? createEmptyCharacter()
+      setCharacter(loadedCharacter)
+      setStoredGalleryEntries(entries.map((entry) => entry.id === activeId ? { ...entry, character: loadedCharacter } : entry))
+      setActiveGalleryId(activeId)
       setIsReady(true)
     })
     return () => { active = false }
@@ -52,6 +72,20 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(saveTimeout)
   }, [character, isReady])
 
+  const galleryEntries = useMemo(() => storedGalleryEntries.map((entry) => entry.id === activeGalleryId
+    ? { ...entry, character, updatedAt: Date.now() }
+    : entry), [activeGalleryId, character, storedGalleryEntries])
+
+  useEffect(() => {
+    if (!isReady) return
+    if (galleryTimeout.current) clearTimeout(galleryTimeout.current)
+    const timeout = setTimeout(() => {
+      void saveCharacterGalleryDatabase({ activeId: activeGalleryId, entries: galleryEntries })
+    }, 350)
+    galleryTimeout.current = timeout
+    return () => clearTimeout(timeout)
+  }, [activeGalleryId, galleryEntries, isReady])
+
   const updateCharacter = useCallback((updater: (prev: Character) => Character) => {
     setCharacter((prev) => updater(prev))
   }, [])
@@ -64,9 +98,52 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     setCharacter(createEmptyCharacter())
   }, [])
 
+  const saveCurrentToGallery = useCallback(() => {
+    if (galleryEntries.length >= 10) return false
+    const id = crypto.randomUUID()
+    setStoredGalleryEntries((current) => [...current, { id, character, updatedAt: Date.now() }])
+    setActiveGalleryId(id)
+    return true
+  }, [character, galleryEntries.length])
+
+  const createGalleryCharacter = useCallback(() => {
+    if (galleryEntries.length >= 10) return false
+    const id = crypto.randomUUID()
+    const next = createEmptyCharacter()
+    setStoredGalleryEntries((current) => [
+      ...current.map((entry) => entry.id === activeGalleryId ? { ...entry, character, updatedAt: Date.now() } : entry),
+      { id, character: next, updatedAt: Date.now() },
+    ])
+    setActiveGalleryId(id)
+    setCharacter(next)
+    return true
+  }, [activeGalleryId, character, galleryEntries.length])
+
+  const importGalleryCharacter = useCallback((imported: Character) => {
+    if (galleryEntries.length >= 10) return false
+    const id = crypto.randomUUID()
+    setStoredGalleryEntries((current) => [...current, { id, character: imported, updatedAt: Date.now() }])
+    return true
+  }, [galleryEntries.length])
+
+  const useGalleryCharacter = useCallback((id: string) => {
+    const entry = galleryEntries.find((candidate) => candidate.id === id)
+    if (!entry) return
+    setStoredGalleryEntries((current) => current.map((candidate) => candidate.id === activeGalleryId
+      ? { ...candidate, character, updatedAt: Date.now() }
+      : candidate))
+    setActiveGalleryId(id)
+    setCharacter(entry.character)
+  }, [activeGalleryId, character, galleryEntries])
+
+  const deleteGalleryCharacter = useCallback((id: string) => {
+    setStoredGalleryEntries((current) => current.filter((entry) => entry.id !== id))
+    setActiveGalleryId((current) => current === id ? null : current)
+  }, [])
+
   return (
     <CharacterContext.Provider
-      value={{ character, updateCharacter, replaceCharacter, resetCharacter, saveStatus, isReady }}
+      value={{ character, updateCharacter, replaceCharacter, resetCharacter, saveStatus, isReady, galleryEntries, activeGalleryId, saveCurrentToGallery, createGalleryCharacter, importGalleryCharacter, useGalleryCharacter, deleteGalleryCharacter }}
     >
       {children}
     </CharacterContext.Provider>

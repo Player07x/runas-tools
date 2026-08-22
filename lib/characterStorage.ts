@@ -1,9 +1,10 @@
-import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterNote, CharacterSaveFile, CharacterSkill, CharacterSpell, SecondaryAttributeKey, SpellMagicType, SpellRangeType } from "@/types/character"
+import type { AbilityCostMode, AbilityCostType, Character, CharacterAbility, CharacterBond, CharacterInventoryItem, CharacterNote, CharacterSaveFile, CharacterSkill, CharacterSpell, InventoryItemType, InventoryUsage, SecondaryAttributeKey, SpellMagicType, SpellRangeType } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
 import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { calculateAttributeTest, calculateSkillModifier, normalizeSkillName } from "@/lib/skillCalculations"
 import { sumAbilityModifiers } from "@/lib/abilityModifiers"
+import { calculateEquippedDefense, calculateInventoryLoad } from "@/lib/inventoryCalculations"
 
 export const STORAGE_KEY = "runas.character.v1"
 
@@ -93,6 +94,7 @@ export function createEmptyCharacter(): Character {
     bonds: [],
     abilities: [],
     spells: [],
+    inventory: [],
     notes: [],
   }
 }
@@ -112,6 +114,11 @@ const secondaryAttributeKeys = new Set<SecondaryAttributeKey>([
 function integer(value: unknown, fallback = 0): number {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback
+}
+
+function nonNegativeNumber(value: unknown, fallback = 0): number {
+  const parsed = typeof value === "string" ? Number(value.replace(",", ".")) : Number(value)
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : fallback
 }
 
 function normalizeSkills(
@@ -246,7 +253,6 @@ function normalizeSpells(partialSpells: CharacterSpell[] | undefined): Character
       category: typeof spell.category === "string" ? spell.category.trim().slice(0, 40) : "",
       name,
       description: typeof spell.description === "string" ? spell.description.slice(0, 5000) : "",
-      permanentModifiers: typeof spell.permanentModifiers === "string" ? spell.permanentModifiers.slice(0, 500) : "",
       costType,
       costMode,
       costValue: Math.max(0, integer(spell.costValue)),
@@ -278,6 +284,51 @@ function normalizeNotes(partialNotes: CharacterNote[] | undefined): CharacterNot
       name,
       description: typeof note.description === "string" ? note.description.slice(0, 5000) : "",
       date: typeof note.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(note.date) ? note.date : "",
+    }]
+  })
+}
+
+const inventoryUsages = new Set<InventoryUsage>(["equipped", "stored", "absent"])
+const inventoryItemTypes = new Set<InventoryItemType>([
+  "weapon", "armor", "shield", "artifact", "material", "consumable", "tool", "utility", "accessory", "currency", "other",
+])
+
+function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined): CharacterInventoryItem[] {
+  const source = Array.isArray(partialItems) ? partialItems : []
+  const usedIds = new Set<string>()
+  let equippedArmorFound = false
+
+  return source.flatMap((item, index) => {
+    if (!item || typeof item !== "object") return []
+    const name = typeof item.name === "string" ? item.name.trim().slice(0, 80) : ""
+    if (!name) return []
+    let id = typeof item.id === "string" && item.id.trim() ? item.id.trim() : `item-${index + 1}`
+    while (usedIds.has(id)) id = `${id}-${index + 1}`
+    usedIds.add(id)
+    const type = inventoryItemTypes.has(item.type as InventoryItemType) ? item.type as InventoryItemType : "other"
+    let usage = inventoryUsages.has(item.usage as InventoryUsage) ? item.usage as InventoryUsage : "stored"
+    if (type === "armor" && usage === "equipped") {
+      if (equippedArmorFound) usage = "stored"
+      equippedArmorFound = true
+    }
+    const affinity = Math.max(0, Math.min(4, integer(item.affinity))) as CharacterInventoryItem["affinity"]
+    return [{
+      id,
+      usage,
+      name,
+      type,
+      affinity,
+      bondPoints: Math.max(0, integer(item.bondPoints)),
+      baseWeight: nonNegativeNumber(item.baseWeight),
+      applyScaleWeight: Boolean(item.applyScaleWeight),
+      damage: typeof item.damage === "string" ? item.damage.trim().slice(0, 160) : "",
+      rdf: Math.max(0, integer(item.rdf)),
+      rdm: Math.max(0, integer(item.rdm)),
+      enchantmentSpellId: typeof item.enchantmentSpellId === "string" ? item.enchantmentSpellId.slice(0, 100) : "",
+      bondId: typeof item.bondId === "string" ? item.bondId.slice(0, 100) : "",
+      bondAbilityId: typeof item.bondAbilityId === "string" ? item.bondAbilityId.slice(0, 100) : "",
+      skillId: typeof item.skillId === "string" ? item.skillId.slice(0, 100) : "",
+      description: typeof item.description === "string" ? item.description.slice(0, 5000) : "",
     }]
   })
 }
@@ -367,14 +418,19 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
   stats.peTemporary = Math.max(0, integer(partialStats.peTemporary, base.stats.peTemporary))
   stats.determination = Math.max(0, integer(partialStats.determination, base.stats.determination))
   stats.casualty = Math.max(0, integer(partialStats.casualty, base.stats.casualty))
-  stats.currentLoad = Math.max(0, integer(partialStats.currentLoad, base.stats.currentLoad))
+  stats.currentLoad = Math.max(0, nonNegativeNumber(partialStats.currentLoad, base.stats.currentLoad))
   stats.mt = modifierToNumber(info.sizeModifier)
   const skills = normalizeSkills(partial.skills)
   const bonds = normalizeBonds(partial.bonds)
   const abilities = normalizeAbilities(partial.abilities)
   const spells = normalizeSpells(partial.spells)
+  const inventory = normalizeInventory(partial.inventory)
   const notes = normalizeNotes(partial.notes)
-  const abilityModifiers = sumAbilityModifiers([...abilities, ...spells])
+  const equippedDefense = calculateEquippedDefense(inventory)
+  stats.currentLoad = calculateInventoryLoad(inventory, info.scaleMultiplier)
+  stats.armorRdf = equippedDefense.rdf
+  stats.armorRdm = equippedDefense.rdm
+  const abilityModifiers = sumAbilityModifiers(abilities)
   const willSkill = skills.find((skill) => skill.id === CORE_SKILL_IDS.will) ?? createCoreSkills()[0]
   const focusMaximum = Math.max(
     0,
@@ -398,6 +454,7 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
     bonds,
     abilities,
     spells,
+    inventory,
     notes,
   }
 }

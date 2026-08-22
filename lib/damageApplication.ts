@@ -1,4 +1,5 @@
 import { damageTypes, getDamageType } from "@/data/damageTypes"
+import { getMtDamageMultiplier } from "@/lib/damageMt"
 import type { AppliedDamageChange, DamageResourceKey } from "@/types/damage"
 
 export interface FixedDamage {
@@ -18,6 +19,8 @@ export interface DamageLayer {
 
 export interface DamageApplicationConfig {
   damage: FixedDamage
+  mtEnabled: boolean
+  mtValue: number
   rdf: number
   rdm: number
   layers: DamageLayer[]
@@ -123,8 +126,17 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
   }
 
   const reduction = Math.max(0, damageType.category === "physical" ? config.rdf : config.rdm)
-  let remaining = Math.max(0, config.damage.amount - reduction)
-  const steps = [`${config.damage.amount} ${damageType.name} − ${reduction} ${damageType.category === "physical" ? "RDF" : "RDM"} = ${remaining}`]
+  const mtMultiplier = config.mtEnabled ? getMtDamageMultiplier(config.mtValue) : 1
+  const damageAfterMt = config.damage.amount * mtMultiplier
+  let remaining = Math.max(0, damageAfterMt - reduction)
+  const formattedAfterMt = damageAfterMt.toFixed(2).replace(/\.00$/, "")
+  const formattedRemaining = remaining.toFixed(2).replace(/\.00$/, "")
+  const steps = config.mtEnabled
+    ? [
+        `${config.damage.amount} ${damageType.name} × MT ${mtMultiplier} = ${formattedAfterMt}`,
+        `${formattedAfterMt} − ${reduction} ${damageType.category === "physical" ? "RDF" : "RDM"} = ${formattedRemaining}`,
+      ]
+    : [`${config.damage.amount} ${damageType.name} − ${reduction} ${damageType.category === "physical" ? "RDF" : "RDM"} = ${formattedRemaining}`]
   const changes: AppliedDamageChange[] = []
 
   for (let layerIndex = 0; layerIndex < config.layers.length; layerIndex += 1) {

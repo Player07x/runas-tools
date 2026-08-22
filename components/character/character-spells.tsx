@@ -73,7 +73,6 @@ function createSpell(): CharacterSpell {
     category: "",
     name: "Nova magia",
     description: "",
-    permanentModifiers: "",
     costType: "none",
     costMode: "fixed",
     costValue: 0,
@@ -344,7 +343,6 @@ export function CharacterSpells({ characterName, spells, skills, stats, onAddSpe
             <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Teste de Conjuração</span><input value={editingSpell.castingSkill} list="spell-skill-suggestions" maxLength={80} onChange={(event) => setEditingSpell({ ...editingSpell, castingSkill: event.target.value })} placeholder="Escolha uma perícia da ficha" className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>
           </div>
           <RichTextEditor label="Descrição" value={editingSpell.description} onChange={(description) => setEditingSpell((current) => current ? { ...current, description } : current)} maxLength={5000} className="mt-4" />
-          <label className="mt-4 block"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Modificadores Permanentes</span><input value={editingSpell.permanentModifiers} maxLength={500} onChange={(event) => setEditingSpell({ ...editingSpell, permanentModifiers: event.target.value })} placeholder="PV +2, Aura +2" className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <label className="relative"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Custo</span><select value={editingSpell.costType} onChange={(event) => setEditingSpell({ ...editingSpell, costType: event.target.value as AbilityCostType })} className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-3 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25">{costOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 size-4 text-muted-foreground" /></label>
             {editingSpell.costType === "other" && <label className="sm:col-span-2"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Descrição do custo</span><input value={editingSpell.costText} maxLength={50} onChange={(event) => setEditingSpell({ ...editingSpell, costText: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>}

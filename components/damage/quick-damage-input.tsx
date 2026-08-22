@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Wand2 } from "lucide-react"
 import type { ParsedDamage } from "@/types/damage"
 import { Button } from "@/components/ui/button"
@@ -9,10 +9,15 @@ import { parseDamageExpression } from "@/lib/damageParser"
 
 interface Props {
   onParsed: (parsed: ParsedDamage) => void
+  initialText?: string
 }
 
-export function QuickDamageInput({ onParsed }: Props) {
+export function QuickDamageInput({ onParsed, initialText = "" }: Props) {
   const [text, setText] = useState("")
+
+  useEffect(() => {
+    if (initialText) setText(initialText)
+  }, [initialText])
 
   function fill() {
     if (!text.trim()) return

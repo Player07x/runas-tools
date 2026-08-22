@@ -81,7 +81,6 @@ export function parseSpellListFile(text: string): ImportedSpell[] {
       category: textField(value.category, 40, "uma categoria", position).trim(),
       name,
       description: textField(value.description, 5000, "uma descrição", position),
-      permanentModifiers: textField(value.permanentModifiers, 500, "modificadores permanentes", position),
       costType,
       costMode,
       costValue: Number(value.costValue),

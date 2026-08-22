@@ -350,41 +350,6 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
         <VitalCard label="PE" current={stats.pe} maximum={snapshot.peMax} bonus={stats.peBonus} onCurrentChange={(pe) => onStatsChange({ pe })} onBonusChange={(peBonus) => onStatsChange({ peBonus })} accentClass="text-[#586b9f] dark:text-[#c7d1f5]" />
       </div>
 
-      <article className="mb-7 overflow-hidden rounded-[20px] border border-border bg-muted/30">
-        <div className="flex flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><h3 className="font-bold text-foreground">Melhoria de Maestria</h3></div>
-            <p className="mt-1 text-xs text-muted-foreground">Pontos definidos por Afinidade {info.affinity} e Eficiência {info.efficiency}%.</p>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span className="text-muted-foreground">Total <strong className="text-foreground">{masteryPoints}</strong></span>
-            <span className="text-muted-foreground">Usados <strong className="text-foreground">{spentMasteryPoints}</strong></span>
-            <span className={remainingMasteryPoints < 0 ? "text-destructive" : "text-muted-foreground"}>Restantes <strong className="text-current">{remainingMasteryPoints}</strong></span>
-          </div>
-        </div>
-        <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
-          {masteryImprovementOptions.map((option) => {
-            const quantity = stats.masteryImprovements[option.key]
-            const canBuy = remainingMasteryPoints >= option.cost
-            return <div key={option.key} className="flex min-w-0 flex-col justify-between gap-3 bg-card/95 p-3.5">
-              <div className="min-w-0">
-                <div className="flex items-start justify-between gap-2"><strong className={`min-w-0 text-sm ${option.color}`}>{option.name}</strong><span className="shrink-0 rounded-full border border-border bg-background/70 px-2 py-0.5 text-[0.65rem] font-semibold text-muted-foreground">{option.cost} pts.</span></div>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{option.description}</p>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[0.68rem] font-medium text-muted-foreground">Compradas</span>
-                <div className="flex shrink-0 items-center rounded-lg border border-border bg-background/70">
-                <button type="button" onClick={() => adjustMasteryImprovement(option.key, -1)} disabled={quantity === 0} aria-label={`Remover uma melhoria de ${option.name}`} className="inline-flex size-8 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"><Minus className="size-3.5" /></button>
-                <output aria-label={`${quantity} melhorias de ${option.name}`} className="min-w-6 text-center text-sm font-bold tabular-nums text-foreground">{quantity}</output>
-                <button type="button" onClick={() => adjustMasteryImprovement(option.key, 1)} disabled={!canBuy} aria-label={`Comprar uma melhoria de ${option.name} por ${option.cost} pontos`} className="inline-flex size-8 items-center justify-center text-primary hover:bg-primary/10 disabled:opacity-30"><Plus className="size-3.5" /></button>
-                </div>
-              </div>
-            </div>
-          })}
-        </div>
-        {remainingMasteryPoints < 0 && <p role="alert" className="border-t border-destructive/25 bg-destructive/8 px-4 py-2 text-xs text-destructive">As melhorias excedem os pontos atuais. Remova compras ou aumente Afinidade/Eficiência.</p>}
-      </article>
-
       <div className="mb-7 grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
         <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">
           <h3 className="px-3 py-2 text-sm font-semibold text-[#397d75] dark:text-[#79cfca]">PA Extra</h3>
@@ -547,6 +512,41 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
           <RichTextEditor label="Efeitos" value={stats.effects} onChange={(effects) => onStatsChange({ effects })} maxLength={1000} />
         </div>
       </div>
+
+      <article className="mt-7 overflow-hidden rounded-[20px] border border-border bg-muted/30">
+        <div className="flex flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><h3 className="font-bold text-foreground">Melhoria de Maestria</h3></div>
+            <p className="mt-1 text-xs text-muted-foreground">Pontos definidos por Afinidade {info.affinity} e Eficiência {info.efficiency}%.</p>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span className="text-muted-foreground">Total <strong className="text-foreground">{masteryPoints}</strong></span>
+            <span className="text-muted-foreground">Usados <strong className="text-foreground">{spentMasteryPoints}</strong></span>
+            <span className={remainingMasteryPoints < 0 ? "text-destructive" : "text-muted-foreground"}>Restantes <strong className="text-current">{remainingMasteryPoints}</strong></span>
+          </div>
+        </div>
+        <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
+          {masteryImprovementOptions.map((option) => {
+            const quantity = stats.masteryImprovements[option.key]
+            const canBuy = remainingMasteryPoints >= option.cost
+            return <div key={option.key} className="flex min-w-0 flex-col justify-between gap-3 bg-card/95 p-3.5">
+              <div className="min-w-0">
+                <div className="flex items-start justify-between gap-2"><strong className={`min-w-0 text-sm ${option.color}`}>{option.name}</strong><span className="shrink-0 rounded-full border border-border bg-background/70 px-2 py-0.5 text-[0.65rem] font-semibold text-muted-foreground">{option.cost} pts.</span></div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{option.description}</p>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[0.68rem] font-medium text-muted-foreground">Compradas</span>
+                <div className="flex shrink-0 items-center rounded-lg border border-border bg-background/70">
+                  <button type="button" onClick={() => adjustMasteryImprovement(option.key, -1)} disabled={quantity === 0} aria-label={`Remover uma melhoria de ${option.name}`} className="inline-flex size-8 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"><Minus className="size-3.5" /></button>
+                  <output aria-label={`${quantity} melhorias de ${option.name}`} className="min-w-6 text-center text-sm font-bold tabular-nums text-foreground">{quantity}</output>
+                  <button type="button" onClick={() => adjustMasteryImprovement(option.key, 1)} disabled={!canBuy} aria-label={`Comprar uma melhoria de ${option.name} por ${option.cost} pontos`} className="inline-flex size-8 items-center justify-center text-primary hover:bg-primary/10 disabled:opacity-30"><Plus className="size-3.5" /></button>
+                </div>
+              </div>
+            </div>
+          })}
+        </div>
+        {remainingMasteryPoints < 0 && <p role="alert" className="border-t border-destructive/25 bg-destructive/8 px-4 py-2 text-xs text-destructive">As melhorias excedem os pontos atuais. Remova compras ou aumente Afinidade/Eficiência.</p>}
+      </article>
     </section>
   )
 }

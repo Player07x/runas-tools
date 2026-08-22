@@ -4,7 +4,8 @@ import { CORE_SKILL_IDS, createCoreSkills } from "@/data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "@/lib/characterCalculations"
 import { calculateAttributeTest, calculateSkillModifier, normalizeSkillName } from "@/lib/skillCalculations"
 import { sumAbilityModifiers } from "@/lib/abilityModifiers"
-import { calculateEquippedDefense, calculateInventoryLoad } from "@/lib/inventoryCalculations"
+import { calculateEquippedArmorDefense, calculateInventoryLoad } from "@/lib/inventoryCalculations"
+import { createEmptyMasteryImprovements } from "@/lib/masteryImprovements"
 
 export const STORAGE_KEY = "runas.character.v1"
 
@@ -89,6 +90,7 @@ export function createEmptyCharacter(): Character {
       naturalRdf: 0,
       naturalRdm: 0,
       mt: 0,
+      masteryImprovements: createEmptyMasteryImprovements(),
     },
     skills: createCoreSkills(),
     bonds: [],
@@ -418,6 +420,14 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
   stats.peTemporary = Math.max(0, integer(partialStats.peTemporary, base.stats.peTemporary))
   stats.determination = Math.max(0, integer(partialStats.determination, base.stats.determination))
   stats.casualty = Math.max(0, integer(partialStats.casualty, base.stats.casualty))
+  const partialMastery = partialStats.masteryImprovements
+  stats.masteryImprovements = {
+    aura: Math.max(0, integer(partialMastery?.aura)),
+    life: Math.max(0, integer(partialMastery?.life)),
+    energy: Math.max(0, integer(partialMastery?.energy)),
+    determination: Math.max(0, integer(partialMastery?.determination)),
+    casualty: Math.max(0, integer(partialMastery?.casualty)),
+  }
   stats.currentLoad = Math.max(0, nonNegativeNumber(partialStats.currentLoad, base.stats.currentLoad))
   stats.mt = modifierToNumber(info.sizeModifier)
   const skills = normalizeSkills(partial.skills)
@@ -426,7 +436,7 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
   const spells = normalizeSpells(partial.spells)
   const inventory = normalizeInventory(partial.inventory)
   const notes = normalizeNotes(partial.notes)
-  const equippedDefense = calculateEquippedDefense(inventory)
+  const equippedDefense = calculateEquippedArmorDefense(inventory)
   stats.currentLoad = calculateInventoryLoad(inventory, info.scaleMultiplier)
   stats.armorRdf = equippedDefense.rdf
   stats.armorRdm = equippedDefense.rdm

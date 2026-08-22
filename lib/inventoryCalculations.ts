@@ -55,13 +55,11 @@ export function calculateInventoryLoad(items: CharacterInventoryItem[], scaleMul
   return Number(total.toFixed(3))
 }
 
-export function calculateEquippedDefense(items: CharacterInventoryItem[]): { rdf: number; rdm: number } {
-  return items.reduce((total, item) => {
-    if (item.usage !== "equipped" || (item.type !== "armor" && item.type !== "shield")) return total
-    total.rdf += Math.max(0, Math.trunc(item.rdf))
-    total.rdm += Math.max(0, Math.trunc(item.rdm))
-    return total
-  }, { rdf: 0, rdm: 0 })
+export function calculateEquippedArmorDefense(items: CharacterInventoryItem[]): { rdf: number; rdm: number } {
+  const armor = items.find((item) => item.usage === "equipped" && item.type === "armor")
+  return armor
+    ? { rdf: Math.max(0, Math.trunc(armor.rdf)), rdm: Math.max(0, Math.trunc(armor.rdm)) }
+    : { rdf: 0, rdm: 0 }
 }
 
 export function itemRarity(points: number): string {

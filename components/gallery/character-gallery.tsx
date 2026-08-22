@@ -105,18 +105,18 @@ function CharacterCard({ entry, active, onPreview, onUse, onExport, onDelete }: 
   const { character } = entry
   const snapshot = calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities)
   const stats = [
-    ["PV", `${character.stats.pv} / ${snapshot.pvMax}`],
-    ["PA", `${character.stats.pa} / ${snapshot.paMax}`],
-    ["PE", `${character.stats.pe} / ${snapshot.peMax}`],
-    ...(character.stats.paExtra > 0 ? [["PA Extra", `${character.stats.paExtra} / ${snapshot.paExtraMax}`]] : []),
-    ["PE Temporário", `${character.stats.peTemporary} / ${snapshot.peTemporaryMax}`],
-    ["Deslocamento", `${snapshot.movement} m`],
-    ["Primeiras Impressões", formatSigned(snapshot.firstImpressions)],
-    ["Carga", `${formatWeight(character.stats.currentLoad)} / ${formatWeight(snapshot.loadCapacity)} kg`],
+    { label: "PV", value: `${character.stats.pv} / ${snapshot.pvMax}`, color: "border-red-400/25 bg-red-500/10 text-red-300" },
+    { label: "PA", value: `${character.stats.pa} / ${snapshot.paMax}`, color: "border-blue-400/25 bg-blue-500/10 text-blue-300" },
+    { label: "PE", value: `${character.stats.pe} / ${snapshot.peMax}`, color: "border-cyan-300/25 bg-cyan-400/10 text-cyan-200" },
+    ...(character.stats.paExtra > 0 ? [{ label: "PA Extra", value: `${character.stats.paExtra} / ${snapshot.paExtraMax}`, color: "border-indigo-300/25 bg-indigo-400/10 text-indigo-200" }] : []),
+    { label: "PE Temp.", value: `${character.stats.peTemporary} / ${snapshot.peTemporaryMax}`, color: "border-sky-300/25 bg-sky-300/10 text-sky-200" },
+    { label: "Desloc.", value: `${snapshot.movement} m`, color: "border-emerald-300/20 bg-emerald-400/8 text-emerald-200" },
+    { label: "Impressão", value: formatSigned(snapshot.firstImpressions), color: "border-amber-300/20 bg-amber-400/8 text-amber-200" },
+    { label: "Carga", value: `${formatWeight(character.stats.currentLoad)} / ${formatWeight(snapshot.loadCapacity)} kg`, color: "border-border bg-muted/25 text-foreground" },
   ]
-  return <article className={`rounded-[24px] border bg-card p-4 shadow-sm sm:p-5 ${active ? "border-primary/55 ring-2 ring-primary/10" : "border-border"}`}>
-    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex items-center gap-2">{active && <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-wide text-primary">Ativa</span>}<span className="text-xs text-muted-foreground">Atualizada {new Date(entry.updatedAt).toLocaleDateString("pt-BR")}</span></div><h2 className="mt-2 truncate text-xl font-bold text-foreground">{character.name || "Personagem sem nome"}</h2><p className="mt-1 text-sm text-muted-foreground">{character.info.race || "Raça não informada"} · {character.info.profession || "Ofício não informado"}</p></div></div>
-    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{stats.map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-muted/30 p-2.5"><span className="text-[0.68rem] text-muted-foreground">{label}</span><strong className="mt-0.5 block text-sm text-foreground">{value}</strong></div>)}</div>
-    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><Button type="button" variant="outline" onClick={onPreview}><Eye /> Visualizar</Button>{active ? <span className="inline-flex h-10 items-center justify-center rounded-xl bg-primary/10 px-4 text-sm font-bold text-primary">Ativa</span> : <Button type="button" onClick={onUse}><UserCheck /> Usar Ficha</Button>}<Button type="button" variant="secondary" onClick={onExport}><Braces /> Exportar JSON</Button><Button type="button" variant="destructive" onClick={onDelete}><Trash2 /> Deletar</Button></div>
+  return <article className={`rounded-[20px] border bg-card p-3 shadow-sm sm:p-4 ${active ? "border-primary/55 ring-2 ring-primary/10" : "border-border"}`}>
+    <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1">{active && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-primary">Ativa</span>}<span className="text-[0.68rem] text-muted-foreground">Atualizada {new Date(entry.updatedAt).toLocaleDateString("pt-BR")}</span></div><div className="mt-1.5 flex min-w-0 items-baseline gap-2"><h2 className="truncate text-lg font-bold text-foreground">{character.name || "Personagem sem nome"}</h2><p className="truncate text-xs text-muted-foreground">{character.info.race || "Raça não informada"} · {character.info.profession || "Ofício não informado"}</p></div></div>
+    <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-4">{stats.map(({ label, value, color }) => <div key={label} className={`min-w-0 rounded-lg border px-2 py-1.5 ${color}`}><span className="block truncate text-[0.62rem] font-medium opacity-80">{label}</span><strong className="mt-0.5 block truncate text-sm text-current">{value}</strong></div>)}</div>
+    <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-4"><Button type="button" size="sm" variant="outline" onClick={onPreview}><Eye /> Visualizar</Button>{active ? <span className="inline-flex h-9 items-center justify-center rounded-xl bg-primary/10 px-3 text-sm font-bold text-primary">Ativa</span> : <Button type="button" size="sm" onClick={onUse}><UserCheck /> Usar Ficha</Button>}<Button type="button" size="sm" variant="secondary" onClick={onExport}><Braces /> Exportar</Button><Button type="button" size="sm" variant="destructive" onClick={onDelete}><Trash2 /> Deletar</Button></div>
   </article>
 }

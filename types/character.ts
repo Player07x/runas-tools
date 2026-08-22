@@ -134,6 +134,14 @@ export interface CharacterInventoryItem {
   description: string
 }
 
+export interface MasteryImprovements {
+  aura: number
+  life: number
+  energy: number
+  determination: number
+  casualty: number
+}
+
 export interface CharacterStats {
   pv: number
   pvBonus: number
@@ -166,6 +174,7 @@ export interface CharacterStats {
   naturalRdf: number
   naturalRdm: number
   mt: number
+  masteryImprovements: MasteryImprovements
 }
 
 export interface Character {
@@ -202,4 +211,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 14
+export const CHARACTER_VERSION = 15

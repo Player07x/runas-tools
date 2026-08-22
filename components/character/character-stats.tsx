@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronDown, Minus, Plus, RefreshCcw, RotateCcw } from "lucide-react"
+import { ChevronDown, Minus, Plus, RefreshCcw, RotateCcw, Sparkles } from "lucide-react"
 import type {
   AttributeKey,
   CharacterAbility,
@@ -17,6 +17,12 @@ import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { cn } from "@/lib/utils"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { TokenInput } from "@/components/ui/token-input"
+import {
+  calculateMasteryImprovementPoints,
+  calculateSpentMasteryImprovementPoints,
+  masteryImprovementOptions,
+  type MasteryImprovementKey,
+} from "@/lib/masteryImprovements"
 
 interface Props {
   attributes: CharacterAttributes
@@ -209,6 +215,23 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
   const peTemporaryPercentage = snapshot.peTemporaryMax > 0
     ? Math.min(100, Math.max(0, (peTemporaryValue / snapshot.peTemporaryMax) * 100))
     : 0
+  const masteryPoints = calculateMasteryImprovementPoints(info)
+  const spentMasteryPoints = calculateSpentMasteryImprovementPoints(stats.masteryImprovements)
+  const remainingMasteryPoints = masteryPoints - spentMasteryPoints
+
+  function adjustMasteryImprovement(key: MasteryImprovementKey, delta: -1 | 1) {
+    const option = masteryImprovementOptions.find((candidate) => candidate.key === key)
+    if (!option) return
+    const current = stats.masteryImprovements[key]
+    if (delta < 0 && current <= 0) return
+    if (delta > 0 && remainingMasteryPoints < option.cost) return
+    onStatsChange({
+      masteryImprovements: {
+        ...stats.masteryImprovements,
+        [key]: Math.max(0, current + delta),
+      },
+    })
+  }
 
   function restoreStatistics() {
     onStatsChange({
@@ -326,6 +349,38 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
         <VitalCard label="PA" current={stats.pa} maximum={snapshot.paMax} bonus={stats.paBonus} onCurrentChange={(pa) => onStatsChange({ pa })} onBonusChange={(paBonus) => onStatsChange({ paBonus })} accentClass="text-[#397d75] dark:text-[#79cfca]" />
         <VitalCard label="PE" current={stats.pe} maximum={snapshot.peMax} bonus={stats.peBonus} onCurrentChange={(pe) => onStatsChange({ pe })} onBonusChange={(peBonus) => onStatsChange({ peBonus })} accentClass="text-[#586b9f] dark:text-[#c7d1f5]" />
       </div>
+
+      <article className="mb-7 overflow-hidden rounded-[20px] border border-border bg-muted/30">
+        <div className="flex flex-col gap-2 border-b border-border px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><h3 className="font-bold text-foreground">Melhoria de Maestria</h3></div>
+            <p className="mt-1 text-xs text-muted-foreground">Pontos definidos por Afinidade {info.affinity} e Eficiência {info.efficiency}%.</p>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span className="text-muted-foreground">Total <strong className="text-foreground">{masteryPoints}</strong></span>
+            <span className="text-muted-foreground">Usados <strong className="text-foreground">{spentMasteryPoints}</strong></span>
+            <span className={remainingMasteryPoints < 0 ? "text-destructive" : "text-muted-foreground"}>Restantes <strong className="text-current">{remainingMasteryPoints}</strong></span>
+          </div>
+        </div>
+        <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-5">
+          {masteryImprovementOptions.map((option) => {
+            const quantity = stats.masteryImprovements[option.key]
+            const canBuy = remainingMasteryPoints >= option.cost
+            return <div key={option.key} className="flex min-w-0 items-center gap-2 bg-card/95 p-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-1.5"><strong className={`truncate text-sm ${option.color}`}>{option.name}</strong><span className="shrink-0 text-[0.65rem] text-muted-foreground">{option.cost} pts.</span></div>
+                <p className="mt-0.5 truncate text-[0.68rem] text-muted-foreground">{option.description}</p>
+              </div>
+              <div className="flex shrink-0 items-center rounded-lg border border-border bg-background/70">
+                <button type="button" onClick={() => adjustMasteryImprovement(option.key, -1)} disabled={quantity === 0} aria-label={`Remover uma melhoria de ${option.name}`} className="inline-flex size-8 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"><Minus className="size-3.5" /></button>
+                <output aria-label={`${quantity} melhorias de ${option.name}`} className="min-w-6 text-center text-sm font-bold tabular-nums text-foreground">{quantity}</output>
+                <button type="button" onClick={() => adjustMasteryImprovement(option.key, 1)} disabled={!canBuy} aria-label={`Comprar uma melhoria de ${option.name} por ${option.cost} pontos`} className="inline-flex size-8 items-center justify-center text-primary hover:bg-primary/10 disabled:opacity-30"><Plus className="size-3.5" /></button>
+              </div>
+            </div>
+          })}
+        </div>
+        {remainingMasteryPoints < 0 && <p role="alert" className="border-t border-destructive/25 bg-destructive/8 px-4 py-2 text-xs text-destructive">As melhorias excedem os pontos atuais. Remova compras ou aumente Afinidade/Eficiência.</p>}
+      </article>
 
       <div className="mb-7 grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
         <article className="overflow-hidden rounded-[18px] border border-border bg-muted/45">

@@ -24,7 +24,7 @@ import type { ImportedBond } from "@/lib/bondImport"
 import type { ImportedAbility } from "@/lib/abilityTransfer"
 import type { ImportedSpell } from "@/lib/spellTransfer"
 import { cn } from "@/lib/utils"
-import { calculateEquippedDefense, calculateInventoryLoad } from "@/lib/inventoryCalculations"
+import { calculateEquippedArmorDefense, calculateInventoryLoad } from "@/lib/inventoryCalculations"
 import { useCharacter } from "./character-provider"
 import { CharacterActions } from "./character-actions"
 import { SaveIndicator } from "./save-indicator"
@@ -129,7 +129,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
   function setStats(updates: Partial<StatsType>) {
     updateCharacter((prev) => {
       const stats = { ...prev.stats, ...updates }
-      const defense = calculateEquippedDefense(prev.inventory)
+      const defense = calculateEquippedArmorDefense(prev.inventory)
       stats.currentLoad = calculateInventoryLoad(prev.inventory, prev.info.scaleMultiplier)
       stats.armorRdf = defense.rdf
       stats.armorRdm = defense.rdm
@@ -388,7 +388,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
 
   function setInventory(items: CharacterInventoryItem[]) {
     updateCharacter((prev) => {
-      const defense = calculateEquippedDefense(items)
+      const defense = calculateEquippedArmorDefense(items)
       return {
         ...prev,
         inventory: items,

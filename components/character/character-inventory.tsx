@@ -23,7 +23,7 @@ import { calculateBondQuality, calculateBondTest, formatSigned } from "@/lib/bon
 import { calculateAttributeTest, calculateSkillLevel, calculateSkillModifier, normalizeSkillName } from "@/lib/skillCalculations"
 import { getAttributeDef } from "@/data/attributes"
 import {
-  calculateEquippedDefense,
+  calculateEquippedArmorDefense,
   calculateInventoryLoad,
   calculateItemRealWeight,
   formatWeight,
@@ -107,7 +107,7 @@ function costSummary(source: Pick<CharacterAbility, "costType" | "costMode" | "c
   return source.costMode === "relative" ? `${source.costType} · Relativo` : `${source.costValue} ${source.costType}`
 }
 
-function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond[]): CharacterInventoryItem {
+function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond[], enchantmentSpells: CharacterSpell[]): CharacterInventoryItem {
   const affinity = Math.max(0, Math.min(4, Math.trunc(item.affinity))) as CharacterInventoryItem["affinity"]
   return {
     ...item,
@@ -118,6 +118,7 @@ function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond
     damage: item.damage.trim().slice(0, 160),
     rdf: Math.max(0, Math.trunc(item.rdf)),
     rdm: Math.max(0, Math.trunc(item.rdm)),
+    enchantmentSpellId: enchantmentSpells.some((spell) => spell.id === item.enchantmentSpellId) ? item.enchantmentSpellId : "",
     bondId: matchingBonds.some((bond) => bond.id === item.bondId) ? item.bondId : "",
     description: item.description.slice(0, 5000),
   }
@@ -134,10 +135,11 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
 
   const currentLoad = calculateInventoryLoad(items, info.scaleMultiplier)
   const statSnapshot = useMemo(() => calculateCharacterStatSnapshot(attributes, info, { ...stats, currentLoad }, skills, abilities), [abilities, attributes, currentLoad, info, skills, stats])
-  const defense = calculateEquippedDefense(items)
+  const defense = calculateEquippedArmorDefense(items)
   const equippedArmor = items.find((item) => item.type === "armor" && item.usage === "equipped")
   const equippedCombatItems = items.filter((item) => item.usage === "equipped" && ["weapon", "armor", "shield"].includes(item.type))
   const bondAbilities = abilities.filter((ability) => isBondAbilityCategory(ability.category))
+  const enchantmentSpells = useMemo(() => spells.filter((spell) => spell.magicType === "enchantment"), [spells])
   const matchingBonds = useMemo(() => draft
     ? bonds.filter((bond) => normalizeSkillName(bond.name) === normalizeSkillName(draft.name))
     : [], [bonds, draft])
@@ -180,7 +182,7 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
   function saveDraft(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draft) return
-    applyItem(sanitizeItem(draft, matchingBonds))
+    applyItem(sanitizeItem(draft, matchingBonds, enchantmentSpells))
   }
 
   function changeUsage(item: CharacterInventoryItem, usage: InventoryUsage) {
@@ -234,10 +236,10 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
         </article>
 
         <article className="rounded-[20px] border border-primary/25 bg-primary/5 p-4">
-          <div className="flex items-center gap-2 text-primary"><Shield className="size-5" /><h3 className="font-bold">Defesa equipada</h3></div>
-          <p className="mt-3 text-sm text-foreground"><span className="text-muted-foreground">Armadura:</span> <strong>{equippedArmor?.name ?? "Nenhuma"}</strong></p>
+          <div className="flex items-center gap-2 text-primary"><Shield className="size-5" /><h3 className="font-bold">Armadura</h3></div>
+          <p className="mt-3 text-sm text-foreground"><span className="text-muted-foreground">Equipada:</span> <strong>{equippedArmor?.name ?? "Nenhuma"}</strong></p>
           <div className="mt-3 grid grid-cols-2 gap-3"><div className="rounded-xl bg-background/70 p-3"><span className="text-xs text-muted-foreground">RDF</span><strong className="block text-xl">{defense.rdf}</strong></div><div className="rounded-xl bg-background/70 p-3"><span className="text-xs text-muted-foreground">RDM</span><strong className="block text-xl">{defense.rdm}</strong></div></div>
-          <p className="mt-2 text-xs text-muted-foreground">Totais da armadura e dos escudos equipados, usados pela aplicação de dano.</p>
+          <p className="mt-2 text-xs text-muted-foreground">RDF e RDM exclusivos da armadura equipada, usados pela aplicação de dano.</p>
         </article>
       </div>
 
@@ -296,9 +298,14 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
                   {draft.baseWeight > 0 && <SegmentedToggle label="Aplicar Peso Real?" value={draft.applyScaleWeight ? "yes" : "no"} onChange={(value) => setDraft({ ...draft, applyScaleWeight: value === "yes" })} options={[{ value: "yes", label: "Sim" }, { value: "no", label: "Não" }]} />}
                   {draft.baseWeight > 0 && <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Peso Real</span><output className="flex h-11 items-center rounded-xl border border-input bg-muted/45 px-3 text-sm font-semibold">{formatWeight(calculateItemRealWeight(draft, info.scaleMultiplier))} kg</output></label>}
                   <label className="sm:col-span-2"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Dano (opcional)</span><input maxLength={160} value={draft.damage} onChange={(event) => setDraft({ ...draft, damage: event.target.value })} placeholder="3D+2 queimadura (+poder)" className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring" /><span className="mt-1 block text-xs text-muted-foreground">Use o mesmo formato da Entrada rápida da Calculadora de Dano.</span></label>
-                  <NumberInput label="RDF (opcional)" value={draft.rdf} min={0} onChange={(rdf) => setDraft({ ...draft, rdf: Math.max(0, Math.trunc(rdf)) })} />
-                  <NumberInput label="RDM (opcional)" value={draft.rdm} min={0} onChange={(rdm) => setDraft({ ...draft, rdm: Math.max(0, Math.trunc(rdm)) })} />
-                  <Select label="Encantamento (opcional)" value={draft.enchantmentSpellId} options={[{ value: "", label: "Nenhum" }, ...spells.map((spell) => ({ value: spell.id, label: spell.name }))]} onChange={(value) => setDraft({ ...draft, enchantmentSpellId: value })} />
+                  <fieldset className="rounded-xl border border-border/80 bg-muted/15 p-3">
+                    <legend className="px-1 text-sm font-medium text-muted-foreground">RDF/RDM (opcional)</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      <NumberInput label="RDF" value={draft.rdf} min={0} onChange={(rdf) => setDraft({ ...draft, rdf: Math.max(0, Math.trunc(rdf)) })} />
+                      <NumberInput label="RDM" value={draft.rdm} min={0} onChange={(rdm) => setDraft({ ...draft, rdm: Math.max(0, Math.trunc(rdm)) })} />
+                    </div>
+                  </fieldset>
+                  <Select label="Encantamento (opcional)" value={draft.enchantmentSpellId} options={[{ value: "", label: enchantmentSpells.length ? "Nenhum" : "Nenhum encantamento cadastrado" }, ...enchantmentSpells.map((spell) => ({ value: spell.id, label: spell.name }))]} onChange={(value) => setDraft({ ...draft, enchantmentSpellId: value })} />
                   <Select label="Vínculo (opcional)" value={draft.bondId} options={[{ value: "", label: matchingBonds.length ? "Nenhum" : "Nenhum vínculo com este nome" }, ...matchingBonds.map((bond) => ({ value: bond.id, label: bond.name }))]} onChange={(value) => setDraft({ ...draft, bondId: value })} />
                   <Select label="Habilidade de Vínculo (opcional)" value={draft.bondAbilityId} options={[{ value: "", label: "Nenhuma" }, ...bondAbilities.map((ability) => ({ value: ability.id, label: ability.name }))]} onChange={(value) => setDraft({ ...draft, bondAbilityId: value })} />
                   <Select label="Perícia (opcional)" value={draft.skillId} options={[{ value: "", label: "Nenhuma" }, ...skills.map((skill) => ({ value: skill.id, label: skill.name }))]} onChange={(value) => setDraft({ ...draft, skillId: value })} />

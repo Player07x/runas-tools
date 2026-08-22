@@ -107,6 +107,7 @@ export function characterToMarkdown(character: Character): string {
   lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}; Mod.: ${stats.paExtraBonus >= 0 ? "+" : ""}${stats.paExtraBonus}`)
   lines.push(`- PE atual: ${stats.pe}; máximo: ${statSnapshot.peMax}; Mod.: ${stats.peBonus >= 0 ? "+" : ""}${stats.peBonus}`)
   lines.push(`- PE temporário: ${stats.peTemporary}`)
+  lines.push(`- Melhorias de Maestria: Aura ${stats.masteryImprovements.aura}; Vida ${stats.masteryImprovements.life}; Energia ${stats.masteryImprovements.energy}; Determinação ${stats.masteryImprovements.determination}; Casualidade ${stats.masteryImprovements.casualty}`)
   lines.push(`- MT: ${stats.mt}`)
   lines.push(`- Elemento principal: ${element?.name ?? "Nenhum"}`)
   lines.push(`- Resistências: ${stats.resistances.join(", ") || "Nenhum"}`)

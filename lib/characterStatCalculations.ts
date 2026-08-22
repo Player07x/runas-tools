@@ -57,20 +57,21 @@ export function calculateCharacterStatSnapshot(
   const karma = parseDecimal(info.karma)
   const karmaDirection = karma > 0 ? 1 : karma < 0 ? -1 : 0
 
-  const pvMax = Math.max(0, attributes.physical + 2 * attributes.vitality + finite(stats.pvBonus) + abilityModifiers.pv)
+  const mastery = stats.masteryImprovements
+  const pvMax = Math.max(0, attributes.physical + 2 * attributes.vitality + finite(stats.pvBonus) + abilityModifiers.pv + nonNegative(mastery.life))
   const paMax = Math.max(
     0,
     attributes.mystic +
       attributes.power +
       affinityLevel * Math.ceil(attributes.power / 2) +
-      finite(stats.paBonus) + abilityModifiers.pa,
+      finite(stats.paBonus) + abilityModifiers.pa + nonNegative(mastery.aura),
   )
   const peMax = Math.max(
     0,
     Math.ceil(attributes.mystic / 2) +
       Math.ceil(attributes.power / 2) +
       affinityLevel * Math.ceil(attributes.power / 4) +
-      finite(stats.peBonus) + abilityModifiers.pe,
+      finite(stats.peBonus) + abilityModifiers.pe + nonNegative(mastery.energy),
   )
   const defaultCoreSkills = createCoreSkills()
   const coreSkillTest = (id: string, fallbackIndex: number) => {
@@ -84,13 +85,13 @@ export function calculateCharacterStatSnapshot(
     0,
     Math.ceil(willSkillTest / 2) +
       finite(stats.determinationBonus) +
-      karmaDirection * alignmentLevel + abilityModifiers.determination,
+      karmaDirection * alignmentLevel + abilityModifiers.determination + nonNegative(mastery.determination),
   )
   const casualtyMax = Math.max(
     0,
     Math.ceil(chanceSkillTest / 2) +
       finite(stats.casualtyBonus) -
-      karmaDirection * alignmentLevel + abilityModifiers.casualty,
+      karmaDirection * alignmentLevel + abilityModifiers.casualty + nonNegative(mastery.casualty),
   )
 
   const loadCapacity = Math.max(0, parseDecimal(info.loadBase) + finite(stats.loadBonus) + abilityModifiers.load)

@@ -213,6 +213,7 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- Peso real: ${calculateItemRealWeight(item, info.scaleMultiplier)} kg`)
     if (item.damage) lines.push(`- Dano: ${item.damage}`)
     if (item.rdf || item.rdm) lines.push(`- RDF: ${item.rdf}; RDM: ${item.rdm}`)
+    if (item.prCurrent !== null || item.prMaximum !== null) lines.push(`- PR atual: ${item.prCurrent ?? "—"}; máximo: ${item.prMaximum ?? "—"}`)
     if (item.description) lines.push("", item.description)
     lines.push("")
   }

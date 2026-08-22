@@ -4,7 +4,7 @@ import { useEffect } from "react"
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return
+    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return
 
     let registrationTimeout: ReturnType<typeof setTimeout> | undefined
     const scheduleRegistration = () => {

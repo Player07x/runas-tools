@@ -80,6 +80,8 @@ function createInventoryItem(): CharacterInventoryItem {
     damage: "",
     rdf: 0,
     rdm: 0,
+    prCurrent: null,
+    prMaximum: null,
     enchantmentSpellId: "",
     bondId: "",
     bondAbilityId: "",
@@ -109,6 +111,10 @@ function costSummary(source: Pick<CharacterAbility, "costType" | "costMode" | "c
 
 function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond[], enchantmentSpells: CharacterSpell[]): CharacterInventoryItem {
   const affinity = Math.max(0, Math.min(4, Math.trunc(item.affinity))) as CharacterInventoryItem["affinity"]
+  const prMaximum = item.prMaximum === null ? null : Math.max(0, Math.trunc(item.prMaximum))
+  const prCurrent = item.prCurrent === null
+    ? null
+    : Math.min(prMaximum ?? Number.POSITIVE_INFINITY, Math.max(0, Math.trunc(item.prCurrent)))
   return {
     ...item,
     name: item.name.trim().slice(0, 80) || "Item sem nome",
@@ -118,6 +124,8 @@ function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond
     damage: item.damage.trim().slice(0, 160),
     rdf: Math.max(0, Math.trunc(item.rdf)),
     rdm: Math.max(0, Math.trunc(item.rdm)),
+    prCurrent,
+    prMaximum,
     enchantmentSpellId: enchantmentSpells.some((spell) => spell.id === item.enchantmentSpellId) ? item.enchantmentSpellId : "",
     bondId: matchingBonds.some((bond) => bond.id === item.bondId) ? item.bondId : "",
     description: item.description.slice(0, 5000),
@@ -213,7 +221,14 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
   function rollDamage(item: CharacterInventoryItem) {
     if (!item.damage.trim()) return
     close()
-    router.push(`/calculadora-dano?damage=${encodeURIComponent(item.damage)}&roll=${encodeURIComponent(crypto.randomUUID())}`)
+    const applyMt = item.applyScaleWeight ? "&applyMt=yes" : ""
+    router.push(`/calculadora-dano?damage=${encodeURIComponent(item.damage)}&roll=${encodeURIComponent(crypto.randomUUID())}${applyMt}`)
+  }
+
+  function updateShieldPr(itemId: string, value: number | null) {
+    onItemsChange(items.map((item) => item.id === itemId
+      ? { ...item, prCurrent: value === null ? null : Math.min(item.prMaximum ?? Number.POSITIVE_INFINITY, Math.max(0, Math.trunc(value))) }
+      : item))
   }
 
   function itemSkill(item: CharacterInventoryItem): CharacterSkill | undefined {
@@ -225,11 +240,11 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,.8fr)]">
         <article className="rounded-[20px] border border-border bg-muted/30 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Carga</p>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div><span className="text-xs text-muted-foreground">Atual</span><strong className="mt-1 block text-xl text-foreground">{formatWeight(currentLoad)} kg</strong></div>
-            <div><span className="text-xs text-muted-foreground">Capacidade</span><strong className="mt-1 block text-xl text-foreground">{formatWeight(statSnapshot.loadCapacity)} kg</strong></div>
-            <NumberInput label="Modificador de Carga" value={stats.loadBonus} onChange={(value) => onLoadBonusChange(Math.trunc(value))} />
-            <div><span className="text-xs text-muted-foreground">Itens contabilizados</span><strong className="mt-1 block text-xl text-foreground">{items.filter((item) => item.usage !== "absent").length}</strong></div>
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="flex min-w-0 flex-col rounded-xl bg-background/55 p-3"><span className="flex min-h-8 items-start text-xs text-muted-foreground">Atual</span><strong className="flex h-11 items-center text-xl text-foreground">{formatWeight(currentLoad)} kg</strong></div>
+            <div className="flex min-w-0 flex-col rounded-xl bg-background/55 p-3"><span className="flex min-h-8 items-start text-xs text-muted-foreground">Capacidade</span><strong className="flex h-11 items-center text-xl text-foreground">{formatWeight(statSnapshot.loadCapacity)} kg</strong></div>
+            <div className="min-w-0 rounded-xl bg-background/55 p-3"><NumberInput label="Modificador de Carga" value={stats.loadBonus} onChange={(value) => onLoadBonusChange(Math.trunc(value))} className="[&>label]:min-h-8" /></div>
+            <div className="flex min-w-0 flex-col rounded-xl bg-background/55 p-3"><span className="flex min-h-8 items-start text-xs text-muted-foreground">Total de Itens</span><strong className="flex h-11 items-center text-xl text-foreground">{items.filter((item) => item.usage !== "absent").length}</strong></div>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted-foreground">A carga soma automaticamente o peso real dos itens equipados e armazenados. Itens ausentes não contam.</p>
           {statSnapshot.overweightLevel > 0 && <div className="mt-3 rounded-xl border border-yellow-500/25 bg-yellow-500/10 p-3 text-sm italic"><p className="font-semibold text-yellow-foreground">Sobrepeso {statSnapshot.overweightLevel}: -{statSnapshot.physicalPenalty} Físico, -{statSnapshot.movementPenalty} Desloc.</p>{statSnapshot.overweightWarnings.length > 0 && <p className="mt-1 font-bold text-destructive">{statSnapshot.overweightWarnings.join(", ")}</p>}</div>}
@@ -252,7 +267,7 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
               const canRollDamage = (item.type === "weapon" || item.type === "shield") && Boolean(item.damage.trim())
               return <article key={item.id} className="rounded-[18px] border border-border bg-background/55 p-4">
                 <div className="flex items-start justify-between gap-3"><div className="min-w-0"><span className="text-xs font-semibold text-primary">{inventoryTypeLabel(item.type)}</span><button type="button" onClick={() => openItem(item)} className="mt-0.5 block max-w-full truncate text-left font-bold text-foreground hover:text-primary">{item.name}</button></div>{item.type === "weapon" ? <Swords className="size-5 text-muted-foreground" /> : <Shield className="size-5 text-muted-foreground" />}</div>
-                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground"><span>Dano: <strong className="text-foreground">{item.damage || "—"}</strong></span>{(item.type === "armor" || item.type === "shield") && <><span>RDF: <strong className="text-foreground">{item.rdf}</strong></span><span>RDM: <strong className="text-foreground">{item.rdm}</strong></span></>}</div>
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground"><span>Dano: <strong className="text-foreground">{item.damage || "—"}</strong></span>{(item.type === "armor" || item.type === "shield") && <><span>RDF: <strong className="text-foreground">{item.rdf}</strong></span><span>RDM: <strong className="text-foreground">{item.rdm}</strong></span></>}{item.type === "shield" && <label className="flex items-center gap-1.5"><span>PR:</span><input type="number" inputMode="numeric" min={0} max={item.prMaximum ?? undefined} value={item.prCurrent ?? ""} placeholder="—" onChange={(event) => updateShieldPr(item.id, event.target.value === "" ? null : Number(event.target.value))} aria-label={`PR atual de ${item.name}`} className="h-8 w-14 rounded-lg border border-input bg-background px-2 text-center text-xs font-bold text-foreground outline-none focus:border-ring" /><span>/ <strong className="text-foreground">{item.prMaximum ?? "—"}</strong></span></label>}</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
                   {(item.type === "weapon" || item.type === "shield") && <Button type="button" size="sm" onClick={() => rollDamage(item)} disabled={!canRollDamage}><Swords /> Rolar dano</Button>}
                   <Button type="button" size="sm" variant="secondary" onClick={() => skill && rollSkill(skill.id)} disabled={!skill?.attributeKey}><Dices /> Rolar teste</Button>
@@ -305,6 +320,13 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
                       <NumberInput label="RDM" value={draft.rdm} min={0} onChange={(rdm) => setDraft({ ...draft, rdm: Math.max(0, Math.trunc(rdm)) })} />
                     </div>
                   </fieldset>
+                  <fieldset className="rounded-xl border border-border/80 bg-muted/15 p-3">
+                    <legend className="px-1 text-sm font-medium text-muted-foreground">PR (opcional)</legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      <OptionalNumberInput label="Atual" value={draft.prCurrent} max={draft.prMaximum ?? undefined} onChange={(prCurrent) => setDraft({ ...draft, prCurrent })} />
+                      <OptionalNumberInput label="Máximo" value={draft.prMaximum} onChange={(prMaximum) => setDraft({ ...draft, prMaximum, prCurrent: draft.prCurrent === null || prMaximum === null ? draft.prCurrent : Math.min(draft.prCurrent, prMaximum) })} />
+                    </div>
+                  </fieldset>
                   <Select label="Encantamento (opcional)" value={draft.enchantmentSpellId} options={[{ value: "", label: enchantmentSpells.length ? "Nenhum" : "Nenhum encantamento cadastrado" }, ...enchantmentSpells.map((spell) => ({ value: spell.id, label: spell.name }))]} onChange={(value) => setDraft({ ...draft, enchantmentSpellId: value })} />
                   <Select label="Vínculo (opcional)" value={draft.bondId} options={[{ value: "", label: matchingBonds.length ? "Nenhum" : "Nenhum vínculo com este nome" }, ...matchingBonds.map((bond) => ({ value: bond.id, label: bond.name }))]} onChange={(value) => setDraft({ ...draft, bondId: value })} />
                   <Select label="Habilidade de Vínculo (opcional)" value={draft.bondAbilityId} options={[{ value: "", label: "Nenhuma" }, ...bondAbilities.map((ability) => ({ value: ability.id, label: ability.name }))]} onChange={(value) => setDraft({ ...draft, bondAbilityId: value })} />
@@ -325,6 +347,10 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
 
 function Select({ label, value, options, onChange }: { label: string; value: string; options: readonly { value: string; label: string }[]; onChange: (value: string) => void }) {
   return <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">{label}</span><select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring">{options.map((option) => <option key={`${label}-${option.value}`} value={option.value}>{option.label}</option>)}</select></label>
+}
+
+function OptionalNumberInput({ label, value, max, onChange }: { label: string; value: number | null; max?: number; onChange: (value: number | null) => void }) {
+  return <label className="min-w-0"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</span><input type="number" inputMode="numeric" min={0} max={max} value={value ?? ""} placeholder="—" onChange={(event) => { const raw = event.target.value; onChange(raw === "" ? null : Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(0, Math.trunc(Number(raw) || 0)))) }} className="h-11 w-full min-w-0 rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>
 }
 
 interface ItemViewProps {
@@ -353,7 +379,7 @@ function ItemView({ item, info, skills, bonds, abilities, spells, attributes, st
   const skillTest = skill?.attributeKey ? calculateAttributeTest(attributes, skill.attributeKey) + calculateSkillModifier(skill) : null
   return <div role="dialog" aria-modal="true" aria-labelledby="inventory-view-title" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-[24px] border border-border bg-card p-4 shadow-2xl sm:p-6">
     <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Visualização do item</p><h2 id="inventory-view-title" className="mt-1 text-xl font-bold text-foreground">{item.name}</h2><p className="mt-1 text-sm text-muted-foreground">{inventoryTypeLabel(item.type)} · {inventoryUsageLabel(item.usage)}</p></div><button type="button" onClick={onClose} aria-label="Fechar item" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div>
-    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Afinidade" value={itemAffinityOptions[item.affinity]?.label ?? "Ordinário (0)"} /><Info label="Raridade" value={itemRarity(item.bondPoints)} /><Info label="Peso Base" value={`${formatWeight(item.baseWeight)} kg`} /><Info label="Peso Real" value={`${formatWeight(calculateItemRealWeight(item, info.scaleMultiplier))} kg`} />{item.damage && <Info label="Dano" value={item.damage} />}{(item.rdf > 0 || item.rdm > 0) && <><Info label="RDF" value={String(item.rdf)} /><Info label="RDM" value={String(item.rdm)} /></>}</div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Afinidade" value={itemAffinityOptions[item.affinity]?.label ?? "Ordinário (0)"} /><Info label="Raridade" value={itemRarity(item.bondPoints)} /><Info label="Peso Base" value={`${formatWeight(item.baseWeight)} kg`} /><Info label="Peso Real" value={`${formatWeight(calculateItemRealWeight(item, info.scaleMultiplier))} kg`} />{item.damage && <Info label="Dano" value={item.damage} />}{(item.rdf > 0 || item.rdm > 0) && <><Info label="RDF" value={String(item.rdf)} /><Info label="RDM" value={String(item.rdm)} /></>}{(item.prCurrent !== null || item.prMaximum !== null) && <Info label="PR atual/máximo" value={`${item.prCurrent ?? "—"} / ${item.prMaximum ?? "—"}`} />}</div>
     {item.description && <div className="mt-4 rounded-xl border border-border bg-background/55 p-4"><span className="text-xs font-medium text-muted-foreground">Descrição</span><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{item.description}</p></div>}
     <div className="mt-4 grid gap-3 lg:grid-cols-2">
       {spell && <ReferenceCard title="Encantamento" name={spell.name} details={`${spellTypeLabel(spell.magicType)} · ${spellRange(spell)} · ${spell.duration || "Sem duração"} · ${costSummary(spell)} · ${spell.castingSkill || "Sem conjuração"}`} onOpen={() => onReference({ type: "spell", value: spell })} />}

@@ -46,6 +46,7 @@ export function useDamageCalculator() {
   const handledRollToken = useRef<string | null>(null)
   const requestedDamage = searchParams.get("damage") ?? ""
   const requestedRollToken = searchParams.get("roll")
+  const requestedApplyMt = searchParams.get("applyMt") === "yes"
 
   /** Valor atual do atributo selecionado, lido da ficha (0 se nenhum). */
   const getAttributeValue = useCallback(
@@ -81,11 +82,15 @@ export function useDamageCalculator() {
     if (!requestedDamage || !requestedRollToken || handledRollToken.current === requestedRollToken) return
     handledRollToken.current = requestedRollToken
     const next = configWithParsed(config, parseDamageExpression(requestedDamage))
+    if (requestedApplyMt) {
+      next.mtEnabled = true
+      next.mtValue = character.stats.mt || 0
+    }
     const attributeValue = next.attributeKey === "none" ? 0 : character.attributes[next.attributeKey] ?? 0
     const conversion = convertDamageBonusesToDice(next.numDice, [attributeValue, next.otherModifier])
     setConfig(next)
     setResult(calculateDamage({ config: next, diceRolls: rollDice(conversion.numDice), attributeValue }))
-  }, [character.attributes, config, requestedDamage, requestedRollToken])
+  }, [character.attributes, character.stats.mt, config, requestedApplyMt, requestedDamage, requestedRollToken])
 
   const roll = useCallback(() => {
     const attributeValue = getAttributeValue(config.attributeKey)

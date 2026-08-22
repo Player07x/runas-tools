@@ -127,6 +127,8 @@ export interface CharacterInventoryItem {
   damage: string
   rdf: number
   rdm: number
+  prCurrent: number | null
+  prMaximum: number | null
   enchantmentSpellId: string
   bondId: string
   bondAbilityId: string
@@ -211,4 +213,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 15
+export const CHARACTER_VERSION = 16

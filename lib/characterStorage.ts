@@ -326,6 +326,10 @@ function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined):
       damage: typeof item.damage === "string" ? item.damage.trim().slice(0, 160) : "",
       rdf: Math.max(0, integer(item.rdf)),
       rdm: Math.max(0, integer(item.rdm)),
+      prMaximum: item.prMaximum === null || item.prMaximum === undefined ? null : Math.max(0, integer(item.prMaximum)),
+      prCurrent: item.prCurrent === null || item.prCurrent === undefined
+        ? null
+        : Math.min(item.prMaximum === null || item.prMaximum === undefined ? Number.POSITIVE_INFINITY : Math.max(0, integer(item.prMaximum)), Math.max(0, integer(item.prCurrent))),
       enchantmentSpellId: typeof item.enchantmentSpellId === "string" ? item.enchantmentSpellId.slice(0, 100) : "",
       bondId: typeof item.bondId === "string" ? item.bondId.slice(0, 100) : "",
       bondAbilityId: typeof item.bondAbilityId === "string" ? item.bondAbilityId.slice(0, 100) : "",

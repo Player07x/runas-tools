@@ -370,22 +370,22 @@ export function SkillTestCalculator() {
   const attributeValue = config.attributeKey ? calculateAttributeTest(attributes, config.attributeKey) : null
 
   return (
-    <section aria-label="Recursos da Calculadora de Testes">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] lg:items-start">
+    <section aria-label="Recursos da Calculadora de Testes" className="min-w-0 max-w-full overflow-x-clip">
+      <div className="grid min-w-0 max-w-full grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] lg:items-start">
         <div className="order-2 min-w-0 rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6 lg:order-1">
-          <div className="grid gap-3 lg:grid-cols-2">
-        <article className="rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
+        <article className="min-w-0 rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
           <h2 className="text-sm font-bold text-foreground">Teste rápido</h2>
           <p className="mt-1 text-xs text-muted-foreground">Informe o total do teste e role 2d10 sem abrir o resumo.</p>
-          <div className="mt-3 flex gap-2">
-            <SkillIntegerInput value={quickTest} onChange={setQuickTest} label="Valor do teste rápido" className="h-11 flex-1 text-base font-semibold" />
+          <div className="mt-3 flex min-w-0 gap-2">
+            <SkillIntegerInput value={quickTest} onChange={setQuickTest} label="Valor do teste rápido" className="h-11 w-full flex-1 text-base font-semibold" />
             <button type="button" onClick={rollQuickTest} className="inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition hover:brightness-110" aria-label="Rolar teste rápido">
               <Dices className="size-5" />
             </button>
           </div>
         </article>
 
-        <article className="rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
+        <article className="min-w-0 rounded-[20px] border border-border bg-muted/30 p-3 sm:p-4">
           <h2 className="text-sm font-bold text-foreground">Entrada rápida</h2>
           <p className="mt-1 text-xs text-muted-foreground">Formato: Força+4 (lendário) ou Lâminas-2 (sorte).</p>
           <div className="mt-3 flex flex-col gap-2 min-[430px]:flex-row">
@@ -409,10 +409,10 @@ export function SkillTestCalculator() {
         </article>
           </div>
 
-          <article className="mt-5 rounded-[22px] border border-border bg-muted/25 p-3 sm:p-5">
-        <div className="mb-4 flex items-center gap-2">
+          <article className="mt-5 min-w-0 rounded-[22px] border border-border bg-muted/25 p-3 sm:p-5">
+        <div className="mb-4 flex min-w-0 items-start gap-2">
           <Sparkles className="size-4.5 text-primary" />
-          <div>
+          <div className="min-w-0">
             <h2 className="font-bold text-foreground">Calculadora de testes</h2>
             <p className="text-xs text-muted-foreground">A rolagem usa o atributo primário + secundário e todos os modificadores abaixo.</p>
           </div>

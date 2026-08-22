@@ -77,8 +77,8 @@ export function CharacterGallery() {
 
   if (!isReady) return <div className="h-72 animate-pulse rounded-[24px] border border-border bg-card" />
 
-  return <div>
-    <section className="rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6">
+  return <div className="min-w-0 max-w-full overflow-x-clip">
+    <section className="min-w-0 max-w-full rounded-[24px] border border-border bg-card p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div><p className="text-sm font-semibold text-muted-foreground">{galleryEntries.length} de 10 fichas salvas</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">A ficha ativa é sincronizada automaticamente sempre que você a altera.</p></div>
         <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:justify-end">
@@ -92,7 +92,7 @@ export function CharacterGallery() {
       {galleryEntries.length > 0 && <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => exportGalleryZip(galleryEntries, "json")}><FileArchive /> Exportar ZIP (JSON)</Button><Button type="button" variant="outline" onClick={() => exportGalleryZip(galleryEntries, "md")}><Download /> Exportar ZIP (MD)</Button></div>}
     </section>
 
-    <div className="mt-5 grid gap-4 lg:grid-cols-2">
+    <div className="mt-5 grid min-w-0 max-w-full gap-4 lg:grid-cols-2">
       {galleryEntries.length === 0 && <div className="rounded-[24px] border border-dashed border-border bg-card/70 p-10 text-center lg:col-span-2"><h2 className="font-bold text-foreground">Sua galeria está vazia</h2><p className="mt-2 text-sm text-muted-foreground">Salve a ficha atual, importe um arquivo JSON ou crie um novo personagem.</p></div>}
       {galleryEntries.map((entry) => <CharacterCard key={entry.id} entry={entry} active={entry.id === activeGalleryId} onPreview={() => setPreviewId(entry.id)} onUse={() => { useGalleryCharacter(entry.id); setMessage(`“${entry.character.name || "Personagem sem nome"}” agora é a ficha ativa.`) }} onExport={() => exportCharacterJSON(entry.character)} onDelete={() => removeEntry(entry)} />)}
     </div>
@@ -114,9 +114,9 @@ function CharacterCard({ entry, active, onPreview, onUse, onExport, onDelete }: 
     { label: "Impressão", value: formatSigned(snapshot.firstImpressions), color: "border-amber-300/20 bg-amber-400/8 text-amber-200" },
     { label: "Carga", value: `${formatWeight(character.stats.currentLoad)} / ${formatWeight(snapshot.loadCapacity)} kg`, color: "border-border bg-muted/25 text-foreground" },
   ]
-  return <article className={`rounded-[20px] border bg-card p-3 shadow-sm sm:p-4 ${active ? "border-primary/55 ring-2 ring-primary/10" : "border-border"}`}>
-    <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1">{active && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-primary">Ativa</span>}<span className="text-[0.68rem] text-muted-foreground">Atualizada {new Date(entry.updatedAt).toLocaleDateString("pt-BR")}</span></div><div className="mt-1.5 flex min-w-0 items-baseline gap-2"><h2 className="truncate text-lg font-bold text-foreground">{character.name || "Personagem sem nome"}</h2><p className="truncate text-xs text-muted-foreground">{character.info.race || "Raça não informada"} · {character.info.profession || "Ofício não informado"}</p></div></div>
+  return <article className={`w-full min-w-0 max-w-full overflow-hidden rounded-[20px] border bg-card p-3 shadow-sm sm:p-4 ${active ? "border-primary/55 ring-2 ring-primary/10" : "border-border"}`}>
+    <div className="min-w-0"><div className="flex flex-wrap items-center gap-x-2 gap-y-1">{active && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wide text-primary">Ativa</span>}<span className="text-[0.68rem] text-muted-foreground">Atualizada {new Date(entry.updatedAt).toLocaleDateString("pt-BR")}</span></div><div className="mt-1.5 min-w-0 sm:flex sm:items-baseline sm:gap-2"><h2 className="min-w-0 truncate text-lg font-bold text-foreground sm:flex-1">{character.name || "Personagem sem nome"}</h2><p className="mt-0.5 min-w-0 truncate text-xs text-muted-foreground sm:mt-0 sm:max-w-[45%]">{character.info.race || "Raça não informada"} · {character.info.profession || "Ofício não informado"}</p></div></div>
     <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-4">{stats.map(({ label, value, color }) => <div key={label} className={`min-w-0 rounded-lg border px-2 py-1.5 ${color}`}><span className="block truncate text-[0.62rem] font-medium opacity-80">{label}</span><strong className="mt-0.5 block truncate text-sm text-current">{value}</strong></div>)}</div>
-    <div className="mt-3 grid grid-cols-2 gap-1.5 min-[440px]:grid-cols-4"><Button type="button" size="sm" variant="outline" onClick={onPreview}><Eye /> Visualizar</Button>{active ? <span className="inline-flex h-9 items-center justify-center rounded-xl bg-primary/10 px-3 text-sm font-bold text-primary">Ativa</span> : <Button type="button" size="sm" onClick={onUse}><UserCheck /> Usar Ficha</Button>}<Button type="button" size="sm" variant="secondary" onClick={onExport}><Braces /> Exportar</Button><Button type="button" size="sm" variant="destructive" onClick={onDelete}><Trash2 /> Deletar</Button></div>
+    <div className="mt-3 grid min-w-0 grid-cols-2 gap-1.5 min-[440px]:grid-cols-4"><Button type="button" size="sm" variant="outline" onClick={onPreview} className="w-full min-w-0 px-1.5"><Eye /> Visualizar</Button>{active ? <span className="inline-flex h-7 min-w-0 items-center justify-center rounded-xl bg-primary/10 px-2 text-[0.8rem] font-bold text-primary">Ativa</span> : <Button type="button" size="sm" onClick={onUse} className="w-full min-w-0 px-1.5"><UserCheck /> Usar Ficha</Button>}<Button type="button" size="sm" variant="secondary" onClick={onExport} className="w-full min-w-0 px-1.5"><Braces /> Exportar</Button><Button type="button" size="sm" variant="destructive" onClick={onDelete} className="w-full min-w-0 px-1.5"><Trash2 /> Deletar</Button></div>
   </article>
 }

@@ -362,19 +362,22 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
             <span className={remainingMasteryPoints < 0 ? "text-destructive" : "text-muted-foreground"}>Restantes <strong className="text-current">{remainingMasteryPoints}</strong></span>
           </div>
         </div>
-        <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
           {masteryImprovementOptions.map((option) => {
             const quantity = stats.masteryImprovements[option.key]
             const canBuy = remainingMasteryPoints >= option.cost
-            return <div key={option.key} className="flex min-w-0 items-center gap-2 bg-card/95 p-3">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-1.5"><strong className={`truncate text-sm ${option.color}`}>{option.name}</strong><span className="shrink-0 text-[0.65rem] text-muted-foreground">{option.cost} pts.</span></div>
-                <p className="mt-0.5 truncate text-[0.68rem] text-muted-foreground">{option.description}</p>
+            return <div key={option.key} className="flex min-w-0 flex-col justify-between gap-3 bg-card/95 p-3.5">
+              <div className="min-w-0">
+                <div className="flex items-start justify-between gap-2"><strong className={`min-w-0 text-sm ${option.color}`}>{option.name}</strong><span className="shrink-0 rounded-full border border-border bg-background/70 px-2 py-0.5 text-[0.65rem] font-semibold text-muted-foreground">{option.cost} pts.</span></div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{option.description}</p>
               </div>
-              <div className="flex shrink-0 items-center rounded-lg border border-border bg-background/70">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[0.68rem] font-medium text-muted-foreground">Compradas</span>
+                <div className="flex shrink-0 items-center rounded-lg border border-border bg-background/70">
                 <button type="button" onClick={() => adjustMasteryImprovement(option.key, -1)} disabled={quantity === 0} aria-label={`Remover uma melhoria de ${option.name}`} className="inline-flex size-8 items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30"><Minus className="size-3.5" /></button>
                 <output aria-label={`${quantity} melhorias de ${option.name}`} className="min-w-6 text-center text-sm font-bold tabular-nums text-foreground">{quantity}</output>
                 <button type="button" onClick={() => adjustMasteryImprovement(option.key, 1)} disabled={!canBuy} aria-label={`Comprar uma melhoria de ${option.name} por ${option.cost} pontos`} className="inline-flex size-8 items-center justify-center text-primary hover:bg-primary/10 disabled:opacity-30"><Plus className="size-3.5" /></button>
+                </div>
               </div>
             </div>
           })}

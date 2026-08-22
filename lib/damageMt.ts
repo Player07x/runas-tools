@@ -6,3 +6,11 @@ export function getMtDamageMultiplier(value: number): number {
   if (mt < 0) return 1 / Math.abs(mt)
   return mt
 }
+
+/**
+ * Converte o MT do alvo em multiplicador de dano recebido.
+ * Um alvo maior reduz o dano; um alvo menor aumenta o dano.
+ */
+export function getTargetMtDamageMultiplier(value: number): number {
+  return getMtDamageMultiplier(-value)
+}

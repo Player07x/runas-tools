@@ -1,5 +1,5 @@
 import { damageTypes, getDamageType } from "@/data/damageTypes"
-import { getMtDamageMultiplier } from "@/lib/damageMt"
+import { getTargetMtDamageMultiplier } from "@/lib/damageMt"
 import type { AppliedDamageChange, DamageResourceKey } from "@/types/damage"
 
 export interface FixedDamage {
@@ -126,7 +126,7 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
   }
 
   const reduction = Math.max(0, damageType.category === "physical" ? config.rdf : config.rdm)
-  const mtMultiplier = config.mtEnabled ? getMtDamageMultiplier(config.mtValue) : 1
+  const mtMultiplier = config.mtEnabled ? getTargetMtDamageMultiplier(config.mtValue) : 1
   const damageAfterMt = config.damage.amount * mtMultiplier
   let remaining = Math.max(0, damageAfterMt - reduction)
   const formattedAfterMt = damageAfterMt.toFixed(2).replace(/\.00$/, "")

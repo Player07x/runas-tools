@@ -23,6 +23,7 @@ import type { ImportedSkill } from "@/lib/skillImport"
 import type { ImportedBond } from "@/lib/bondImport"
 import type { ImportedAbility } from "@/lib/abilityTransfer"
 import type { ImportedSpell } from "@/lib/spellTransfer"
+import type { ImportedInventoryItem } from "@/lib/inventoryTransfer"
 import { cn } from "@/lib/utils"
 import { calculateEquippedArmorDefense, calculateInventoryLoad } from "@/lib/inventoryCalculations"
 import { useCharacter } from "./character-provider"
@@ -402,6 +403,52 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
     })
   }
 
+  function importInventoryItems(importedItems: ImportedInventoryItem[]) {
+    updateCharacter((prev) => {
+      let equippedArmorExists = prev.inventory.some((item) => item.type === "armor" && item.usage === "equipped")
+      const spells = [...prev.spells]
+      const imported = importedItems.map((item, index): CharacterInventoryItem => {
+        const usage = item.type === "armor" && item.usage === "equipped" && equippedArmorExists ? "stored" : item.usage
+        if (item.type === "armor" && usage === "equipped") equippedArmorExists = true
+        const findByName = <T extends { id: string; name: string }>(values: T[], name: string): string => (
+          values.find((value) => normalizeSkillName(value.name) === normalizeSkillName(name))?.id ?? ""
+        )
+        let enchantmentSpellId = ""
+        if (item.enchantment) {
+          const existing = spells.find((spell) => spell.magicType === "enchantment" && normalizeSkillName(spell.name) === normalizeSkillName(item.enchantment?.name ?? ""))
+          if (existing) enchantmentSpellId = existing.id
+          else {
+            enchantmentSpellId = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `spell-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`
+            spells.push({ id: enchantmentSpellId, ...item.enchantment })
+          }
+        }
+        return {
+          id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `item-import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 7)}`,
+          usage,
+          name: item.name,
+          type: item.type,
+          affinity: item.affinity,
+          bondPoints: item.bondPoints,
+          baseWeight: item.baseWeight,
+          applyScaleWeight: item.applyScaleWeight,
+          damage: item.damage,
+          rdf: item.rdf,
+          rdm: item.rdm,
+          prCurrent: item.prCurrent,
+          prMaximum: item.prMaximum,
+          enchantmentSpellId,
+          bondId: findByName(prev.bonds, item.bondName),
+          bondAbilityId: findByName(prev.abilities, item.bondAbilityName),
+          skillId: findByName(prev.skills, item.skillName),
+          description: item.description,
+        }
+      })
+      const inventory = [...prev.inventory, ...imported]
+      const defense = calculateEquippedArmorDefense(inventory)
+      return { ...prev, spells, inventory, stats: { ...prev.stats, currentLoad: calculateInventoryLoad(inventory, prev.info.scaleMultiplier), armorRdf: defense.rdf, armorRdm: defense.rdm } }
+    })
+  }
+
   function setNote(id: string, updates: Partial<CharacterNote>) {
     updateCharacter((prev) => ({
       ...prev,
@@ -551,6 +598,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
           )}
           {activeTab === "inventory" && (
             <CharacterInventory
+              characterName={character.name}
               items={character.inventory}
               info={character.info}
               attributes={character.attributes}
@@ -560,6 +608,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
               abilities={character.abilities}
               spells={character.spells}
               onItemsChange={setInventory}
+              onImportItems={importInventoryItems}
               onLoadBonusChange={(loadBonus) => setStats({ loadBonus })}
             />
           )}

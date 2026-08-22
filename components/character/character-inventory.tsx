@@ -1,9 +1,9 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
-import { Dices, Eye, Pencil, Plus, Save, Shield, Swords, Trash2, X } from "lucide-react"
+import { Dices, Download, Eye, Pencil, Plus, Save, Shield, Swords, Trash2, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NumberInput } from "@/components/ui/number-input"
 import { SegmentedToggle } from "@/components/ui/segmented-toggle"
@@ -37,8 +37,10 @@ import {
 } from "@/lib/inventoryCalculations"
 import { useCharacterPanel } from "./character-panel"
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
+import { exportInventoryList, parseInventoryListFile, type ImportedInventoryItem } from "@/lib/inventoryTransfer"
 
 interface Props {
+  characterName: string
   items: CharacterInventoryItem[]
   info: CharacterInfo
   attributes: CharacterAttributes
@@ -48,6 +50,7 @@ interface Props {
   abilities: CharacterAbility[]
   spells: CharacterSpell[]
   onItemsChange: (items: CharacterInventoryItem[]) => void
+  onImportItems: (items: ImportedInventoryItem[]) => void
   onLoadBonusChange: (value: number) => void
 }
 
@@ -132,7 +135,7 @@ function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond
   }
 }
 
-export function CharacterInventory({ items, info, attributes, stats, skills, bonds, abilities, spells, onItemsChange, onLoadBonusChange }: Props) {
+export function CharacterInventory({ characterName, items, info, attributes, stats, skills, bonds, abilities, spells, onItemsChange, onImportItems, onLoadBonusChange }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
   const [draft, setDraft] = useState<CharacterInventoryItem | null>(null)
@@ -140,6 +143,12 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
   const [dialogMode, setDialogMode] = useState<"view" | "edit">("view")
   const [referencePreview, setReferencePreview] = useState<ReferencePreview | null>(null)
   const [armorConfirmation, setArmorConfirmation] = useState<ArmorConfirmation | null>(null)
+  const importFileRef = useRef<HTMLInputElement>(null)
+  const [showImport, setShowImport] = useState(false)
+  const [importedItems, setImportedItems] = useState<ImportedInventoryItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
+  const [importFilename, setImportFilename] = useState("")
+  const [importError, setImportError] = useState<string | null>(null)
 
   const currentLoad = calculateInventoryLoad(items, info.scaleMultiplier)
   const statSnapshot = useMemo(() => calculateCharacterStatSnapshot(attributes, info, { ...stats, currentLoad }, skills, abilities), [abilities, attributes, currentLoad, info, skills, stats])
@@ -162,6 +171,50 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
     setDraft(createInventoryItem())
     setDraftIsNew(true)
     setDialogMode("edit")
+  }
+
+  function openImport() {
+    setImportedItems([])
+    setSelectedItems(new Set())
+    setImportFilename("")
+    setImportError(null)
+    setShowImport(true)
+  }
+
+  async function loadInventoryFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setImportError(null)
+    try {
+      const imported = parseInventoryListFile(await file.text())
+      setImportedItems(imported)
+      setSelectedItems(new Set(imported.map((_, index) => index)))
+      setImportFilename(file.name)
+    } catch (error) {
+      setImportedItems([])
+      setSelectedItems(new Set())
+      setImportFilename("")
+      setImportError(error instanceof Error ? error.message : "Não foi possível ler a lista de itens.")
+    } finally {
+      event.target.value = ""
+    }
+  }
+
+  function toggleImportedItem(index: number) {
+    setSelectedItems((current) => {
+      const next = new Set(current)
+      if (next.has(index)) next.delete(index)
+      else next.add(index)
+      return next
+    })
+  }
+
+  function confirmImport(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const selected = importedItems.filter((_, index) => selectedItems.has(index))
+    if (selected.length === 0) return
+    onImportItems(selected)
+    setShowImport(false)
   }
 
   function commitItemSet(nextItem: CharacterInventoryItem, baseItems: CharacterInventoryItem[], closeEditor: boolean) {
@@ -281,7 +334,11 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
 
       <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div><h3 className="font-bold text-foreground">Todos os itens</h3><p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground"><strong>Equipado</strong> está sendo usado agora; <strong>Armazenado</strong> está nos bolsos ou mochila; <strong>Ausente</strong> está em outro lugar, mas continua sob posse ou registrado pelo jogador.</p></div>
-        <Button type="button" onClick={addItem}><Plus /> Adicionar item</Button>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Button type="button" variant="outline" onClick={() => exportInventoryList(items, characterName, spells, bonds, abilities, skills)} disabled={items.length === 0}><Download /> Exportar todos</Button>
+          <Button type="button" variant="outline" onClick={openImport}><Upload /> Importar lista</Button>
+          <Button type="button" onClick={addItem}><Plus /> Adicionar item</Button>
+        </div>
       </div>
 
       <div className="mt-3 space-y-2">
@@ -296,6 +353,23 @@ export function CharacterInventory({ items, info, attributes, stats, skills, bon
           <button type="button" onClick={() => openItem(item, "edit")} aria-label={`Editar ${item.name}`} className="col-start-2 row-start-2 inline-flex size-10 items-center justify-center justify-self-end rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground md:col-start-auto md:row-start-auto"><Pencil className="size-4" /></button>
         </article>)}
       </div>
+
+      {showImport && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setShowImport(false) }}>
+          <form onSubmit={confirmImport} role="dialog" aria-modal="true" aria-labelledby="inventory-import-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[24px] border border-border bg-card shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-6"><div><h2 id="inventory-import-title" className="text-lg font-bold text-foreground">Importar itens</h2><p className="mt-1 text-sm text-muted-foreground">Escolha uma lista exportada e selecione os itens que deseja adicionar ao inventário.</p></div><button type="button" onClick={() => setShowImport(false)} aria-label="Fechar importação de itens" className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <input ref={importFileRef} type="file" accept="application/json,.json" onChange={loadInventoryFile} className="hidden" />
+              <button type="button" onClick={() => importFileRef.current?.click()} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-[18px] border border-dashed border-input bg-background/65 px-4 py-3 text-sm font-semibold text-muted-foreground transition hover:border-primary/55 hover:text-foreground"><Upload className="size-4" /> {importFilename ? "Escolher outro arquivo" : "Escolher arquivo de inventário"}</button>
+              {importFilename && <p className="mt-2 truncate text-xs text-muted-foreground">Arquivo: <strong>{importFilename}</strong></p>}
+              {importedItems.length > 0 && <div className="mt-4"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-semibold text-foreground">{selectedItems.size} de {importedItems.length} selecionados</p><div className="flex flex-wrap gap-1"><button type="button" onClick={() => setSelectedItems(new Set(importedItems.map((_, index) => index)))} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/10">Selecionar todos</button><button type="button" onClick={() => setSelectedItems(new Set())} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground">Limpar seleção</button></div></div><div className="mt-3 space-y-2">{importedItems.map((item, index) => { const selected = selectedItems.has(index); return <label key={`${item.name}-${index}`} className={`flex cursor-pointer items-center gap-3 rounded-[18px] border p-3 transition ${selected ? "border-primary/45 bg-primary/5" : "border-border bg-background/45"}`}><input type="checkbox" checked={selected} onChange={() => toggleImportedItem(index)} aria-label={`Selecionar ${item.name}`} className="size-5 shrink-0 accent-primary" /><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-foreground">{item.name}</strong><span className="block truncate text-xs text-muted-foreground">{inventoryTypeLabel(item.type)} · {inventoryUsageLabel(item.usage)} · {formatWeight(item.baseWeight)} kg{item.damage ? ` · ${item.damage}` : ""}{item.enchantment ? ` · Encantamento: ${item.enchantment.name}` : ""}</span></span></label> })}</div></div>}
+              {importError && <div role="alert" className="mt-3 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{importError}</div>}
+            </div>
+            <div className="flex flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:justify-end sm:px-6"><Button type="button" variant="outline" onClick={() => setShowImport(false)}>Cancelar</Button><Button type="submit" disabled={selectedItems.size === 0}><Upload /> Importar {selectedItems.size || "selecionados"}</Button></div>
+          </form>
+        </div>,
+        document.body,
+      )}
 
       {draft && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setDraft(null) }}>

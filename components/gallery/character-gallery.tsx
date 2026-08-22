@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Braces, Download, Eye, FileArchive, Plus, Trash2, Upload, UserCheck, X } from "lucide-react"
+import { Braces, CheckSquare, Download, Eye, FileArchive, Plus, Square, Trash2, Upload, UserCheck, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCharacter } from "@/components/character/character-provider"
 import { useCharacterPanel } from "@/components/character/character-panel"
@@ -11,6 +11,7 @@ import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
 import { exportCharacterJSON } from "@/lib/exportCharacter"
 import { parseCharacterFile } from "@/lib/characterStorage"
 import { exportGalleryZip } from "@/lib/galleryExport"
+import { parseGalleryZip, type GalleryZipCharacter } from "@/lib/galleryImport"
 import { formatSigned } from "@/lib/bondCalculations"
 import { formatWeight } from "@/lib/inventoryCalculations"
 import type { CharacterGalleryEntry } from "@/types/character"
@@ -23,14 +24,20 @@ export function CharacterGallery() {
     saveCurrentToGallery,
     createGalleryCharacter,
     importGalleryCharacter,
+    importGalleryCharacters,
     useGalleryCharacter,
     deleteGalleryCharacter,
     isReady,
   } = useCharacter()
   const { open } = useCharacterPanel()
   const inputRef = useRef<HTMLInputElement>(null)
+  const zipInputRef = useRef<HTMLInputElement>(null)
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [zipCharacters, setZipCharacters] = useState<GalleryZipCharacter[]>([])
+  const [selectedZipIds, setSelectedZipIds] = useState<Set<string>>(new Set())
+  const [zipIgnoredFiles, setZipIgnoredFiles] = useState(0)
+  const [readingZip, setReadingZip] = useState(false)
   const previewEntry = useMemo(() => galleryEntries.find((entry) => entry.id === previewId) ?? null, [galleryEntries, previewId])
   const isFull = galleryEntries.length >= 20
   const currentIsSaved = Boolean(activeGalleryId && galleryEntries.some((entry) => entry.id === activeGalleryId))
@@ -69,6 +76,53 @@ export function CharacterGallery() {
     }
   }
 
+  async function inspectZip(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setReadingZip(true)
+    setMessage(null)
+    try {
+      const result = await parseGalleryZip(file)
+      const availableSlots = Math.max(0, 20 - galleryEntries.length)
+      setZipCharacters(result.characters)
+      setSelectedZipIds(new Set(result.characters.slice(0, availableSlots).map((item) => item.id)))
+      setZipIgnoredFiles(result.ignoredFiles)
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Não foi possível ler o arquivo ZIP.")
+    } finally {
+      setReadingZip(false)
+      event.target.value = ""
+    }
+  }
+
+  function closeZipImport() {
+    setZipCharacters([])
+    setSelectedZipIds(new Set())
+    setZipIgnoredFiles(0)
+  }
+
+  function toggleZipCharacter(id: string) {
+    setSelectedZipIds((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else if (next.size < 20 - galleryEntries.length) next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllZipCharacters() {
+    const availableSlots = Math.max(0, 20 - galleryEntries.length)
+    const selectableIds = zipCharacters.slice(0, availableSlots).map((item) => item.id)
+    setSelectedZipIds(selectedZipIds.size === selectableIds.length ? new Set() : new Set(selectableIds))
+  }
+
+  function confirmZipImport() {
+    const selected = zipCharacters.filter((item) => selectedZipIds.has(item.id)).map((item) => item.character)
+    const importedCount = importGalleryCharacters(selected)
+    closeZipImport()
+    setMessage(`${importedCount} ${importedCount === 1 ? "ficha importada" : "fichas importadas"} do ZIP.`)
+  }
+
   function removeEntry(entry: CharacterGalleryEntry) {
     if (!window.confirm(`Excluir “${entry.character.name || "Personagem sem nome"}” da galeria?`)) return
     deleteGalleryCharacter(entry.id)
@@ -84,8 +138,10 @@ export function CharacterGallery() {
         <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:justify-end">
           {!currentIsSaved && <Button type="button" variant="secondary" onClick={saveCurrent} disabled={isFull}><UserCheck /> Salvar ficha atual</Button>}
           <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isFull}><Upload /> Importar ficha</Button>
+          <Button type="button" variant="outline" onClick={() => zipInputRef.current?.click()} disabled={isFull || readingZip}><FileArchive /> {readingZip ? "Lendo ZIP…" : "Importar ZIP (JSON)"}</Button>
           <Button type="button" onClick={createCharacter} disabled={isFull}><Plus /> Criar nova ficha</Button>
           <input ref={inputRef} type="file" accept="application/json,.json" onChange={importCharacter} className="hidden" />
+          <input ref={zipInputRef} type="file" accept="application/zip,.zip" onChange={inspectZip} className="hidden" />
         </div>
       </div>
       {message && <p role="status" className="mt-3 rounded-xl border border-border bg-muted/40 p-3 text-sm text-foreground">{message}</p>}
@@ -98,6 +154,34 @@ export function CharacterGallery() {
     </div>
 
     {previewEntry && typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setPreviewId(null) }}><div role="dialog" aria-modal="true" aria-labelledby="gallery-preview-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[26px] border border-border bg-card shadow-2xl"><div className="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-6"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ficha em modo leitura</p><h2 id="gallery-preview-title" className="mt-1 text-xl font-bold text-foreground">{previewEntry.character.name || "Personagem sem nome"}</h2></div><button type="button" onClick={() => setPreviewId(null)} aria-label="Fechar visualização da ficha" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div><div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><CharacterReadonlySheet character={previewEntry.character} /></div><div className="flex flex-col gap-2 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-end">{previewEntry.id === activeGalleryId ? <span className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-bold text-primary">Ativa</span> : <Button type="button" onClick={() => { useGalleryCharacter(previewEntry.id); setMessage(`“${previewEntry.character.name || "Personagem sem nome"}” agora é a ficha ativa.`) }}><UserCheck /> Usar Ficha</Button>}</div></div></div>, document.body)}
+
+    {zipCharacters.length > 0 && typeof document !== "undefined" && createPortal(
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/65 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) closeZipImport() }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="zip-import-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl flex-col overflow-hidden rounded-[26px] border border-border bg-card shadow-2xl">
+          <div className="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-6">
+            <div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Importar ZIP (JSON)</p><h2 id="zip-import-title" className="mt-1 text-xl font-bold text-foreground">Escolha as fichas</h2><p className="mt-1 text-xs text-muted-foreground">{20 - galleryEntries.length} espaços disponíveis na galeria.</p></div>
+            <button type="button" onClick={closeZipImport} aria-label="Fechar importação do ZIP" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6">
+            <span className="text-sm font-semibold text-foreground">{selectedZipIds.size} de {zipCharacters.length} selecionadas</span>
+            <Button type="button" size="sm" variant="outline" onClick={toggleAllZipCharacters}>{selectedZipIds.size === Math.min(zipCharacters.length, 20 - galleryEntries.length) ? <Square /> : <CheckSquare />} {selectedZipIds.size === Math.min(zipCharacters.length, 20 - galleryEntries.length) ? "Desmarcar todas" : "Marcar todas"}</Button>
+          </div>
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4 sm:p-6">
+            {zipCharacters.map((item) => {
+              const selected = selectedZipIds.has(item.id)
+              const selectionLimitReached = !selected && selectedZipIds.size >= 20 - galleryEntries.length
+              return <label key={item.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${selected ? "border-primary/45 bg-primary/8" : "border-border bg-muted/20"} ${selectionLimitReached ? "cursor-not-allowed opacity-55" : "hover:bg-muted/45"}`}>
+                <input type="checkbox" checked={selected} disabled={selectionLimitReached} onChange={() => toggleZipCharacter(item.id)} className="size-4 accent-primary" />
+                <span className="min-w-0"><strong className="block truncate text-sm text-foreground">{item.character.name || "Personagem sem nome"}</strong><span className="block truncate text-xs text-muted-foreground">{item.filename}</span></span>
+              </label>
+            })}
+            {zipIgnoredFiles > 0 && <p className="rounded-xl border border-amber-400/25 bg-amber-400/10 p-3 text-xs text-amber-200">{zipIgnoredFiles} {zipIgnoredFiles === 1 ? "arquivo JSON inválido foi ignorado" : "arquivos JSON inválidos foram ignorados"}.</p>}
+          </div>
+          <div className="flex flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:justify-end sm:p-6"><Button type="button" variant="outline" onClick={closeZipImport}>Cancelar</Button><Button type="button" onClick={confirmZipImport} disabled={selectedZipIds.size === 0}><Upload /> Importar {selectedZipIds.size || ""} {selectedZipIds.size === 1 ? "ficha" : "fichas"}</Button></div>
+        </div>
+      </div>,
+      document.body,
+    )}
   </div>
 }
 

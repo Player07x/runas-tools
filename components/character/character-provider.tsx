@@ -24,6 +24,7 @@ interface CharacterContextValue {
   saveCurrentToGallery: () => boolean
   createGalleryCharacter: () => boolean
   importGalleryCharacter: (character: Character) => boolean
+  importGalleryCharacters: (characters: Character[]) => number
   useGalleryCharacter: (id: string) => void
   deleteGalleryCharacter: (id: string) => void
 }
@@ -126,6 +127,17 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
     return true
   }, [galleryEntries.length])
 
+  const importGalleryCharacters = useCallback((imported: Character[]) => {
+    const accepted = imported.slice(0, Math.max(0, 20 - galleryEntries.length))
+    if (accepted.length === 0) return 0
+    const updatedAt = Date.now()
+    setStoredGalleryEntries((current) => [
+      ...current,
+      ...accepted.map((nextCharacter) => ({ id: crypto.randomUUID(), character: nextCharacter, updatedAt })),
+    ])
+    return accepted.length
+  }, [galleryEntries.length])
+
   const useGalleryCharacter = useCallback((id: string) => {
     const entry = galleryEntries.find((candidate) => candidate.id === id)
     if (!entry) return
@@ -143,7 +155,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CharacterContext.Provider
-      value={{ character, updateCharacter, replaceCharacter, resetCharacter, saveStatus, isReady, galleryEntries, activeGalleryId, saveCurrentToGallery, createGalleryCharacter, importGalleryCharacter, useGalleryCharacter, deleteGalleryCharacter }}
+      value={{ character, updateCharacter, replaceCharacter, resetCharacter, saveStatus, isReady, galleryEntries, activeGalleryId, saveCurrentToGallery, createGalleryCharacter, importGalleryCharacter, importGalleryCharacters, useGalleryCharacter, deleteGalleryCharacter }}
     >
       {children}
     </CharacterContext.Provider>

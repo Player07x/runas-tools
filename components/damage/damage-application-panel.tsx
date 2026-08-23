@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { createPortal } from "react-dom"
-import { AlertTriangle, ClipboardCheck, Eraser, RotateCcw, Sparkles } from "lucide-react"
+import { AlertTriangle, ClipboardCheck, Dices, Eraser, RotateCcw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NumberInput } from "@/components/ui/number-input"
 import { SegmentedToggle } from "@/components/ui/segmented-toggle"
@@ -19,7 +19,11 @@ import {
   simulateDamageApplication,
 } from "@/lib/damageApplication"
 import { calculateCharacterStatSnapshot } from "@/lib/characterStatCalculations"
-import type { AppliedDamageChange, DamageResourceKey, DamageResult } from "@/types/damage"
+import { calculateAttributeTest, calculateSkillModifier, determineSkillRollOutcome, findCharacterSkill } from "@/lib/skillCalculations"
+import type { AppliedDamageChange, DamageResourceKey, DamageResult, SpecialDamageTest } from "@/types/damage"
+import type { SkillRollOutcome } from "@/types/skillTest"
+import type { Character } from "@/types/character"
+import { ItemDamageApplicationPanel } from "./item-damage-application-panel"
 
 interface Props {
   rolledResult: DamageResult | null
@@ -29,6 +33,14 @@ interface ElementState {
   elementId: string
   resistances: string[]
   weaknesses: string[]
+}
+
+interface QuickDamageTestResult {
+  diceRolls: [number, number]
+  diceSum: number
+  testValue: number
+  margin: number
+  outcome: SkillRollOutcome
 }
 
 const emptyElement: ElementState = { elementId: "none", resistances: [], weaknesses: [] }
@@ -121,6 +133,19 @@ function ElementFields({
 }
 
 export function DamageApplicationPanel({ rolledResult }: Props) {
+  const [activeTab, setActiveTab] = useState<"target" | "item">("target")
+  return (
+    <div>
+      <div role="tablist" aria-label="Tipo de aplicação de dano" className="mb-4 grid grid-cols-2 rounded-2xl border border-border bg-muted/45 p-1">
+        <button type="button" role="tab" aria-selected={activeTab === "target"} onClick={() => setActiveTab("target")} className={`min-h-11 rounded-xl px-3 text-sm font-bold transition ${activeTab === "target" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>Aplicar Dano em Alvo</button>
+        <button type="button" role="tab" aria-selected={activeTab === "item"} onClick={() => setActiveTab("item")} className={`min-h-11 rounded-xl px-3 text-sm font-bold transition ${activeTab === "item" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>Aplicar Dano em Item</button>
+      </div>
+      {activeTab === "target" ? <TargetDamageApplicationPanel rolledResult={rolledResult} /> : <ItemDamageApplicationPanel rolledResult={rolledResult} />}
+    </div>
+  )
+}
+
+function TargetDamageApplicationPanel({ rolledResult }: Props) {
   const { character, updateCharacter, isReady } = useCharacter()
   const snapshot = useMemo(
     () => calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities),
@@ -152,7 +177,16 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
   const [rdm, setRdm] = useState(Math.max(0, character.stats.armorRdm + character.stats.naturalRdm))
   const [mtEnabled, setMtEnabled] = useState(true)
   const [mtValue, setMtValue] = useState(character.stats.mt)
+  const [vitalityBonus, setVitalityBonus] = useState(character.attributes.vitality)
+  const [powerBonus, setPowerBonus] = useState(character.attributes.power)
+  const [faithBonus, setFaithBonus] = useState(character.attributes.faith)
+  const [luckBonus, setLuckBonus] = useState(character.attributes.luck)
+  const [vitalityTest, setVitalityTest] = useState(() => calculateAttributeTest(character.attributes, "vitality"))
+  const [sanityTest, setSanityTest] = useState(() => calculateSanityTest(character))
   const [simulationSteps, setSimulationSteps] = useState<string[]>([])
+  const [notices, setNotices] = useState<string[]>([])
+  const [specialTest, setSpecialTest] = useState<SpecialDamageTest | null>(null)
+  const [quickTestResult, setQuickTestResult] = useState<QuickDamageTestResult | null>(null)
   const [resultText, setResultText] = useState("")
   const [simulationError, setSimulationError] = useState<string | null>(null)
   const [applyMessage, setApplyMessage] = useState<string | null>(null)
@@ -185,6 +219,12 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     setRdm(Math.max(0, character.stats.armorRdm + character.stats.naturalRdm))
     setMtEnabled(true)
     setMtValue(character.stats.mt)
+    setVitalityBonus(character.attributes.vitality)
+    setPowerBonus(character.attributes.power)
+    setFaithBonus(character.attributes.faith)
+    setLuckBonus(character.attributes.luck)
+    setVitalityTest(calculateAttributeTest(character.attributes, "vitality"))
+    setSanityTest(calculateSanityTest(character))
     if (rolledResult) {
       setDamageInput(`${Math.max(0, rolledResult.totalBeforeReduction)} ${rolledResult.damageTypeName}`)
     }
@@ -215,7 +255,16 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     setRdm(0)
     setMtEnabled(false)
     setMtValue(0)
+    setVitalityBonus(0)
+    setPowerBonus(0)
+    setFaithBonus(0)
+    setLuckBonus(0)
+    setVitalityTest(0)
+    setSanityTest(0)
     setSimulationSteps([])
+    setNotices([])
+    setSpecialTest(null)
+    setQuickTestResult(null)
     setResultText("")
     setSimulationError(null)
     setApplyMessage(null)
@@ -228,11 +277,14 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     setSimulationError(null)
   }
 
-  function simulate() {
+  function simulate(specialTestSucceeded: boolean | null = null) {
     const parsed = parseFixedDamage(damageInput)
     if (!parsed.value) {
       setSimulationError(parsed.error)
       setSimulationSteps([])
+      setNotices([])
+      setSpecialTest(null)
+      setQuickTestResult(null)
       setResultText("")
       return
     }
@@ -242,6 +294,8 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
       mtValue,
       rdf,
       rdm,
+      attributeBonuses: { vitality: vitalityBonus, power: powerBonus, faith: faithBonus, luck: luckBonus },
+      specialTestSucceeded,
       layers: [
         {
           resource: "paExtra",
@@ -271,8 +325,39 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
     })
     setSimulationError(simulation.error)
     setSimulationSteps(simulation.value?.steps ?? [])
+    setNotices(simulation.value?.notices ?? [])
+    setSpecialTest(simulation.value?.specialTest ?? null)
     setResultText(simulation.value?.resultText ?? "")
     setApplyMessage(null)
+  }
+
+  function rollSpecialTest() {
+    if (!specialTest) return
+    const base = specialTest.kind === "vitality" ? vitalityTest : sanityTest
+    const testValue = base - specialTest.penalty
+    const diceRolls: [number, number] = [Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 10) + 1]
+    applyQuickTestResult(diceRolls, testValue)
+  }
+
+  function applyQuickTestResult(diceRolls: [number, number], testValue: number) {
+    const diceSum = diceRolls[0] + diceRolls[1]
+    const margin = testValue - diceSum
+    const outcome = determineSkillRollOutcome(diceRolls, margin)
+    setQuickTestResult({ diceRolls, diceSum, testValue, margin, outcome })
+    simulate(outcome === "success" || outcome === "critical-success")
+  }
+
+  function useDetermination() {
+    if (!quickTestResult || character.stats.determination <= 0 || isCritical(quickTestResult.outcome)) return
+    updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, determination: previous.stats.determination - 1 } }))
+    applyQuickTestResult(quickTestResult.diceRolls, quickTestResult.testValue + 1)
+  }
+
+  function useCasualty() {
+    if (!quickTestResult || character.stats.casualty <= 0 || isCritical(quickTestResult.outcome)) return
+    updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, casualty: previous.stats.casualty - 1 } }))
+    const diceRolls: [number, number] = [Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 10) + 1]
+    applyQuickTestResult(diceRolls, quickTestResult.testValue)
   }
 
   function resourceLimits(resource: DamageResourceKey): { current: number; maximum: number } {
@@ -370,8 +455,21 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
                 <NumberInput label={`PE Atual (${target})`} value={pe} min={0} onChange={(value) => { markExternalTarget(); setPe(Math.trunc(value)) }} />
                 <NumberInput label={`PE Temporário / PE Extra (${target})`} value={peTemporary} min={0} onChange={(value) => { markExternalTarget(); setPeTemporary(Math.trunc(value)) }} />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">Danos físicos e mágicos seguem PA Extra → PA → PV. PE e PE Temporário ficam disponíveis para resultados editados; regras especiais serão adicionadas futuramente.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Danos padrão seguem PA Extra → PA → PV. Danos especiais aplicam automaticamente suas exceções de aura, RD e recursos.</p>
             </div>
+
+            <details className="rounded-2xl border border-border bg-muted/35 p-4">
+              <summary className="cursor-pointer text-sm font-bold text-foreground">Defesas e testes de danos especiais</summary>
+              <p className="mt-2 text-xs text-muted-foreground">Valores importados da ficha. Edite-os para simular um alvo externo.</p>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <NumberInput label="Bônus de Vitalidade" value={vitalityBonus} onChange={(value) => { markExternalTarget(); setVitalityBonus(Math.trunc(value)) }} />
+                <NumberInput label="Bônus de Poder" value={powerBonus} onChange={(value) => { markExternalTarget(); setPowerBonus(Math.trunc(value)) }} />
+                <NumberInput label="Bônus de Fé" value={faithBonus} onChange={(value) => { markExternalTarget(); setFaithBonus(Math.trunc(value)) }} />
+                <NumberInput label="Bônus de Sorte" value={luckBonus} onChange={(value) => { markExternalTarget(); setLuckBonus(Math.trunc(value)) }} />
+                <NumberInput label="Teste de Vitalidade" value={vitalityTest} onChange={(value) => { markExternalTarget(); setVitalityTest(Math.trunc(value)) }} />
+                <NumberInput label="Teste de Sanidade" value={sanityTest} onChange={(value) => { markExternalTarget(); setSanityTest(Math.trunc(value)) }} />
+              </div>
+            </details>
 
             <ElementFields title="Aura Extra" state={extraAuraElement} multiplier={extraAuraMultiplier} onStateChange={setExtraAuraElement} onMultiplierChange={setExtraAuraMultiplier} />
             <ElementFields title="Aura Atual" state={auraElement} multiplier={auraMultiplier} onStateChange={setAuraElement} onMultiplierChange={setAuraMultiplier} />
@@ -390,16 +488,16 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
               <NumberInput label="RDM do Alvo" value={rdm} min={0} onChange={(value) => setRdm(Math.trunc(value))} />
             </div>
 
-            <Button type="button" size="lg" onClick={simulate} className="w-full sm:w-auto sm:self-start">
+            <Button type="button" size="lg" onClick={() => { setQuickTestResult(null); simulate() }} className="w-full sm:w-auto sm:self-start">
               <Sparkles /> Simular Dano
             </Button>
 
             {simulationError && <p role="alert" className="rounded-xl border border-destructive/35 bg-destructive/10 p-3 text-sm font-medium text-destructive">{simulationError}</p>}
 
-            {(resultText || simulationSteps.length > 0) && (
+            {(resultText || simulationSteps.length > 0 || notices.length > 0 || specialTest) && (
               <div className={`rounded-2xl border p-4 sm:p-5 ${fatal ? "border-black bg-black text-white" : "border-primary/30 bg-primary/5"}`}>
                 <h3 className={`text-sm font-bold ${fatal ? "text-white" : "text-foreground"}`}>Resumo dos danos</h3>
-                <label className="mt-3 block">
+                {resultText && <label className="mt-3 block">
                   <span className={`mb-1.5 block text-xs font-medium ${fatal ? "text-white/70" : "text-muted-foreground"}`}>Resultado editável</span>
                   <textarea
                     value={resultText}
@@ -407,7 +505,7 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
                     rows={3}
                     className={`w-full resize-y rounded-xl border px-3.5 py-3 text-sm font-semibold outline-none focus:ring-3 ${fatal ? "border-white/25 bg-white/10 text-white focus:ring-white/20" : "border-input bg-background text-foreground focus:ring-ring/25"}`}
                   />
-                </label>
+                </label>}
                 <p className={`mt-3 text-base font-extrabold ${fatal ? "text-white" : "text-foreground"}`}>Dano Total Sofrido: {totalDamage}</p>
                 {parsedSummary.error && <p role="alert" className={`mt-2 text-xs font-semibold ${fatal ? "text-red-300" : "text-destructive"}`}>{parsedSummary.error}</p>}
                 {simulationSteps.length > 0 && (
@@ -417,6 +515,31 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
                       {simulationSteps.map((step, index) => <li key={`${step}-${index}`}>{step}</li>)}
                     </ol>
                   </details>
+                )}
+                {notices.length > 0 && (
+                  <ul className={`mt-4 space-y-2 rounded-xl border p-4 text-sm leading-relaxed ${fatal ? "border-white/20 bg-white/10" : "border-primary/25 bg-background/70"}`}>
+                    {notices.map((notice, index) => <li key={`${notice}-${index}`}>{notice}</li>)}
+                  </ul>
+                )}
+                {specialTest && (
+                  <div className={`mt-4 rounded-xl border p-4 ${fatal ? "border-white/20 bg-white/10" : "border-border bg-background/70"}`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold">{specialTest.label}{specialTest.penalty > 0 ? ` − ${specialTest.penalty}` : ""}</p>
+                        <p className={`mt-1 text-xs ${fatal ? "text-white/70" : "text-muted-foreground"}`}>Valor final: {(specialTest.kind === "vitality" ? vitalityTest : sanityTest) - specialTest.penalty}</p>
+                      </div>
+                      <Button type="button" onClick={rollSpecialTest}><Dices /> Rolar teste rápido</Button>
+                    </div>
+                    {quickTestResult && (
+                      <div className="mt-3">
+                        <p className="text-sm font-bold">{formatQuickOutcome(quickTestResult)} — {quickTestResult.diceRolls[0]} + {quickTestResult.diceRolls[1]} = {quickTestResult.diceSum}</p>
+                      </div>
+                    )}
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <Button type="button" variant="outline" onClick={useDetermination} disabled={!quickTestResult || character.stats.determination <= 0 || isCritical(quickTestResult.outcome)}>Usar Determinação ({character.stats.determination})</Button>
+                      <Button type="button" variant="outline" onClick={useCasualty} disabled={!quickTestResult || character.stats.casualty <= 0 || isCritical(quickTestResult.outcome)}>Usar Casualidade ({character.stats.casualty})</Button>
+                    </div>
+                  </div>
                 )}
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Button type="button" onClick={requestApply} disabled={!usingOwnSheet || !parsedSummary.value || Boolean(parsedSummary.error)}>
@@ -461,4 +584,20 @@ function clamp(value: number, minimum: number, maximum: number): number {
 
 function normalizeNote(value?: string): string {
   return (value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
+}
+
+function calculateSanityTest(character: Character): number {
+  const skill = findCharacterSkill(character.skills, "Sanidade")
+  if (skill?.attributeKey) return calculateAttributeTest(character.attributes, skill.attributeKey) + calculateSkillModifier(skill)
+  return calculateAttributeTest(character.attributes, "intelligence") - 4
+}
+
+function isCritical(outcome: SkillRollOutcome): boolean {
+  return outcome === "critical-success" || outcome === "critical-failure"
+}
+
+function formatQuickOutcome(result: QuickDamageTestResult): string {
+  if (result.outcome === "critical-success") return "Sucesso Crítico"
+  if (result.outcome === "critical-failure") return "Fracasso Crítico"
+  return `${result.outcome === "success" ? "Sucesso" : "Fracasso"} por ${result.margin >= 0 ? "+" : ""}${result.margin}`
 }

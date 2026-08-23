@@ -1,6 +1,7 @@
 import type { CharacterGalleryEntry } from "@/types/character"
 import { CHARACTER_VERSION } from "@/types/character"
-import { characterToMarkdown } from "@/lib/exportCharacter"
+import { characterObsidianFilename, characterToMarkdown } from "@/lib/exportCharacter"
+import { saveExportedBlob } from "@/lib/fileExport"
 
 const encoder = new TextEncoder()
 
@@ -73,10 +74,12 @@ function createZip(files: { name: string; content: string }[]): Uint8Array {
   return join([...localChunks, centralData, end.bytes])
 }
 
-export function exportGalleryZip(entries: CharacterGalleryEntry[], format: "json" | "md"): void {
+export function exportGalleryZip(entries: CharacterGalleryEntry[], format: "json" | "md"): Promise<void> | undefined {
   if (typeof window === "undefined" || entries.length === 0) return
   const files = entries.map((entry, index) => {
-    const base = `${String(index + 1).padStart(2, "0")}_${safeFilename(entry.character.name, "personagem")}`
+    const base = format === "md"
+      ? characterObsidianFilename(entry.character.name)
+      : `${String(index + 1).padStart(2, "0")}_${safeFilename(entry.character.name, "personagem")}`
     return {
       name: `${base}.${format}`,
       content: format === "json"
@@ -86,12 +89,5 @@ export function exportGalleryZip(entries: CharacterGalleryEntry[], format: "json
   })
   const zip = createZip(files)
   const blob = new Blob([zip], { type: "application/zip" })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = `galeria_personagens_${format}.zip`
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
+  return saveExportedBlob(blob, `galeria_personagens_${format}.zip`, "Galeria de personagens do Runas Tools")
 }

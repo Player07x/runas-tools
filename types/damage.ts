@@ -59,3 +59,11 @@ export interface AppliedDamageChange {
   amount: number
   note?: string
 }
+
+export type SpecialDamageTestKind = "vitality" | "sanity"
+
+export interface SpecialDamageTest {
+  kind: SpecialDamageTestKind
+  label: string
+  penalty: number
+}

@@ -1,4 +1,5 @@
 import type { AbilityCostMode, AbilityCostType, CharacterAbility } from "@/types/character"
+import { saveExportedJson } from "@/lib/fileExport"
 
 const ABILITY_LIST_KIND = "runas-tools-ability-list"
 const ABILITY_LIST_VERSION = 1
@@ -27,20 +28,8 @@ function safeFilename(value: string): string {
   return normalized || "personagem-runas"
 }
 
-function downloadJson(content: unknown, filename: string): void {
-  const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
-}
-
-export function exportAbilityList(abilities: CharacterAbility[], characterName: string): void {
-  if (typeof window === "undefined") return
+export function exportAbilityList(abilities: CharacterAbility[], characterName: string): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve()
   const file: AbilityListFile = {
     kind: ABILITY_LIST_KIND,
     version: ABILITY_LIST_VERSION,
@@ -55,7 +44,7 @@ export function exportAbilityList(abilities: CharacterAbility[], characterName: 
       costText: ability.costText,
     })),
   }
-  downloadJson(file, `${safeFilename(characterName)}_habilidades.json`)
+  return saveExportedJson(file, `${safeFilename(characterName)}_habilidades.json`)
 }
 
 function textField(value: unknown, maximum: number, field: string, position: number): string {

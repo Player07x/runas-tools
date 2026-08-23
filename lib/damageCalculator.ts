@@ -88,8 +88,9 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
   const isPhysical = category === "physical"
   const reduction = category === "special" ? 0 : isPhysical ? config.rdf : config.rdm
 
-  const mtMultiplier = config.mtEnabled ? getMtDamageMultiplier(config.mtValue) : 1
-  const otherMultiplier = normalizeMultiplier(config.otherMultiplier)
+  const ignoresDamageMultipliers = damageType?.id === "psiquica" || damageType?.id === "temporal"
+  const mtMultiplier = config.mtEnabled && !ignoresDamageMultipliers ? getMtDamageMultiplier(config.mtValue) : 1
+  const otherMultiplier = ignoresDamageMultipliers ? 1 : normalizeMultiplier(config.otherMultiplier)
 
   const attr = config.attributeKey !== "none" ? attributeValue || 0 : 0
   const modifier = config.otherModifier || 0

@@ -1,4 +1,5 @@
 import type { AbilityCostMode, AbilityCostType, CharacterSpell, SpellMagicType, SpellRangeType } from "@/types/character"
+import { saveExportedJson } from "@/lib/fileExport"
 
 const SPELL_LIST_KIND = "runas-tools-spell-list"
 const SPELL_LIST_VERSION = 1
@@ -28,8 +29,8 @@ function textField(value: unknown, maximum: number, field: string, position: num
   return value
 }
 
-export function exportSpellList(spells: CharacterSpell[], characterName: string): void {
-  if (typeof window === "undefined") return
+export function exportSpellList(spells: CharacterSpell[], characterName: string): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve()
   const file: SpellListFile = {
     kind: SPELL_LIST_KIND,
     version: SPELL_LIST_VERSION,
@@ -39,15 +40,7 @@ export function exportSpellList(spells: CharacterSpell[], characterName: string)
       return spellWithoutId
     }),
   }
-  const blob = new Blob([JSON.stringify(file, null, 2)], { type: "application/json" })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = `${safeFilename(characterName)}_magias.json`
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
+  return saveExportedJson(file, `${safeFilename(characterName)}_magias.json`)
 }
 
 export function parseSpellListFile(text: string): ImportedSpell[] {

@@ -8,6 +8,7 @@ import type {
   InventoryUsage,
 } from "@/types/character"
 import { parseImportedSpell, type ImportedSpell } from "@/lib/spellTransfer"
+import { saveExportedJson } from "@/lib/fileExport"
 
 const INVENTORY_LIST_KIND = "runas-tools-inventory-list"
 const INVENTORY_LIST_VERSION = 1
@@ -36,18 +37,6 @@ function safeFilename(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "") || "personagem-runas"
 }
 
-function downloadJson(content: unknown, filename: string): void {
-  const blob = new Blob([JSON.stringify(content, null, 2)], { type: "application/json" })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement("a")
-  anchor.href = url
-  anchor.download = filename
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
-}
-
 export function exportInventoryList(
   items: CharacterInventoryItem[],
   characterName: string,
@@ -55,8 +44,8 @@ export function exportInventoryList(
   bonds: CharacterBond[],
   abilities: CharacterAbility[],
   skills: CharacterSkill[],
-): void {
-  if (typeof window === "undefined") return
+): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve()
   const file: InventoryListFile = {
     kind: INVENTORY_LIST_KIND,
     version: INVENTORY_LIST_VERSION,
@@ -78,7 +67,7 @@ export function exportInventoryList(
       }
     }),
   }
-  downloadJson(file, `${safeFilename(characterName)}_inventario.json`)
+  return saveExportedJson(file, `${safeFilename(characterName)}_inventario.json`)
 }
 
 function textField(value: unknown, maximum: number, field: string, position: number): string {

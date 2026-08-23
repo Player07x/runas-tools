@@ -1,6 +1,6 @@
 "use client"
 
-import { Backpack, Dices, FlaskConical, Images, ListChecks, Swords } from "lucide-react"
+import { Dices, FlaskConical, Images, ListChecks, Swords } from "lucide-react"
 import { PageContainer } from "@/components/layout/page-container"
 import { ToolCard } from "@/components/home/tool-card"
 import { FichaToolCard } from "@/components/home/ficha-tool-card"
@@ -61,12 +61,6 @@ export default function HomePage() {
           <span className="h-px flex-1 bg-border" />
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <ToolCard
-            title="Calculadora de Inventário"
-            description="Controle carga, itens e capacidade."
-            icon={Backpack}
-            comingSoon
-          />
           <ToolCard
             title="Calculadora de Criação de Itens"
             description="Monte itens e equipamentos personalizados."

@@ -25,6 +25,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
   const usesRdf = category === "physical"
   const usesRdm = category === "magical"
   const isSpecial = category === "special"
+  const ignoresDamageMultipliers = config.damageTypeId === "psiquica" || config.damageTypeId === "temporal"
   const bonusConversion = convertDamageBonusesToDice(config.numDice, [attributeValue, config.otherModifier])
   const convertedNotation = `${bonusConversion.numDice}D${
     bonusConversion.modifier > 0
@@ -102,6 +103,9 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
           <p className="mt-1.5 text-[0.7rem] text-muted-foreground">Aceita frações como 1/2 e 1/4.</p>
         </div>
       </div>
+      {ignoresDamageMultipliers && (
+        <p className="mt-2 text-xs font-medium text-primary">Dano Psíquico e Temporal ignoram MT e Outro Multiplicador.</p>
+      )}
 
       <div className="mt-4">
         <span className="mb-2 block text-xs font-medium text-muted-foreground">Redução de Dano do alvo (opcional)</span>

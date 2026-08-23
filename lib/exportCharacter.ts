@@ -8,18 +8,10 @@ import { calculateAttributeTest, calculateSkillLevel } from "@/lib/skillCalculat
 import { calculateBondQuality, calculateBondTest, formatSigned } from "@/lib/bondCalculations"
 import { getAttributeDef } from "@/data/attributes"
 import { calculateItemRealWeight, inventoryTypeLabel, inventoryUsageLabel, itemRarity } from "@/lib/inventoryCalculations"
+import { saveExportedBlob } from "@/lib/fileExport"
 
-function downloadBlob(content: string, filename: string, mime: string): void {
-  if (typeof window === "undefined") return
-  const blob = new Blob([content], { type: mime })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+function downloadBlob(content: string, filename: string, mime: string): Promise<void> {
+  return saveExportedBlob(new Blob([content], { type: mime }), filename, "Ficha do Runas Tools")
 }
 
 function characterFilename(name: string): string {
@@ -32,22 +24,50 @@ function characterFilename(name: string): string {
   return sanitized || "personagem-runas"
 }
 
-function richTextToPlainText(value: string): string {
+export function characterObsidianFilename(name: string): string {
+  const sanitized = name.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, "").replace(/[. ]+$/g, "")
+  return sanitized || "Personagem Runas"
+}
+
+function richTextToMarkdown(value: string): string {
   return value
-    .replace(/<\/?(p|div|li|ol|ul|br)[^>]*>/gi, "\n")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<\/(li|p|div|h[1-6])>/gi, "\n")
+    .replace(/<p[^>]*>/gi, "")
+    .replace(/<h([1-6])[^>]*>/gi, (_match, level: string) => `${"#".repeat(Number(level))} `)
+    .replace(/<(strong|b)[^>]*>/gi, "**").replace(/<\/(strong|b)>/gi, "**")
+    .replace(/<(em|i)[^>]*>/gi, "*").replace(/<\/(em|i)>/gi, "*")
+    .replace(/<(s|strike)[^>]*>/gi, "~~").replace(/<\/(s|strike)>/gi, "~~")
+    .replace(/<u[^>]*>/gi, "<u>").replace(/<\/u>/gi, "</u>")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, "\n\n")
     .trim()
 }
 
+function yamlScalar(value: string | number): string {
+  return typeof value === "number" ? String(value) : value ? JSON.stringify(value) : ""
+}
+
+function yamlList(key: string, values: string[]): string[] {
+  const filtered = [...new Set(values.map((value) => value.trim()).filter(Boolean))]
+  return filtered.length > 0 ? [`${key}:`, ...filtered.map((value) => `  - ${yamlScalar(value)}`)] : [`${key}:`]
+}
+
+function markdownCell(value: string | number): string {
+  return String(value).replace(/\|/g, "\\|").replace(/\r?\n/g, "<br>")
+}
+
 /** Exporta a ficha como arquivo .json (save manual). */
-export function exportCharacterJSON(character: Character): void {
+export function exportCharacterJSON(character: Character): Promise<void> {
   const file = { version: CHARACTER_VERSION, character }
-  downloadBlob(JSON.stringify(file, null, 2), `${characterFilename(character.name)}.json`, "application/json")
+  return downloadBlob(JSON.stringify(file, null, 2), `${characterFilename(character.name)}.json`, "application/json")
 }
 
 /** Gera um Markdown legível por humanos a partir da ficha. */
@@ -56,8 +76,47 @@ export function characterToMarkdown(character: Character): string {
   const statSnapshot = calculateCharacterStatSnapshot(attributes, info, stats, skills, abilities)
   const element = getCharacterElement(stats.elementId)
   const lines: string[] = []
+  const title = info.archetype || info.characterClass || info.profession
 
+  lines.push("---")
+  lines.push(`name: ${yamlScalar(character.name || "Personagem sem nome")}`)
+  lines.push("type: character")
+  lines.push(`system: ${yamlScalar("Runas: Livro Azul")}`)
+  lines.push(...yamlList("aliases", [title]))
+  lines.push(`Título: ${yamlScalar(title)}`)
+  lines.push("Obra de Origem:")
+  lines.push("Organizações:")
+  lines.push(...yamlList("Raça", [info.race, info.species]))
+  lines.push("Gênero:")
+  lines.push(`Nascimento: ${yamlScalar(info.birthDate)}`)
+  lines.push("Estado:")
+  lines.push(`Sistema: ${yamlScalar("Runas: Livro Azul")}`)
+  lines.push(`Profissão: ${yamlScalar(info.profession)}`)
+  lines.push(`Classe: ${yamlScalar(info.characterClass)}`)
+  lines.push(`Arquétipo: ${yamlScalar(info.archetype)}`)
+  lines.push(`Região: ${yamlScalar(info.region)}`)
+  lines.push(`Divindade: ${yamlScalar(info.deity)}`)
+  lines.push(`Afinidade: ${yamlScalar(info.affinity)}`)
+  lines.push(`Alinhamento: ${yamlScalar(info.alignment)}`)
+  lines.push(`PV Atual: ${stats.pv}`)
+  lines.push(`PV Máximo: ${statSnapshot.pvMax}`)
+  lines.push(`PA Atual: ${stats.pa}`)
+  lines.push(`PA Máximo: ${statSnapshot.paMax}`)
+  lines.push(`PE Atual: ${stats.pe}`)
+  lines.push(`PE Máximo: ${statSnapshot.peMax}`)
+  lines.push(`Versão da Ficha: ${CHARACTER_VERSION}`)
+  lines.push("tags:")
+  lines.push("  - character")
+  lines.push("  - personagem")
+  lines.push("  - runilita")
+  lines.push("  - runas-tools")
+  lines.push("---")
+  lines.push("")
   lines.push(`# ${character.name || "Personagem sem nome"}`)
+  lines.push("")
+  lines.push("> [!info] Ficha de Runas")
+  lines.push(`> **${info.profession || "Ofício não informado"}**${info.characterClass ? ` · ${info.characterClass}` : ""}${info.archetype ? ` · ${info.archetype}` : ""}`)
+  lines.push(`> PV **${stats.pv}/${statSnapshot.pvMax}** · PA **${stats.pa}/${statSnapshot.paMax}** · PE **${stats.pe}/${statSnapshot.peMax}**`)
   lines.push("")
   lines.push("## Informações")
   lines.push("")
@@ -102,11 +161,13 @@ export function characterToMarkdown(character: Character): string {
 
   lines.push("## Estatísticas")
   lines.push("")
-  lines.push(`- PV atual: ${stats.pv}; máximo: ${statSnapshot.pvMax}; Mod.: ${stats.pvBonus >= 0 ? "+" : ""}${stats.pvBonus}`)
-  lines.push(`- PA atual: ${stats.pa}; máximo: ${statSnapshot.paMax}; Mod.: ${stats.paBonus >= 0 ? "+" : ""}${stats.paBonus}`)
-  lines.push(`- PA extra: ${Math.min(stats.paExtra, statSnapshot.paExtraMax)}; máximo: ${statSnapshot.paExtraMax}; Mod.: ${stats.paExtraBonus >= 0 ? "+" : ""}${stats.paExtraBonus}`)
-  lines.push(`- PE atual: ${stats.pe}; máximo: ${statSnapshot.peMax}; Mod.: ${stats.peBonus >= 0 ? "+" : ""}${stats.peBonus}`)
-  lines.push(`- PE temporário: ${stats.peTemporary}`)
+  lines.push("| Recurso | Atual | Máximo | Mod. |")
+  lines.push("|---|---:|---:|---:|")
+  lines.push(`| PV | ${stats.pv} | ${statSnapshot.pvMax} | ${formatSigned(stats.pvBonus)} |`)
+  lines.push(`| PA | ${stats.pa} | ${statSnapshot.paMax} | ${formatSigned(stats.paBonus)} |`)
+  lines.push(`| PA Extra | ${Math.min(stats.paExtra, statSnapshot.paExtraMax)} | ${statSnapshot.paExtraMax} | ${formatSigned(stats.paExtraBonus)} |`)
+  lines.push(`| PE | ${stats.pe} | ${statSnapshot.peMax} | ${formatSigned(stats.peBonus)} |`)
+  lines.push(`| PE Temporário | ${stats.peTemporary} | ${statSnapshot.peTemporaryMax} | — |`)
   lines.push(`- Melhorias de Maestria: Aura ${stats.masteryImprovements.aura}; Vida ${stats.masteryImprovements.life}; Energia ${stats.masteryImprovements.energy}; Determinação ${stats.masteryImprovements.determination}; Casualidade ${stats.masteryImprovements.casualty}`)
   lines.push(`- MT: ${stats.mt}`)
   lines.push(`- Elemento principal: ${element?.name ?? "Nenhum"}`)
@@ -128,7 +189,7 @@ export function characterToMarkdown(character: Character): string {
       lines.push(`- Alertas de sobrepeso: ${statSnapshot.overweightWarnings.join(", ")}`)
     }
   }
-  const effects = richTextToPlainText(stats.effects)
+  const effects = richTextToMarkdown(stats.effects)
   if (effects) {
     lines.push("")
     lines.push("### Efeitos")
@@ -139,6 +200,8 @@ export function characterToMarkdown(character: Character): string {
 
   lines.push("## Perícias")
   lines.push("")
+  lines.push("| Perícia | Teste | Nível | Atributo | Pontos | Mod. |")
+  lines.push("|---|---:|---:|---|---:|---:|")
   for (const skill of skills) {
     const level = calculateSkillLevel(skill.points)
     const attribute = skill.attributeKey ? getAttributeDef(skill.attributeKey)?.name ?? skill.attributeKey : "Não definido"
@@ -146,15 +209,17 @@ export function characterToMarkdown(character: Character): string {
       ? calculateAttributeTest(attributes, skill.attributeKey) + level + skill.modifier
       : "Indisponível"
     const fixed = Object.values(CORE_SKILL_IDS).includes(skill.id as typeof CORE_SKILL_IDS[keyof typeof CORE_SKILL_IDS])
-    lines.push(`- ${skill.name || "Perícia sem nome"}: teste ${test}; nível +${level}; atributo ${attribute}; pontos ${skill.points}; Mod. ${skill.modifier >= 0 ? "+" : ""}${skill.modifier}${fixed ? "; padrão" : ""}`)
+    lines.push(`| ${markdownCell(skill.name || "Perícia sem nome")}${fixed ? " *(padrão)*" : ""} | ${test} | +${level} | ${markdownCell(attribute)} | ${skill.points} | ${formatSigned(skill.modifier)} |`)
   }
   lines.push("")
 
   lines.push("## Vínculos")
   lines.push("")
+  lines.push("| Vínculo | Categoria | Teste | Qualidade | Nível | Pontos | Mod. |")
+  lines.push("|---|---|---:|---|---:|---:|---:|")
   for (const bond of bonds) {
     const quality = calculateBondQuality(bond.points)
-    lines.push(`- ${bond.name}: categoria ${bond.category || "Sem categoria"}; teste ${calculateBondTest(attributes, stats, bond)}; qualidade ${quality.name}; nível ${formatSigned(quality.level)}; pontos ${bond.points}; Mod. ${formatSigned(bond.modifier)}`)
+    lines.push(`| ${markdownCell(bond.name)} | ${markdownCell(bond.category || "Sem categoria")} | ${calculateBondTest(attributes, stats, bond)} | ${quality.name} | ${formatSigned(quality.level)} | ${bond.points} | ${formatSigned(bond.modifier)} |`)
   }
   lines.push("")
 
@@ -170,7 +235,7 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- Categoria: ${ability.category || "Sem categoria"}`)
     lines.push(`- Modificadores permanentes: ${ability.permanentModifiers || "Nenhum"}`)
     lines.push(`- Custo: ${cost}`)
-    const description = richTextToPlainText(ability.description)
+    const description = richTextToMarkdown(ability.description)
     if (description) lines.push("", description)
     lines.push("")
   }
@@ -197,7 +262,7 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`- Duração: ${spell.duration || "Não informada"}`)
     lines.push(`- Teste de conjuração: ${spell.castingSkill || "Nenhum"}`)
     lines.push(`- Custo: ${cost}`)
-    const description = richTextToPlainText(spell.description)
+    const description = richTextToMarkdown(spell.description)
     if (description) lines.push("", description)
     lines.push("")
   }
@@ -215,7 +280,8 @@ export function characterToMarkdown(character: Character): string {
     if (item.damage) lines.push(`- Dano: ${item.damage}`)
     if (item.rdf || item.rdm) lines.push(`- RDF: ${item.rdf}; RDM: ${item.rdm}`)
     if (item.prCurrent !== null || item.prMaximum !== null) lines.push(`- PR atual: ${item.prCurrent ?? "—"}; máximo: ${item.prMaximum ?? "—"}`)
-    if (item.description) lines.push("", item.description)
+    const description = richTextToMarkdown(item.description)
+    if (description) lines.push("", description)
     lines.push("")
   }
 
@@ -225,7 +291,7 @@ export function characterToMarkdown(character: Character): string {
     lines.push(`### ${note.name}`)
     lines.push(`- Categoria: ${note.category || "Sem categoria"}`)
     lines.push(`- Data: ${note.date || "Sem data"}`)
-    const description = richTextToPlainText(note.description)
+    const description = richTextToMarkdown(note.description)
     if (description) lines.push("", description)
     lines.push("")
   }
@@ -234,6 +300,6 @@ export function characterToMarkdown(character: Character): string {
 }
 
 /** Baixa a ficha como arquivo .md. */
-export function exportCharacterMarkdown(character: Character): void {
-  downloadBlob(characterToMarkdown(character), `${characterFilename(character.name)}.md`, "text/markdown")
+export function exportCharacterMarkdown(character: Character): Promise<void> {
+  return downloadBlob(characterToMarkdown(character), `${characterObsidianFilename(character.name)}.md`, "text/markdown")
 }

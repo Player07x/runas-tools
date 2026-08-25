@@ -4,7 +4,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { User } from "lucide-react"
-import logo from "@/app/icon.png"
 import { cn } from "@/lib/utils"
 import { navItems } from "@/data/navigation"
 import { ThemeToggle } from "./theme-toggle"
@@ -25,7 +24,7 @@ export function AppHeader() {
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <Link href="/" className="group flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
             <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-black shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition-transform group-hover:-rotate-3">
-              <Image src={logo} alt="Logo Runas Tools" className="size-full object-cover" />
+              <Image src="/icon-192.png" alt="Logo Runas Tools" width={192} height={192} className="size-full object-cover" />
             </span>
             <span className="text-sm font-bold tracking-tight text-foreground sm:text-base">Runas Tools</span>
           </Link>

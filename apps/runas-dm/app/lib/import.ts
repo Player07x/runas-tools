@@ -1,4 +1,5 @@
 import type { Character } from "@runas/core/types/character"
+import { normalizeCharacter } from "@runas/core/lib/characterStorage"
 import type { RunasDmState } from "./model"
 
 export type RunasImport =
@@ -9,18 +10,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
 
-function isCharacter(value: unknown): value is Character {
+function looksLikeCharacter(value: unknown): value is Partial<Character> {
   return isRecord(value)
-    && typeof value.name === "string"
-    && isRecord(value.info)
-    && isRecord(value.attributes)
-    && isRecord(value.stats)
-    && Array.isArray(value.skills)
-    && Array.isArray(value.bonds)
-    && Array.isArray(value.abilities)
-    && Array.isArray(value.spells)
-    && Array.isArray(value.inventory)
-    && Array.isArray(value.notes)
+    && (typeof value.name === "string" || isRecord(value.info))
+    && (isRecord(value.attributes) || isRecord(value.stats))
 }
 
 function isWorkspace(value: unknown): value is RunasDmState {
@@ -39,7 +32,7 @@ export function parseRunasImport(value: unknown): RunasImport {
   if (isWorkspace(value)) return { kind: "workspace", state: value }
 
   const candidate = isRecord(value) && "character" in value ? value.character : value
-  if (isCharacter(candidate)) return { kind: "character", character: candidate }
+  if (looksLikeCharacter(candidate)) return { kind: "character", character: normalizeCharacter(candidate) }
 
   throw new Error("O arquivo não contém uma ficha Runas válida.")
 }

@@ -28,10 +28,13 @@ Antes de alterar qualquer parte desta suíte, leia integralmente:
 - A galeria sempre resume a ficha. O modal oferece `Simplificada` e `Avançada`.
 - `Simplificada` e `Avançada` editam a mesma instância de `Character`. Perícias, habilidades, magias, ataques e itens devem permanecer registros estruturados identificados por `id`; nunca use strings ou arrays paralelos para representá-los na simplificada.
 - A ficha avançada deve expor todos os campos de domínio do modelo compartilhado. A simplificada pode apenas ocultar o que não faz parte de seu recorte rápido.
+- A ficha avançada do Runas DM mantém paridade funcional e de organização com as seções da ficha do Runas Tools. Informações, Estatísticas, Perícias, Vínculos, Habilidades, Inventário, Magias e Anotações devem ser comparadas com seus componentes equivalentes em `apps/runas-tools/components/character` antes de qualquer mudança. No DM, alteram-se tema, cores e remoção dos botões de rolar/conjurar; não se substituem tabelas, resumos ou janelas de registro por cartões genéricos expansíveis.
+- Toda mudança estrutural em uma seção da ficha do Runas Tools exige revisar a seção correspondente em `apps/runas-dm/app/components/advanced-sheet-editor.tsx` no mesmo trabalho. Migração e normalização do formato `Character` pertencem exclusivamente a `packages/runas-core/src/lib/characterStorage.ts`.
 - O estado primário do Runas DM é local (IndexedDB). O D1 é backup privado e nunca é requisito de uso.
 - Endpoints de backup exigem token secreto no servidor e hospedagem privada.
 - O endereço canônico do Runas DM é `https://runas-dm.pages.dev`; mantenha o Cloudflare Access e o workflow dedicado antes de substituir uma publicação.
 - O Runas DM não limita fichas ou cópias. A galeria do Runas Tools aceita até 100 fichas, paginadas em 20 por página (máximo de 5 páginas), conforme decisão explícita de produto.
+- A importação do Runas DM aceita uma ficha JSON, vários JSON selecionados simultaneamente e o ZIP JSON exportado pela galeria do Runas Tools.
 - Mudanças compartilhadas exigem teste no `@runas/core`, typecheck e build dos dois aplicativos.
 - Os dois aplicativos são PWAs. A opção de instalação existe somente nas telas iniciais e nenhum fluxo principal pode depender da rede.
 - Service workers nunca armazenam `/api/backup`, autenticação ou respostas do Cloudflare Access/Sites.

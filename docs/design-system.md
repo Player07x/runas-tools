@@ -21,7 +21,7 @@ Painel operacional moderno inspirado no Livro Vermelho: árvore, pedra rúnica e
 - Inputs numéricos nunca exibem os controles nativos de incremento/decremento do navegador.
 - Imagens de ficha usam recorte quadrado ou retangular com cantos moderados; círculos são reservados às runas sem imagem. A ficha simplificada oferece seleção e remoção explícitas.
 - No cabeçalho simplificado, Nome ocupa a linha superior; Raça, Afinidade e Eficiência permanecem juntas na linha inferior. Eficiência é sempre apresentada e editada com o sufixo `%`.
-- Na simplificada, listas densas mostram resumo e edição progressiva. Na avançada, perícias, vínculos, habilidades e inventário abrem os campos completos por padrão até 6 registros; acima disso, os 4 primeiros ficam completos e os demais mantêm resumo informativo, economizando rolagem sem esconder a existência dos dados.
+- Na simplificada, listas densas mostram resumo e edição progressiva. Na avançada, a organização acompanha o Runas Tools: perícias e vínculos são linhas editáveis; habilidades, magias e anotações são tabelas-resumo com janela de registro; inventário mostra carga, armadura e itens antes de abrir detalhes. Cartões expansíveis genéricos são proibidos nessas seções.
 - Campos modificadores aparecem imediatamente antes, à esquerda, do recurso ou estado que alteram.
 - A ficha simplificada usa largura máxima aproximada de 1060 px; a avançada expande até aproximadamente 1280 px.
 - Cores têm função: vermelho para PV/dano, ciano para PA/testes, violeta para PE/magia, dourado para recursos narrativos e verde para restauração/carga.

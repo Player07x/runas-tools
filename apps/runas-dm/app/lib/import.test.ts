@@ -15,7 +15,8 @@ describe("parseRunasImport", () => {
 
     expect(parsed.kind).toBe("character")
     if (parsed.kind !== "character") return
-    expect(parsed.character).toBe(character)
+    expect(parsed.character).not.toBe(character)
+    expect(parsed.character.name).toBe(character.name)
     expect(parsed.character.skills.at(-1)?.id).toBe("skill-linked")
     expect(parsed.character.abilities[0]?.id).toBe("ability-linked")
     expect(parsed.character.spells[0]?.id).toBe("spell-linked")
@@ -29,6 +30,15 @@ describe("parseRunasImport", () => {
 
   it("rejeita listas textuais que não sejam uma ficha completa", () => {
     expect(() => parseRunasImport({ skills: ["Profecia"] })).toThrow("ficha Runas válida")
+  })
+
+  it("migra uma ficha antiga do Runas Tools antes de importar", () => {
+    const parsed = parseRunasImport({ version: 4, character: { version: 4, name: "Ficha antiga", info: { race: "Humano" }, attributes: { physical: 8 }, stats: { pv: 12 } } })
+    expect(parsed.kind).toBe("character")
+    if (parsed.kind !== "character") return
+    expect(parsed.character.version).toBeGreaterThan(4)
+    expect(parsed.character.info.race).toBe("Humano")
+    expect(parsed.character.skills.length).toBeGreaterThan(0)
   })
 
   it("valida uma exportação real quando RUNAS_IMPORT_FIXTURE é informado", () => {

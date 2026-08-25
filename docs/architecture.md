@@ -13,7 +13,7 @@ apps/runas-dm ────┘
 
 ## `@runas/core`
 
-Contém tipos versionados, tabelas de consulta, cálculos derivados, sincronização de invariantes, rolagens, dano, melhoria de maestria e modificador rápido.
+Contém tipos versionados, migração/normalização de `Character`, leitura de ZIP da galeria, tabelas de consulta, cálculos derivados, sincronização de invariantes, rolagens, dano, melhoria de maestria e modificador rápido.
 
 O núcleo não importa React, navegador, IndexedDB, Next.js, Cloudflare ou componentes. Seus módulos são publicados por subpaths, como `@runas/core/lib/damageCalculator`.
 
@@ -26,13 +26,13 @@ O núcleo não importa React, navegador, IndexedDB, Next.js, Cloudflare ou compo
 
 ## Runas DM
 
-O editor mantém uma única instância de `Character` por ficha aberta. As telas Simplificada e Avançada são projeções de interface sobre essa mesma instância. Coleções de domínio (`skills`, `abilities`, `spells`, `inventory`, `bonds` e `notes`) continuam normalizadas em objetos com `id`; a interface compacta nunca cria campos alternativos de texto.
+O editor mantém uma única instância de `Character` por ficha aberta. As telas Simplificada e Avançada são projeções de interface sobre essa mesma instância. Coleções de domínio (`skills`, `abilities`, `spells`, `inventory`, `bonds` e `notes`) continuam normalizadas em objetos com `id`; a interface compacta nunca cria campos alternativos de texto. JSONs antigos, múltiplos JSONs e ZIPs do Runas Tools passam por `@runas/core/lib/characterStorage` e `@runas/core/lib/galleryImport`, os mesmos módulos consumidos pelo Tools.
 
 Toda edição passa por `synchronizeCharacterDerivedValues`. A função recalcula informações derivadas, carga, defesa e limites de recursos; combina resistências/fraquezas do elemento com as personalizadas; permite PV atual negativo; e limita PA/PE aos respectivos máximos. O teto de PE Temporário é o PE atual. Runas Tools e Runas DM consomem essa mesma função.
 
 `Character.portraitDataUrl` é opcional e versionado desde a versão 18. O Runas DM reduz o arquivo a JPEG 512×512 antes de persistir, permitindo uso offline e sincronização pelo snapshot sem armazenar a imagem original.
 
-Na Mesa, cada ator é uma cópia independente. Testes podem gastar Determinação ou Casualidade; usos acumulados de Determinação são reaplicados às rolagens seguintes de Casualidade. Itens vinculam sua perícia por `skillId`; magias usam `castingSkill`; e a aplicação de dano mantém as três camadas PA Extra → PA → PV, seus elementos, multiplicadores, quebra, RDF/RDM e MT. Toda rolagem de dano, inclusive a iniciada por equipamento, pertence ao atacante, seleciona outro ator como alvo e cria primeiro uma simulação. `Dano causado` preserva o tipo e permite editar somente o valor; `Dano simulado` permite edição textual sob bloqueio e é recalculado ao ser bloqueado novamente. Apenas a confirmação explícita altera o alvo.
+Na Mesa, cada ator é uma cópia independente. Testes podem gastar Determinação ou Casualidade; usos acumulados de Determinação são reaplicados às rolagens seguintes de Casualidade. Itens vinculam sua perícia por `skillId`; magias usam `castingSkill`; e a aplicação de dano mantém as três camadas PA Extra → PA → PV, seus elementos, multiplicadores, quebra, RDF/RDM e MT. Toda rolagem de dano, inclusive a iniciada por equipamento, pertence ao atacante, seleciona explicitamente qualquer ator — inclusive ele mesmo — e cria primeiro uma simulação. `Dano causado` preserva o tipo e permite editar somente o valor; `Dano simulado` permite edição textual sob bloqueio e é recalculado ao ser bloqueado novamente. Apenas a confirmação explícita altera o alvo.
 
 A galeria do Runas Tools usa o limite de produto `GALLERY_MAX_CHARACTERS = 100`, derivado de 20 registros por página e 5 páginas. Persistência, importação individual/ZIP e interface consomem as mesmas constantes.
 

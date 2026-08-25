@@ -15,6 +15,7 @@ O Runas DM reduz o tempo gasto pelo mestre procurando fichas, calculando testes 
 - Toda alteração feita em um registro na simplificada deve aparecer imediatamente na avançada, e vice-versa.
 - A simplificada pode omitir campos por velocidade. A avançada deve expor todos os campos de domínio editáveis do modelo completo.
 - A importação aceita o envelope `{ version, character }` do Runas Tools sem perder os vínculos entre entidades.
+- A importação aceita uma ficha JSON individual, seleção múltipla de JSON e o ZIP de fichas JSON exportado pela galeria do Runas Tools. Toda ficha passa pela mesma migração compartilhada antes de entrar no bestiário.
 - Clicar em qualquer área principal do cartão abre imediatamente o modal na ficha simplificada; não existe etapa intermediária de expansão ou botão obrigatório de edição.
 - A ficha simplificada usa modal mais estreito. A avançada amplia o modal, sem ocupar desnecessariamente toda a largura da tela.
 - O Runas DM não limita fichas. No Runas Tools, a galeria aceita até 100 fichas, com 20 fichas por página e no máximo 5 páginas.
@@ -37,7 +38,15 @@ O Runas DM reduz o tempo gasto pelo mestre procurando fichas, calculando testes 
 - Valores iniciados por `x` multiplicam. `x0,5` equivale a dividir por dois.
 - `Avançado` abre configurações completas no mesmo painel.
 - Dano percorre PA Extra, PA e PV, considerando redução, resistência e fraqueza.
-- Dano de equipamento pertence ao atacante e nunca é aplicado nele por padrão. A Mesa exige um alvo explícito para aplicar a simulação.
+- Dano de equipamento pertence ao atacante e exige alvo explícito para aplicar a simulação. Outros atores aparecem primeiro, mas o próprio atacante também é uma opção válida para representar auto-dano.
+
+## Paridade da ficha avançada
+
+- A ficha avançada do Runas DM replica a organização funcional da ficha do Runas Tools, mudando apenas o tema visual e removendo ações de rolar teste, rolar dano e conjurar dentro do editor.
+- Perícias e vínculos são linhas editáveis, sem cartões expansíveis.
+- Habilidades e magias exibem tabelas-resumo e abrem o registro selecionado em uma janela de edição.
+- Inventário exibe carga, armadura, equipamentos e lista de itens; clicar no item abre sua visualização e permite entrar em edição.
+- Informações e Estatísticas preservam os mesmos agrupamentos, valores derivados e hierarquia do Runas Tools.
 - O painel mostra separadamente `Dano causado` (valor numérico editável, tipo imutável) e `Dano simulado` (texto protegido por bloqueio de edição). Ao bloquear novamente, a simulação é recalculada.
 - Ao gastar Determinação, o bônus permanece em toda nova rolagem feita por Casualidade no mesmo teste.
 - Disparar um teste por perícia, equipamento ou magia rola a página até a calculadora integrada.

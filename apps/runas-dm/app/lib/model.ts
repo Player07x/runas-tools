@@ -1,7 +1,6 @@
-import { createCoreSkills } from "@runas/core/data/skills"
+import { createEmptyCharacter as createCoreCharacter, normalizeCharacter } from "@runas/core/lib/characterStorage"
 import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import type { Character } from "@runas/core/types/character"
-import { CHARACTER_VERSION } from "@runas/core/types/character"
 
 export interface BestiaryEntry {
   id: string
@@ -31,32 +30,9 @@ export interface RunasDmState {
 }
 
 export function createEmptyCharacter(name = "Nova criatura"): Character {
-  return {
-    version: CHARACTER_VERSION,
-    name,
-    info: {
-      currentYear: "424", calendar: "logi", race: "Personalizado", species: "", profession: "",
-      sizeBase: "2.00", sizeReal: "2.00", sizeModifier: "0", sizeModifierBonus: "0",
-      weightBase: "100", weightBonus: "0", weightReal: "100", scaleMultiplier: "1.0x",
-      birthDate: "", age: "", region: "", characterClass: "", archetype: "", essences: "0",
-      karma: "0", deity: "", legacy: "", legacyPoints: "0", affinity: "Ordinário (0)",
-      efficiency: "0", alignment: "Neutro (0)", legacyRarity: "Comum (+0)", loadBase: "14",
-    },
-    attributes: {
-      physical: 7, mental: 7, mystic: 7, strength: 0, dexterity: 0, vitality: 0,
-      intelligence: 0, knowledge: 0, social: 0, faith: 0, power: 0, luck: 0,
-    },
-    stats: {
-      pv: 7, pvBonus: 0, pa: 7, paBonus: 0, pe: 4, peBonus: 0, peTemporary: 4,
-      paExtra: 0, paExtraBonus: 0, resistances: [], weaknesses: [], elementId: "none", effects: "",
-      determination: 4, determinationBonus: 0, casualty: 4, casualtyBonus: 0, focusCurrent: 35,
-      focusModifier: 0, currentLoad: 0, loadBonus: 0, willModifier: 0, chanceModifier: 0,
-      perceptionModifier: 0, movementBonus: 0, firstImpressionsBonus: 0, armorRdf: 0,
-      armorRdm: 0, naturalRdf: 0, naturalRdm: 0, mt: 0,
-      masteryImprovements: { aura: 0, life: 0, energy: 0, determination: 0, casualty: 0 },
-    },
-    skills: createCoreSkills(), bonds: [], abilities: [], spells: [], inventory: [], notes: [],
-  }
+  const character = createCoreCharacter()
+  character.name = name
+  return character
 }
 
 function sampleSentinel(): Character {
@@ -113,11 +89,11 @@ export function normalizeRunasDmState(state: RunasDmState): RunasDmState {
     ...state,
     entries: state.entries.map((entry) => ({
       ...entry,
-      character: synchronizeCharacterDerivedValues(entry.character, entry.character),
+      character: normalizeCharacter(entry.character),
     })),
     encounter: state.encounter.map((actor) => ({
       ...actor,
-      character: synchronizeCharacterDerivedValues(actor.character, actor.character),
+      character: normalizeCharacter(actor.character),
     })),
   }
 }

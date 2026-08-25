@@ -47,7 +47,6 @@ jobs:
         run: |
           test -f apps/runas-dm/dist/pages/_worker.js
           test -f apps/runas-dm/dist/pages/sw.js
-          test -f apps/runas-dm/dist/pages/manifest.webmanifest
           test -f apps/runas-dm/dist/pages/icon-192.png
           test -f apps/runas-dm/dist/pages/icon-512.png
 

@@ -13,7 +13,7 @@ apps/runas-dm ────┘
 
 ## `@runas/core`
 
-Contém tipos versionados, tabelas de consulta, cálculos derivados, rolagens, dano, melhoria de maestria e modificador rápido.
+Contém tipos versionados, tabelas de consulta, cálculos derivados, sincronização de invariantes, rolagens, dano, melhoria de maestria e modificador rápido.
 
 O núcleo não importa React, navegador, IndexedDB, Next.js, Cloudflare ou componentes. Seus módulos são publicados por subpaths, como `@runas/core/lib/damageCalculator`.
 
@@ -28,7 +28,13 @@ O núcleo não importa React, navegador, IndexedDB, Next.js, Cloudflare ou compo
 
 O editor mantém uma única instância de `Character` por ficha aberta. As telas Simplificada e Avançada são projeções de interface sobre essa mesma instância. Coleções de domínio (`skills`, `abilities`, `spells`, `inventory`, `bonds` e `notes`) continuam normalizadas em objetos com `id`; a interface compacta nunca cria campos alternativos de texto.
 
-- Vinext/React hospedável em Cloudflare.
+Toda edição passa por `synchronizeCharacterDerivedValues`. A função recalcula informações derivadas, carga, defesa e limites de recursos; combina resistências/fraquezas do elemento com as personalizadas; permite PV atual negativo; e limita PA/PE aos respectivos máximos. O teto de PE Temporário é o PE atual. Runas Tools e Runas DM consomem essa mesma função.
+
+`Character.portraitDataUrl` é opcional e versionado desde a versão 18. O Runas DM reduz o arquivo a JPEG 512×512 antes de persistir, permitindo uso offline e sincronização pelo snapshot sem armazenar a imagem original.
+
+Na Mesa, cada ator é uma cópia independente. Testes podem gastar Determinação ou Casualidade; itens vinculam sua perícia por `skillId`; magias usam `castingSkill`; e a aplicação de dano mantém as três camadas PA Extra → PA → PV, seus elementos, multiplicadores, quebra, RDF/RDM e MT. Toda rolagem de dano, inclusive a iniciada por equipamento, cria primeiro uma simulação com valor final editável e só altera a ficha após confirmação explícita.
+
+- Vinext/React publicado como Pages Function em `runas-dm.pages.dev`.
 - Interface client-side para resposta imediata.
 - IndexedDB salva bestiário, encontro e tabelas customizadas.
 - `/api/backup` guarda snapshot privado no D1.

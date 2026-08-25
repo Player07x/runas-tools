@@ -14,7 +14,7 @@ O D1 armazena um snapshot JSON privado. O endpoint exige:
 
 O token fica somente em `sessionStorage`; não entra no bundle, IndexedDB ou Git.
 
-Antes de publicar, aplique `apps/runas-dm/drizzle/0000_backup_snapshots.sql` ao D1 e substitua o id placeholder no processo de hospedagem.
+Antes de publicar, aplique `apps/runas-dm/drizzle/0000_backup_snapshots.sql` ao D1. A configuração versionada do Pages usa o binding `DB`; nunca duplique esse binding no artefato gerado pelo Vinext.
 
 ## Conflitos
 

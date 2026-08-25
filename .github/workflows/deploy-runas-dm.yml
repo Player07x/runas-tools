@@ -1,0 +1,65 @@
+name: Deploy Runas DM to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/runas-dm/**"
+      - "packages/runas-core/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-runas-dm.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runas-dm-pages
+  cancel-in-progress: true
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: "076845eb75724529d83e92307f7df356"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate shared business rules
+        run: npm test && npm run typecheck
+
+      - name: Build Cloudflare Pages bundle
+        run: npm run build:dm:pages
+
+      - name: Verify offline and server artifacts
+        run: |
+          test -f apps/runas-dm/dist/pages/_worker.js
+          test -f apps/runas-dm/dist/pages/sw.js
+          test -f apps/runas-dm/dist/pages/manifest.webmanifest
+          test -f apps/runas-dm/dist/pages/icon-192.png
+          test -f apps/runas-dm/dist/pages/icon-512.png
+
+      - name: Deploy Runas DM
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        working-directory: apps/runas-dm
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: >-
+          npx wrangler pages deploy dist/pages
+          --project-name runas-dm
+          --branch main
+          --commit-hash ${{ github.sha }}
+          --commit-message "Automated Runas DM deployment"
+          --commit-dirty=false

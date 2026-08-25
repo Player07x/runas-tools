@@ -8,6 +8,9 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:pages": "npm run build && npm run pages:prepare",
+    "pages:prepare": "node scripts/prepare-pages.mjs",
+    "deploy:pages": "npm run build:pages && wrangler pages deploy dist/pages --project-name runas-dm --branch main",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "test": "vitest run --config vitest.config.ts",

@@ -17,7 +17,7 @@ export default function HomePage() {
           Runas: Livro Azul
         </span>
         <h1 className="relative mt-5 max-w-2xl text-4xl font-bold tracking-[-0.04em] text-white text-balance sm:text-5xl">
-          Calculadora de Runas
+          Runas Tools
         </h1>
         <p className="relative mt-3 max-w-xl text-base leading-relaxed text-panel-muted text-pretty sm:text-lg">
           Uma coleção de ferramentas para facilitar partidas de Runas: Livro Azul.

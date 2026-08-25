@@ -462,6 +462,7 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
     ...base,
     ...partial,
     version: CHARACTER_VERSION,
+    portraitDataUrl: typeof partial.portraitDataUrl === "string" && partial.portraitDataUrl.startsWith("data:image/") ? partial.portraitDataUrl : undefined,
     info,
     attributes,
     stats,

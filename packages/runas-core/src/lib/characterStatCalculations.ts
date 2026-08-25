@@ -135,7 +135,8 @@ export function calculateCharacterStatSnapshot(
     pvMax,
     paMax,
     peMax,
-    peTemporaryMax: Math.max(0, peMax + abilityModifiers.peTemporary),
+    // PE Temporário acompanha a energia realmente disponível, não o PE máximo.
+    peTemporaryMax: Math.min(peMax, nonNegative(stats.pe)),
     paExtraMax: Math.max(0, Math.ceil(paMax / 2) + finite(stats.paExtraBonus) + abilityModifiers.paExtra),
     determinationMax,
     casualtyMax,

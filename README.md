@@ -25,11 +25,11 @@ npm run lint
 npm run build
 ```
 
-O Runas Tools é gerado em `apps/runas-tools/out`. O Runas DM usa Vinext/Cloudflare e inclui uma base D1 somente para backup privado.
+O Runas Tools é gerado em `apps/runas-tools/out` e publicado no GitHub Pages. O Runas DM usa Vinext no Cloudflare Pages, com endereço canônico `https://runas-dm.pages.dev`, e inclui uma base D1 somente para backup privado.
 
 Leia `AGENTS.md` e os arquivos em `docs/` antes de alterar o projeto.
 
 Documentos operacionais:
 
 - `docs/offline-pwa.md`: instalação, cache e validação offline;
-- `docs/deployment.md`: GitHub Pages, Worker, D1, segredos e acesso privado.
+- `docs/deployment.md`: GitHub Pages, Cloudflare Pages, D1, segredos e acesso privado.

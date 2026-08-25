@@ -183,6 +183,8 @@ export interface CharacterStats {
 export interface Character {
   version: number
   name: string
+  /** Retrato otimizado em data URL para funcionar offline e acompanhar backups. */
+  portraitDataUrl?: string
   info: CharacterInfo
   attributes: CharacterAttributes
   stats: CharacterStats
@@ -214,4 +216,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 17
+export const CHARACTER_VERSION = 18

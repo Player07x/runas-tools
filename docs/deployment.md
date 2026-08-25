@@ -5,7 +5,7 @@
 ```text
 GitHub: Player07x/runas-tools (monorepo)
 ├── apps/runas-tools → GitHub Pages
-├── apps/runas-dm    → Worker privado + D1
+├── apps/runas-dm    → Cloudflare Pages privado + D1
 └── packages/runas-core → incorporado nos dois builds
 ```
 
@@ -17,13 +17,17 @@ Os dois aplicativos devem ser construídos a partir do mesmo commit. `@runas/cor
 
 ## Runas DM
 
-O Runas DM usa um Worker compatível com Cloudflare, binding lógico D1 `DB` e a migração `apps/runas-dm/drizzle/0000_backup_snapshots.sql`.
+O endereço canônico é `https://runas-dm.pages.dev`. O Runas DM usa uma Pages Function compatível com Cloudflare Workers, binding lógico D1 `DB`, banco `runas-dm-backups` e a migração `apps/runas-dm/drizzle/0000_backup_snapshots.sql`.
+
+O build `npm run build:dm:pages` reúne o cliente Vinext e o Worker modular em `apps/runas-dm/dist/pages`. `wrangler.jsonc` contém apenas identificadores públicos e bindings; segredos ficam no Cloudflare ou no GitHub Actions.
+
+`.github/workflows/deploy-runas-dm.yml` publica automaticamente o Runas DM após mudanças em `apps/runas-dm`, `packages/runas-core` ou arquivos de workspace. Ele exige o segredo de repositório `CLOUDFLARE_API_TOKEN`. O Account ID não é secreto e está fixado no workflow para reduzir configuração manual.
 
 Variáveis de produção:
 
 - `RUNAS_DM_BACKUP_TOKEN`: segredo; nunca registrar no Git, logs ou arquivos `.env` versionados.
 
-O acesso de produção deve permanecer `custom`, com o proprietário e somente os e-mails explicitamente autorizados. Alterar o modo para público é uma operação de segurança e exige autorização expressa.
+O Cloudflare Access deve proteger `runas-dm.pages.dev`, com o proprietário e somente os e-mails explicitamente autorizados. A URL legada `runas-dm.player-7x.chatgpt.site` é contingência temporária; não deve ser divulgada como endereço canônico.
 
 ## Ordem de uma publicação
 
@@ -32,7 +36,7 @@ O acesso de produção deve permanecer `custom`, com o proprietário e somente o
 3. Lint e build dos dois consumidores.
 4. Publicar Runas Tools no GitHub Pages.
 5. Gerar/aplicar migrações D1 antes de publicar código que dependa delas.
-6. Publicar Runas DM com segredo e política de acesso já configurados.
+6. Publicar Runas DM no Cloudflare Pages com segredo e política de acesso já configurados.
 7. Verificar as duas URLs e o modo offline.
 
 Se uma publicação falhar, a versão anterior deve continuar ativa. Nunca publique um consumidor após falha nos testes do núcleo compartilhado.

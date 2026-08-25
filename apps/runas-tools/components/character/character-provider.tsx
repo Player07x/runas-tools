@@ -3,6 +3,7 @@
 import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { Character, CharacterGalleryEntry } from "@runas/core/types/character"
+import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import { createEmptyCharacter } from "@/lib/characterStorage"
 import { loadCharacterDatabase, loadCharacterGalleryDatabase, saveCharacterDatabase, saveCharacterGalleryDatabase } from "@/lib/characterDatabase"
 
@@ -93,11 +94,11 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [activeGalleryId, galleryEntries, isReady])
 
   const updateCharacter = useCallback((updater: (prev: Character) => Character) => {
-    setCharacter((prev) => updater(prev))
+    setCharacter((prev) => synchronizeCharacterDerivedValues(prev, updater(prev)))
   }, [])
 
   const replaceCharacter = useCallback((next: Character) => {
-    setCharacter(next)
+    setCharacter(synchronizeCharacterDerivedValues(next, next))
   }, [])
 
   const resetCharacter = useCallback(() => {

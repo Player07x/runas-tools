@@ -12,9 +12,13 @@ import { ServiceWorkerRegistration } from "@/components/service-worker-registrat
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 
 export const metadata: Metadata = {
-  title: "Calculadora de Runas",
+  title: "Runas Tools",
   description: "Uma coleção de ferramentas para facilitar partidas de Runas: Livro Azul.",
   generator: "v0.app",
+  icons: {
+    icon: [{ url: "./icon-192.png", type: "image/png", sizes: "192x192" }],
+    apple: [{ url: "./icon-192.png", type: "image/png", sizes: "192x192" }],
+  },
 }
 
 export const viewport: Viewport = {

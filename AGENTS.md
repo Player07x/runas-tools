@@ -30,6 +30,7 @@ Antes de alterar qualquer parte desta suíte, leia integralmente:
 - A ficha avançada deve expor todos os campos de domínio do modelo compartilhado. A simplificada pode apenas ocultar o que não faz parte de seu recorte rápido.
 - O estado primário do Runas DM é local (IndexedDB). O D1 é backup privado e nunca é requisito de uso.
 - Endpoints de backup exigem token secreto no servidor e hospedagem privada.
+- O endereço canônico do Runas DM é `https://runas-dm.pages.dev`; mantenha o Cloudflare Access e o workflow dedicado antes de substituir uma publicação.
 - Não adicione limite artificial ao número de fichas ou cópias.
 - Mudanças compartilhadas exigem teste no `@runas/core`, typecheck e build dos dois aplicativos.
 - Os dois aplicativos são PWAs. A opção de instalação existe somente nas telas iniciais e nenhum fluxo principal pode depender da rede.

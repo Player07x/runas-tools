@@ -12,6 +12,7 @@
     "build": "npm run build:tools && npm run build:dm",
     "build:tools": "npm run build -w @runas/tools",
     "build:dm": "npm run build -w @runas/dm",
+    "build:dm:pages": "npm run build:pages -w @runas/dm",
     "lint": "npm run lint -w @runas/tools && npm run lint -w @runas/dm",
     "typecheck": "npm run typecheck -w @runas/core && npm run typecheck -w @runas/tools && npm run typecheck -w @runas/dm",
     "test": "npm run test -w @runas/core"

@@ -1,4 +1,5 @@
 import { createCoreSkills } from "@runas/core/data/skills"
+import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import type { Character } from "@runas/core/types/character"
 import { CHARACTER_VERSION } from "@runas/core/types/character"
 
@@ -71,8 +72,8 @@ function sampleSentinel(): Character {
     { id: "ability-1", category: "Racial", name: "Corpo Prismático", description: "", permanentModifiers: "", costType: "none", costMode: "fixed", costValue: 0, costText: "" },
     { id: "ability-2", category: "Combate", name: "Estilhaçar", description: "Explode fragmentos ao redor.", permanentModifiers: "", costType: "none", costMode: "fixed", costValue: 0, costText: "" },
   ]
-  character.inventory = [{ id: "item-1", usage: "equipped", name: "Lança de cristal", type: "weapon", affinity: 2, bondPoints: 0, baseWeight: 3, quantity: 1, applyScaleWeight: false, damage: "4D+2 perfurante", rdf: 0, rdm: 0, prCurrent: null, prMaximum: null, enchantmentSpellId: "", bondId: "", bondAbilityId: "", skillId: "", description: "" }]
-  return character
+  character.inventory = [{ id: "item-1", usage: "equipped", name: "Lança de cristal", type: "weapon", affinity: 2, bondPoints: 0, baseWeight: 3, quantity: 1, applyScaleWeight: false, damage: "4D+2 perfurante", rdf: 0, rdm: 0, prCurrent: null, prMaximum: null, enchantmentSpellId: "", bondId: "", bondAbilityId: "", skillId: "sample-1", description: "" }]
+  return synchronizeCharacterDerivedValues(character, character)
 }
 
 function sampleAshBeast(): Character {
@@ -86,7 +87,7 @@ function sampleAshBeast(): Character {
   character.skills = [...character.skills, { id: "sample-2", name: "Rastreio", attributeKey: "knowledge", points: 6, modifier: 1, locked: false }]
   character.abilities = [{ id: "ability-3", category: "Racial", name: "Faro de Fumaça", description: "", permanentModifiers: "", costType: "none", costMode: "fixed", costValue: 0, costText: "" }]
   character.inventory = [{ id: "item-2", usage: "equipped", name: "Garras em brasa", type: "weapon", affinity: 1, bondPoints: 0, baseWeight: 0, quantity: 1, applyScaleWeight: false, damage: "3D+3 cortante", rdf: 0, rdm: 0, prCurrent: null, prMaximum: null, enchantmentSpellId: "", bondId: "", bondAbilityId: "", skillId: "", description: "" }]
-  return character
+  return synchronizeCharacterDerivedValues(character, character)
 }
 
 export function createInitialState(): RunasDmState {
@@ -103,6 +104,21 @@ export function createInitialState(): RunasDmState {
       { id: "double", name: "Pontos dobrados", multiplier: 2 },
     ],
     updatedAt: now,
+  }
+}
+
+/** Normaliza dados antigos/importados com as regras atuais sem restaurar recursos gastos. */
+export function normalizeRunasDmState(state: RunasDmState): RunasDmState {
+  return {
+    ...state,
+    entries: state.entries.map((entry) => ({
+      ...entry,
+      character: synchronizeCharacterDerivedValues(entry.character, entry.character),
+    })),
+    encounter: state.encounter.map((actor) => ({
+      ...actor,
+      character: synchronizeCharacterDerivedValues(actor.character, actor.character),
+    })),
   }
 }
 

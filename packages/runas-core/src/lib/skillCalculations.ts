@@ -232,6 +232,13 @@ export function applyDeterminationToRoll(roll: SkillRoll): SkillRoll {
   }
 }
 
+/** Reaplica em uma nova rolagem os usos de Determinação já gastos no mesmo teste. */
+export function applyDeterminationUsesToRoll(roll: SkillRoll, uses: number): SkillRoll {
+  let adjusted = roll
+  for (let use = 0; use < Math.max(0, Math.trunc(uses)); use += 1) adjusted = applyDeterminationToRoll(adjusted)
+  return adjusted
+}
+
 function outcomeRank(outcome: SkillRollOutcome): number {
   if (outcome === "critical-success") return 3
   if (outcome === "success") return 2

@@ -11,16 +11,16 @@ import { calculateCharacterStatSnapshot } from "@runas/core/lib/characterStatCal
 import { calculateDamage, convertDamageBonusesToDice, rollDice } from "@runas/core/lib/damageCalculator"
 import { parseDamageExpression } from "@runas/core/lib/damageParser"
 import { simulateDamageApplication } from "@runas/core/lib/damageApplication"
-import { calculateMasteryImprovementPoints } from "@runas/core/lib/masteryImprovements"
+import { calculateMasteryImprovementPoints, masteryImprovementOptions } from "@runas/core/lib/masteryImprovements"
 import { inventoryTypeOptions, inventoryUsageOptions } from "@runas/core/lib/inventoryCalculations"
 import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import { applyQuickModifier } from "@runas/core/lib/quickModifier"
-import { applyDeterminationToRoll, compareSkillRolls, normalizeSkillName, rollSkillTest } from "@runas/core/lib/skillCalculations"
+import { applyDeterminationToRoll, applyDeterminationUsesToRoll, compareSkillRolls, normalizeSkillName, rollSkillTest } from "@runas/core/lib/skillCalculations"
 import type { AttributeKey, Character, CharacterSkill, CharacterSpell, SecondaryAttributeKey } from "@runas/core/types/character"
 import type { SkillRoll, SkillRollOutcome, SpecialDieId } from "@runas/core/types/skillTest"
 import {
-  actionsAndAbilities, cloneCharacter, createEmptyCharacter, createInitialState, essenceYield,
-  normalizeRunasDmState, racialCharacteristics, type BestiaryEntry, type EncounterActor, type MasteryTable, type RunasDmState,
+  cloneCharacter, createEmptyCharacter, createInitialState, essenceYield,
+  normalizeRunasDmState, type BestiaryEntry, type EncounterActor, type MasteryTable, type RunasDmState,
 } from "../lib/model"
 import { parseRunasImport } from "../lib/import"
 import { loadLocalState, saveLocalState } from "../lib/storage"
@@ -66,11 +66,6 @@ function listFromText(value: string): string[] {
   return value.split(/[,\n]/).map((item) => item.trim()).filter(Boolean)
 }
 
-function resourceLine(character: Character): string {
-  const inventory = character.inventory.map((item) => `${item.quantity}× ${item.name}`)
-  return [...inventory, `${essenceYield(character)}× Essência`].join(" · ")
-}
-
 function outcomeLabel(outcome: SkillRollOutcome): string {
   if (outcome === "critical-success") return "Sucesso crítico"
   if (outcome === "critical-failure") return "Fracasso crítico"
@@ -85,7 +80,6 @@ export function DmDashboard() {
   const [search, setSearch] = useState("")
   const [editing, setEditing] = useState<BestiaryEntry | null>(null)
   const [editingActor, setEditingActor] = useState<EncounterActor | null>(null)
-  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null)
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null)
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const [syncMessage, setSyncMessage] = useState("")
@@ -163,7 +157,6 @@ export function DmDashboard() {
       entries: current.entries.filter((entry) => entry.id !== entryId),
       encounter: current.encounter.filter((actor) => actor.sourceId !== entryId),
     }))
-    if (expandedEntryId === entryId) setExpandedEntryId(null)
   }
 
   function addToEncounter(entry: BestiaryEntry) {
@@ -310,7 +303,7 @@ export function DmDashboard() {
             <span>{filteredEntries.length} exibidas</span>
           </div>
           <div className="sheet-grid">
-            {filteredEntries.map((entry) => <SheetCard key={entry.id} entry={entry} expanded={expandedEntryId === entry.id} onToggle={() => setExpandedEntryId((current) => current === entry.id ? null : entry.id)} onEdit={() => setEditing({ ...entry, character: cloneCharacter(entry.character) })} onAdd={() => addToEncounter(entry)} onDelete={() => deleteSheet(entry.id)} />)}
+            {filteredEntries.map((entry) => <SheetCard key={entry.id} entry={entry} onOpen={() => setEditing({ ...entry, character: cloneCharacter(entry.character) })} onAdd={() => addToEncounter(entry)} onDelete={() => deleteSheet(entry.id)} />)}
             <button className="new-sheet-card" onClick={createSheet}><span><Plus size={24} /></span><strong>Criar nova ficha</strong><small>Comece pelo formato simplificado</small></button>
           </div>
         </section>
@@ -325,24 +318,18 @@ export function DmDashboard() {
   )
 }
 
-function SheetCard({ entry, expanded, onToggle, onEdit, onAdd, onDelete }: { entry: BestiaryEntry; expanded: boolean; onToggle: () => void; onEdit: () => void; onAdd: () => void; onDelete: () => void }) {
+function SheetCard({ entry, onOpen, onAdd, onDelete }: { entry: BestiaryEntry; onOpen: () => void; onAdd: () => void; onDelete: () => void }) {
   const { character } = entry
-  const snapshot = calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities)
   const element = getCharacterElement(character.stats.elementId)
-  const racials = racialCharacteristics(character)
-  const actions = actionsAndAbilities(character)
   return (
-    <article className={`sheet-card ${expanded ? "expanded" : "compact"} ${character.portraitDataUrl ? "has-portrait" : ""}`} style={{ "--element-color": element?.color ?? "#79dce0" } as React.CSSProperties}>
+    <article className={`sheet-card compact ${character.portraitDataUrl ? "has-portrait" : ""}`} style={{ "--element-color": element?.color ?? "#79dce0" } as React.CSSProperties}>
       <div className={`card-rune ${character.portraitDataUrl ? "has-portrait" : ""}`} aria-hidden="true">{character.portraitDataUrl ? <img src={character.portraitDataUrl} alt="" /> : <span>{character.name.slice(0, 1) || "R"}</span>}</div>
-      <div className="card-title"><button className="card-title-button" onClick={onToggle} aria-expanded={expanded}><p>{character.info.race || "Sem raça"} · {character.info.affinity || "Sem afinidade"} · EF {character.info.efficiency || "0"}%</p><h2>{character.name || "Sem nome"}</h2></button><div className="card-quick-actions"><button className="icon-button subtle" onClick={onEdit} title="Editar ficha"><Edit3 size={15} /></button><button className="icon-button compact-add" onClick={onAdd} title="Levar à mesa"><Plus size={16} /></button></div></div>
-      <button className="bestiary-overview" onClick={onToggle} aria-expanded={expanded} title={expanded ? "Recolher ficha" : "Expandir ficha"}>
+      <div className="card-title"><button className="card-title-button" onClick={onOpen} title="Abrir ficha simplificada"><p>{character.info.race || "Sem raça"} · {character.info.affinity || "Sem afinidade"} · EF {character.info.efficiency || "0"}%</p><h2>{character.name || "Sem nome"}</h2></button><div className="card-quick-actions"><button className="icon-button compact-add" onClick={onAdd} title="Levar à mesa"><Plus size={16} /></button></div></div>
+      <button className="bestiary-overview" onClick={onOpen} title="Abrir ficha simplificada">
         <span className="compact-resources"><span><b>{character.stats.pv}</b> PV</span><span><b>{character.stats.pa}</b> PA{character.stats.paExtra > 0 && <i>+{character.stats.paExtra}</i>}</span><span><b>{character.stats.pe}</b> PE{character.stats.peTemporary > 0 && <i>+{character.stats.peTemporary}</i>}</span></span>
         <span className="compact-attributes"><span><b>FÍS {character.attributes.physical}</b><i>for {character.attributes.strength} · des {character.attributes.dexterity} · vit {character.attributes.vitality}</i></span><span><b>MEN {character.attributes.mental}</b><i>int {character.attributes.intelligence} · con {character.attributes.knowledge} · soc {character.attributes.social}</i></span><span><b>MÍS {character.attributes.mystic}</b><i>fé {character.attributes.faith} · pod {character.attributes.power} · sor {character.attributes.luck}</i></span></span>
       </button>
-      <div className="expanded-content"><p className="expanded-meta">{element?.name ?? "Sem elemento"} · Deslocamento {snapshot.movement} m</p>
-      <dl className="sheet-facts"><div><dt>Elemento</dt><dd>{element?.name ?? "Nenhum"}</dd></div><div><dt>Deslocamento</dt><dd>{snapshot.movement} m</dd></div><div><dt>Resistências</dt><dd>{character.stats.resistances.join(", ") || "—"}</dd></div><div><dt>Fraquezas</dt><dd>{character.stats.weaknesses.join(", ") || "—"}</dd></div><div><dt>Características</dt><dd>{racials.join(", ") || "—"}</dd></div><div><dt>Ações</dt><dd>{actions.slice(0, 4).join(", ") || "—"}</dd></div></dl>
-      <p className="resource-line"><Sparkles size={14} /> {resourceLine(character)}</p>
-      <footer><button className="secondary-button danger-icon" onClick={onDelete} title="Excluir ficha"><Trash2 size={16} /></button><button className="secondary-button" onClick={onEdit}>Editar ficha</button><button className="primary-button" onClick={onAdd}><Plus size={16} /> Levar à mesa</button></footer></div>
+      <div className="card-delete-action"><button className="icon-button subtle danger-icon" onClick={onDelete} title="Excluir ficha"><Trash2 size={15} /></button></div>
     </article>
   )
 }
@@ -357,7 +344,7 @@ function EncounterWorkspace({ actors, selectedId, entries, onSelect, onAdd, onEd
         {pickerOpen && <div className="actor-picker">{entries.map((entry) => <button key={entry.id} onClick={() => { onAdd(entry); setPickerOpen(false) }}><span className={`mini-rune ${entry.character.portraitDataUrl ? "has-portrait" : ""}`}>{entry.character.portraitDataUrl ? <img src={entry.character.portraitDataUrl} alt="" /> : entry.character.name.slice(0, 1)}</span><span><strong>{entry.character.name}</strong><small>{entry.character.info.race}</small></span><Plus size={17} /></button>)}</div>}
         {actors.length === 0 ? <div className="empty-encounter"><Swords size={42} /><h2>A mesa está vazia</h2><p>Anexe uma ficha do bestiário para criar uma cópia de combate.</p><button className="primary-button" onClick={() => setPickerOpen(true)}><Plus size={17} /> Anexar primeiro inimigo</button></div> : <div className="actor-grid">{actors.map((actor) => <ActorCard key={actor.id} actor={actor} selected={actor.id === selected?.id} onSelect={() => onSelect(actor.id)} onEdit={() => onEdit(actor)} onRestore={() => onRestore(actor)} onDuplicate={() => onDuplicate(actor)} onRemove={() => onRemove(actor.id)} />)}</div>}
       </div>
-      <aside className="action-dock">{selected ? <QuickActions key={selected.id} actor={selected} onUpdate={(character) => onUpdate(selected.id, character)} /> : <div className="dock-empty"><Bolt size={28} /><p>Selecione uma criatura para abrir testes e dano.</p></div>}</aside>
+      <aside className="action-dock">{selected ? <QuickActions key={selected.id} actor={selected} targets={actors.filter((candidate) => candidate.id !== selected.id)} onUpdate={(character) => onUpdate(selected.id, character)} onUpdateTarget={onUpdate} /> : <div className="dock-empty"><Bolt size={28} /><p>Selecione uma criatura para abrir testes e dano.</p></div>}</aside>
     </section>
   )
 }
@@ -373,7 +360,8 @@ function ResourceBar({ label, value, maximum, extra = 0, color }: { label: strin
   return <div className={`resource-bar ${color}`}><span>{label}</span><strong>{value}<small>/{maximum}</small>{extra > 0 ? ` +${extra}` : ""}</strong><i style={{ width: `${percentage}%` }} /></div>
 }
 
-function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (character: Character) => void }) {
+function QuickActions({ actor, targets, onUpdate, onUpdateTarget }: { actor: EncounterActor; targets: EncounterActor[]; onUpdate: (character: Character) => void; onUpdateTarget: (id: string, character: Character) => void }) {
+  const calculatorRef = useRef<HTMLDivElement>(null)
   const [mode, setMode] = useState<"test" | "damage">("damage")
   const [modifierOpen, setModifierOpen] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -383,11 +371,14 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
   const [skillModifier, setSkillModifier] = useState(0)
   const [specialDie, setSpecialDie] = useState<SpecialDieId>("none")
   const [damageExpression, setDamageExpression] = useState("2D cortante")
+  const [targetId, setTargetId] = useState(() => targets[0]?.id ?? "")
+  const [simulationEditing, setSimulationEditing] = useState(false)
   const [mtEnabled, setMtEnabled] = useState(false)
-  const [targetRdf, setTargetRdf] = useState(() => actor.character.stats.armorRdf + actor.character.stats.naturalRdf)
-  const [targetRdm, setTargetRdm] = useState(() => actor.character.stats.armorRdm + actor.character.stats.naturalRdm)
+  const initialTarget = targets[0]?.character
+  const [targetRdf, setTargetRdf] = useState(() => initialTarget ? initialTarget.stats.armorRdf + initialTarget.stats.naturalRdf : 0)
+  const [targetRdm, setTargetRdm] = useState(() => initialTarget ? initialTarget.stats.armorRdm + initialTarget.stats.naturalRdm : 0)
   const [targetMtEnabled, setTargetMtEnabled] = useState(true)
-  const [targetMtValue, setTargetMtValue] = useState(actor.character.stats.mt)
+  const [targetMtValue, setTargetMtValue] = useState(initialTarget?.stats.mt ?? 0)
   const [lifeElementEnabled, setLifeElementEnabled] = useState(false)
   const [extraAuraElementEnabled, setExtraAuraElementEnabled] = useState(false)
   const [extraAuraMultiplier, setExtraAuraMultiplier] = useState("1x")
@@ -396,14 +387,24 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
   const [extraAuraBreak, setExtraAuraBreak] = useState("1x")
   const [auraBreak, setAuraBreak] = useState("1/2")
   const [result, setResult] = useState<{ tone: "good" | "bad" | "neutral"; title: string; detail: string } | null>(null)
-  const [pendingDamage, setPendingDamage] = useState<{ signature: string; amount: number; damageTypeId: string; damageTypeName: string; character: Character; title: string; detail: string } | null>(null)
+  const [pendingDamage, setPendingDamage] = useState<{ signature: string; amount: number; damageTypeId: string; damageTypeName: string; targetId: string; character: Character | null; title: string; detail: string } | null>(null)
   const [activeRoll, setActiveRoll] = useState<SkillRoll | null>(null)
-  const makeDamageSignature = (expression: string, attackerMtEnabled: boolean) => [actor.id, actor.character.stats.pv, actor.character.stats.pa, actor.character.stats.paExtra, expression, modifier, attackerMtEnabled, targetRdf, targetRdm, targetMtEnabled, targetMtValue, lifeElementEnabled, extraAuraElementEnabled, extraAuraMultiplier, auraMultiplier, lifeMultiplier, extraAuraBreak, auraBreak].join("|")
+  const makeDamageSignature = (expression: string, attackerMtEnabled: boolean) => [actor.id, targetId, expression, modifier, attackerMtEnabled, targetRdf, targetRdm, targetMtEnabled, targetMtValue, lifeElementEnabled, extraAuraElementEnabled, extraAuraMultiplier, auraMultiplier, lifeMultiplier, extraAuraBreak, auraBreak].join("|")
   const damageSignature = makeDamageSignature(damageExpression, mtEnabled)
   const simulatedDamage = pendingDamage?.signature === damageSignature ? pendingDamage : null
 
   const damageItems = actor.character.inventory.filter((item) => item.usage === "equipped" && (item.type === "weapon" || item.type === "shield") && item.damage.trim())
   const usableSkills = actor.character.skills.filter((skill) => skill.attributeKey)
+
+  function selectDamageTarget(nextId: string) {
+    setTargetId(nextId)
+    setPendingDamage(null)
+    const target = targets.find((candidate) => candidate.id === nextId)
+    if (!target) return
+    setTargetRdf(target.character.stats.armorRdf + target.character.stats.naturalRdf)
+    setTargetRdm(target.character.stats.armorRdm + target.character.stats.naturalRdm)
+    setTargetMtValue(target.character.stats.mt)
+  }
 
   function runTest(requestedSkill?: CharacterSkill, context?: string) {
     const attributeKey = requestedSkill?.attributeKey || testAttribute
@@ -425,6 +426,7 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
     const adjusted = { ...roll, totalTest: total, totalModifiers: roll.totalModifiers + total - roll.totalTest, margin, outcome }
     setActiveRoll(adjusted)
     showSkillRoll(adjusted, context)
+    requestAnimationFrame(() => calculatorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }))
   }
 
   function showSkillRoll(roll: SkillRoll, context?: string) {
@@ -447,7 +449,12 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
     if (!isChance && activeRoll.outcome.includes("critical")) return
     const rerolled = rollSkillTest({ config: { attributeKey: activeRoll.attributeKey, skillName: activeRoll.skillName, skillModifier: activeRoll.skillModifier, masterModifier: activeRoll.masterModifier, otherModifiers: activeRoll.otherModifiers, specialDieId: activeRoll.specialDieId }, attributes: actor.character.attributes })
     if (!rerolled) return
-    const chosen = isChance && compareSkillRolls(activeRoll, rerolled) > 0 ? activeRoll : rerolled
+    const quickTotal = applyQuickModifier(rerolled.totalTest, modifier)
+    const quickMargin = quickTotal - rerolled.diceSum
+    const quickOutcome: SkillRollOutcome = rerolled.diceRolls[0] === 1 && rerolled.diceRolls[1] === 1 ? "critical-success" : rerolled.diceRolls[0] === 10 && rerolled.diceRolls[1] === 10 ? "critical-failure" : quickMargin >= 0 ? "success" : "failure"
+    const quickAdjusted = { ...rerolled, totalTest: quickTotal, totalModifiers: rerolled.totalModifiers + quickTotal - rerolled.totalTest, margin: quickMargin, outcome: quickOutcome } as SkillRoll
+    const adjustedReroll = applyDeterminationUsesToRoll(quickAdjusted, activeRoll.determinationUses)
+    const chosen = isChance && compareSkillRolls(activeRoll, adjustedReroll) > 0 ? activeRoll : adjustedReroll
     const next = cloneCharacter(actor.character)
     next.stats.casualty -= 1
     onUpdate(next)
@@ -458,29 +465,34 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
   function stageDamage(amount: number, damageTypeId: string, damageTypeName: string, signature = damageSignature) {
     setActiveRoll(null)
     const total = Math.max(0, Math.trunc(Number.isFinite(amount) ? amount : 0))
-    const stats = actor.character.stats
-    const snapshot = calculateCharacterStatSnapshot(actor.character.attributes, actor.character.info, stats, actor.character.skills, actor.character.abilities)
+    const target = targets.find((candidate) => candidate.id === targetId)
+    if (!target) {
+      setPendingDamage({ signature, amount: total, damageTypeId, damageTypeName, targetId: "", character: null, title: `${total} ${damageTypeName}`, detail: `${total} ${damageTypeName} · selecione um alvo da mesa para calcular resistências e recursos.` })
+      return
+    }
+    const stats = target.character.stats
+    const snapshot = calculateCharacterStatSnapshot(target.character.attributes, target.character.info, stats, target.character.skills, target.character.abilities)
     const element = getCharacterElement(stats.elementId)
     const resistances = [...new Set([...(element?.resistances ?? []), ...stats.resistances])]
     const weaknesses = [...new Set([...(element?.weaknesses ?? []), ...stats.weaknesses])]
-    const simulation = simulateDamageApplication({ damage: { amount: total, damageTypeId }, mtEnabled: targetMtEnabled, mtValue: targetMtValue, rdf: targetRdf, rdm: targetRdm, attributeBonuses: { vitality: actor.character.attributes.vitality, power: actor.character.attributes.power, faith: actor.character.attributes.faith, luck: actor.character.attributes.luck }, layers: [
+    const simulation = simulateDamageApplication({ damage: { amount: total, damageTypeId }, mtEnabled: targetMtEnabled, mtValue: targetMtValue, rdf: targetRdf, rdm: targetRdm, attributeBonuses: { vitality: target.character.attributes.vitality, power: target.character.attributes.power, faith: target.character.attributes.faith, luck: target.character.attributes.luck }, layers: [
       { resource: "paExtra", current: stats.paExtra, resistances: extraAuraElementEnabled ? resistances : [], weaknesses: extraAuraElementEnabled ? weaknesses : [], multiplier: extraAuraMultiplier, breakMultiplier: extraAuraBreak },
       { resource: "pa", current: stats.pa, resistances, weaknesses, multiplier: auraMultiplier, breakMultiplier: auraBreak },
       { resource: "pv", current: stats.pv, maximum: snapshot.pvMax, resistances: lifeElementEnabled ? resistances : [], weaknesses: lifeElementEnabled ? weaknesses : [], multiplier: lifeMultiplier },
     ] })
     if (!simulation.value) { setPendingDamage(null); setResult({ tone: "bad", title: "Não foi possível simular", detail: simulation.error ?? "Revise o dano." }); return }
-    const next = cloneCharacter(actor.character)
+    const next = cloneCharacter(target.character)
     for (const change of simulation.value.changes) {
       const value = next.stats[change.resource] + change.amount
       next.stats[change.resource] = change.resource === "pv" ? value : Math.max(0, value)
     }
     const detail = [simulation.value.resultText, ...simulation.value.notices].filter(Boolean).join(" · ")
-    const preview = { signature, amount: total, damageTypeId, damageTypeName, character: next, title: `${total} ${damageTypeName}`, detail }
+    const preview = { signature, amount: total, damageTypeId, damageTypeName, targetId: target.id, character: next, title: `${total} ${damageTypeName}`, detail: `${target.character.name} #${target.copyNumber}: ${detail}` }
     setPendingDamage(preview)
-    setResult({ tone: "neutral", title: `Simulação: ${preview.title}`, detail: preview.detail })
   }
 
   function simulateDamage(requestedExpression = damageExpression, requestedMt = mtEnabled) {
+    setSimulationEditing(false)
     const parsed = parseDamageExpression(requestedExpression)
     if (!parsed.hasDamageValue || !parsed.damageTypeId) { setResult({ tone: "bad", title: "Dano incompleto", detail: "Use algo como 3D+2 cortante." }); return }
     const conversion = convertDamageBonusesToDice(parsed.numDice, [parsed.bonus])
@@ -495,6 +507,7 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
     setMtEnabled(item.applyScaleWeight)
     setPendingDamage(null)
     simulateDamage(item.damage, item.applyScaleWeight)
+    requestAnimationFrame(() => calculatorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }))
   }
 
   function castSpell(spell: CharacterSpell) {
@@ -508,14 +521,14 @@ function QuickActions({ actor, onUpdate }: { actor: EncounterActor; onUpdate: (c
   }
 
   function confirmDamage() {
-    if (!simulatedDamage) return
-    onUpdate(simulatedDamage.character)
-    setResult({ tone: "good", title: `Dano aplicado: ${simulatedDamage.title}`, detail: simulatedDamage.detail })
+    if (!simulatedDamage?.character || !simulatedDamage.targetId) return
+    onUpdateTarget(simulatedDamage.targetId, simulatedDamage.character)
+    setResult({ tone: "good", title: `Dano aplicado ao alvo: ${simulatedDamage.title}`, detail: simulatedDamage.detail })
     setPendingDamage(null)
   }
 
-  return <div className="quick-actions"><div className="dock-title"><div><p className="eyebrow">Ações integradas</p><h2>{actor.character.name} #{actor.copyNumber}</h2></div><Bolt size={20} /></div><div className="actor-action-library">{damageItems.length > 0 && <ActionGroup title="Equipamentos" tone="damage">{damageItems.map((item) => { const linkedSkill = actor.character.skills.find((skill) => skill.id === item.skillId); return <article className="equipment-action" key={item.id}><span><strong>{item.name}</strong><small>{item.damage}{linkedSkill ? ` · ${linkedSkill.name}` : " · sem perícia vinculada"}</small></span><div><button onClick={() => rollItemDamage(item)}><Swords size={13} /> Dano</button><button disabled={!linkedSkill?.attributeKey} title={linkedSkill?.attributeKey ? `Rolar ${linkedSkill.name}` : "Vincule uma perícia ao equipamento na ficha"} onClick={() => linkedSkill && runTest(linkedSkill)}><Shield size={13} /> Teste</button></div></article> })}</ActionGroup>}{usableSkills.length > 0 && <ActionGroup title="Perícias" tone="test">{usableSkills.map((skill) => <button key={skill.id} onClick={() => runTest(skill)}><span><strong>{skill.name}</strong><small>{secondaryAttributes.find((attribute) => attribute.key === skill.attributeKey)?.label ?? "Teste"} · mod. {skill.modifier}</small></span><b><Shield size={13} /> Rolar teste</b></button>)}</ActionGroup>}{actor.character.spells.length > 0 && <ActionGroup title="Magias" tone="spell">{actor.character.spells.map((spell) => <button key={spell.id} onClick={() => castSpell(spell)}><span><strong>{spell.name}</strong><small>{spell.category || spell.magicType} · {spell.castingSkill || "sem perícia"}</small></span><b><Sparkles size={13} /> Conjurar</b></button>)}</ActionGroup>}</div><div className="mode-tabs"><button className={mode === "damage" ? "active" : ""} onClick={() => { setMode("damage"); setResult(null) }}><Swords size={16} /> Dano</button><button className={mode === "test" ? "active" : ""} onClick={() => { setMode("test"); setResult(null) }}><Shield size={16} /> Teste</button></div>
-    {mode === "damage" ? <div className="quick-form"><label><span>Dano rápido</span><input value={damageExpression} onChange={(event) => setDamageExpression(event.target.value)} placeholder="3D+2 cortante" /></label>{advancedOpen && <div className="advanced-panel damage-advanced"><div className="advanced-group-title"><strong>Redução e escala do alvo</strong><small>Mesmas camadas da aplicação completa</small></div><label><span>RDF</span><input type="number" value={targetRdf} onChange={(event) => setTargetRdf(Number(event.target.value))} /></label><label><span>RDM</span><input type="number" value={targetRdm} onChange={(event) => setTargetRdm(Number(event.target.value))} /></label><label className="check-row"><input type="checkbox" checked={mtEnabled} onChange={(event) => setMtEnabled(event.target.checked)} /> Aplicar MT do atacante na rolagem</label><label className="check-row"><input type="checkbox" checked={targetMtEnabled} onChange={(event) => setTargetMtEnabled(event.target.checked)} /> Aplicar MT do alvo</label>{targetMtEnabled && <label><span>MT do alvo</span><input type="number" value={targetMtValue} onChange={(event) => setTargetMtValue(Number(event.target.value))} /></label>}<div className="damage-layer extra"><strong>PA Extra</strong><label className="check-row"><input type="checkbox" checked={extraAuraElementEnabled} onChange={(event) => setExtraAuraElementEnabled(event.target.checked)} /> Usar elemento</label><label><span>Multiplicador</span><input value={extraAuraMultiplier} onChange={(event) => setExtraAuraMultiplier(event.target.value)} /></label><label><span>Quebra</span><input value={extraAuraBreak} onChange={(event) => setExtraAuraBreak(event.target.value)} /></label></div><div className="damage-layer aura"><strong>PA</strong><small>{getCharacterElement(actor.character.stats.elementId)?.name ?? "Sem elemento"}</small><label><span>Multiplicador</span><input value={auraMultiplier} onChange={(event) => setAuraMultiplier(event.target.value)} /></label><label><span>Quebra</span><input value={auraBreak} onChange={(event) => setAuraBreak(event.target.value)} /></label></div><div className="damage-layer life"><strong>PV</strong><label className="check-row"><input type="checkbox" checked={lifeElementEnabled} onChange={(event) => setLifeElementEnabled(event.target.checked)} /> Usar elemento na vida</label><label><span>Multiplicador</span><input value={lifeMultiplier} onChange={(event) => setLifeMultiplier(event.target.value)} /></label></div><p>Resistências e fraquezas do elemento são combinadas com as personalizadas da ficha.</p></div>}<ConfigurationButtons modifierOpen={modifierOpen} advancedOpen={advancedOpen} onModifier={() => setModifierOpen((value) => !value)} onAdvanced={() => setAdvancedOpen((value) => !value)} />{modifierOpen && <ModifierInput value={modifier} onChange={setModifier} />}<button className="execute-button damage" onClick={() => simulateDamage()}>Simular dano</button>{simulatedDamage && <div className="damage-confirmation"><span>A simulação não alterou a ficha. Ajuste o valor final se alguma habilidade modificar o dano.</span><label className="damage-final-input"><span>Dano final</span><input type="number" min="0" value={simulatedDamage.amount} onChange={(event) => stageDamage(Number(event.target.value), simulatedDamage.damageTypeId, simulatedDamage.damageTypeName)} /></label><button className="execute-button confirm" onClick={confirmDamage}>Aplicar dano simulado</button></div>}</div> : <div className="quick-form"><label><span>Perícia ou teste</span><input value={skillName} onChange={(event) => setSkillName(event.target.value)} /></label>{advancedOpen && <div className="advanced-panel"><label><span>Atributo</span><select value={testAttribute} onChange={(event) => setTestAttribute(event.target.value as SecondaryAttributeKey)}>{secondaryAttributes.map((attribute) => <option key={attribute.key} value={attribute.key}>{attribute.label}</option>)}</select></label><label><span>Mod. da perícia</span><input type="number" value={skillModifier} onChange={(event) => setSkillModifier(Number(event.target.value))} /></label><label><span>Dado especial</span><select value={specialDie} onChange={(event) => setSpecialDie(event.target.value as SpecialDieId)}><option value="none">Nenhum</option><option value="luck">Sorte</option><option value="inspiration">Inspiração</option><option value="legendary-inspiration">Inspiração lendária</option><option value="divine-advantage">Divino: vantagem</option><option value="divine-disadvantage">Divino: desvantagem</option></select></label></div>}<ConfigurationButtons modifierOpen={modifierOpen} advancedOpen={advancedOpen} onModifier={() => setModifierOpen((value) => !value)} onAdvanced={() => setAdvancedOpen((value) => !value)} />{modifierOpen && <ModifierInput value={modifier} onChange={setModifier} />}<button className="execute-button test" onClick={() => runTest()}>Rolar teste</button></div>}
+  return <div className="quick-actions"><div className="dock-title"><div><p className="eyebrow">Ações integradas</p><h2>{actor.character.name} #{actor.copyNumber}</h2></div><Bolt size={20} /></div><div className="actor-action-library">{damageItems.length > 0 && <ActionGroup title="Equipamentos" tone="damage">{damageItems.map((item) => { const linkedSkill = actor.character.skills.find((skill) => skill.id === item.skillId); return <article className="equipment-action" key={item.id}><span><strong>{item.name}</strong><small>{item.damage}{linkedSkill ? ` · ${linkedSkill.name}` : " · sem perícia vinculada"}</small></span><div><button onClick={() => rollItemDamage(item)}><Swords size={13} /> Dano</button><button disabled={!linkedSkill?.attributeKey} title={linkedSkill?.attributeKey ? `Rolar ${linkedSkill.name}` : "Vincule uma perícia ao equipamento na ficha"} onClick={() => linkedSkill && runTest(linkedSkill)}><Shield size={13} /> Teste</button></div></article> })}</ActionGroup>}{usableSkills.length > 0 && <ActionGroup title="Perícias" tone="test">{usableSkills.map((skill) => <button key={skill.id} onClick={() => runTest(skill)}><span><strong>{skill.name}</strong><small>{secondaryAttributes.find((attribute) => attribute.key === skill.attributeKey)?.label ?? "Teste"} · mod. {skill.modifier}</small></span><b><Shield size={13} /> Rolar teste</b></button>)}</ActionGroup>}{actor.character.spells.length > 0 && <ActionGroup title="Magias" tone="spell">{actor.character.spells.map((spell) => <button key={spell.id} onClick={() => castSpell(spell)}><span><strong>{spell.name}</strong><small>{spell.category || spell.magicType} · {spell.castingSkill || "sem perícia"}</small></span><b><Sparkles size={13} /> Conjurar</b></button>)}</ActionGroup>}</div><div className="mode-tabs" ref={calculatorRef}><button className={mode === "damage" ? "active" : ""} onClick={() => { setMode("damage"); setResult(null) }}><Swords size={16} /> Dano</button><button className={mode === "test" ? "active" : ""} onClick={() => { setMode("test"); setResult(null) }}><Shield size={16} /> Teste</button></div>
+    {mode === "damage" ? <div className="quick-form"><label><span>Dano rápido</span><input value={damageExpression} onChange={(event) => setDamageExpression(event.target.value)} placeholder="3D+2 cortante" /></label><label className="damage-target-field"><span>Alvo da simulação</span><select value={targetId} onChange={(event) => selectDamageTarget(event.target.value)}><option value="">Apenas calcular o dano causado</option>{targets.map((target) => <option key={target.id} value={target.id}>{target.character.name} #{target.copyNumber}</option>)}</select></label>{advancedOpen && <div className="advanced-panel damage-advanced"><div className="advanced-group-title"><strong>Redução e escala do alvo</strong><small>Mesmas camadas da aplicação completa</small></div><label><span>RDF</span><input type="number" value={targetRdf} onChange={(event) => setTargetRdf(Number(event.target.value))} /></label><label><span>RDM</span><input type="number" value={targetRdm} onChange={(event) => setTargetRdm(Number(event.target.value))} /></label><label className="check-row"><input type="checkbox" checked={mtEnabled} onChange={(event) => setMtEnabled(event.target.checked)} /> Aplicar MT do atacante na rolagem</label><label className="check-row"><input type="checkbox" checked={targetMtEnabled} onChange={(event) => setTargetMtEnabled(event.target.checked)} /> Aplicar MT do alvo</label>{targetMtEnabled && <label><span>MT do alvo</span><input type="number" value={targetMtValue} onChange={(event) => setTargetMtValue(Number(event.target.value))} /></label>}<div className="damage-layer extra"><strong>PA Extra</strong><label className="check-row"><input type="checkbox" checked={extraAuraElementEnabled} onChange={(event) => setExtraAuraElementEnabled(event.target.checked)} /> Usar elemento</label><label><span>Multiplicador</span><input value={extraAuraMultiplier} onChange={(event) => setExtraAuraMultiplier(event.target.value)} /></label><label><span>Quebra</span><input value={extraAuraBreak} onChange={(event) => setExtraAuraBreak(event.target.value)} /></label></div><div className="damage-layer aura"><strong>PA</strong><small>{getCharacterElement(actor.character.stats.elementId)?.name ?? "Sem elemento"}</small><label><span>Multiplicador</span><input value={auraMultiplier} onChange={(event) => setAuraMultiplier(event.target.value)} /></label><label><span>Quebra</span><input value={auraBreak} onChange={(event) => setAuraBreak(event.target.value)} /></label></div><div className="damage-layer life"><strong>PV</strong><label className="check-row"><input type="checkbox" checked={lifeElementEnabled} onChange={(event) => setLifeElementEnabled(event.target.checked)} /> Usar elemento na vida</label><label><span>Multiplicador</span><input value={lifeMultiplier} onChange={(event) => setLifeMultiplier(event.target.value)} /></label></div><p>Resistências e fraquezas do elemento são combinadas com as personalizadas da ficha.</p></div>}<ConfigurationButtons modifierOpen={modifierOpen} advancedOpen={advancedOpen} onModifier={() => setModifierOpen((value) => !value)} onAdvanced={() => setAdvancedOpen((value) => !value)} />{modifierOpen && <ModifierInput value={modifier} onChange={setModifier} />}<button className="execute-button damage" onClick={() => simulateDamage()}>Simular dano</button>{simulatedDamage && <div className="damage-confirmation"><div className="damage-caused-line"><span>Dano causado</span><label><input aria-label="Valor do dano causado" type="number" min="0" value={simulatedDamage.amount} onChange={(event) => { const amount = Number(event.target.value); if (simulationEditing) setPendingDamage((current) => current ? { ...current, amount, title: `${amount} ${current.damageTypeName}` } : current); else stageDamage(amount, simulatedDamage.damageTypeId, simulatedDamage.damageTypeName) }} /><b>{simulatedDamage.damageTypeName}</b></label></div><div className="simulated-damage-editor"><div><span>Dano simulado</span><button className={simulationEditing ? "active" : ""} onClick={() => { if (simulationEditing) { setSimulationEditing(false); stageDamage(simulatedDamage.amount, simulatedDamage.damageTypeId, simulatedDamage.damageTypeName) } else setSimulationEditing(true) }}>{simulationEditing ? "Bloquear e recalcular" : "Editar texto"}</button></div><textarea aria-label="Dano simulado" readOnly={!simulationEditing} value={simulatedDamage.detail} onChange={(event) => setPendingDamage((current) => current ? { ...current, detail: event.target.value } : current)} /></div><button className="execute-button confirm" disabled={!simulatedDamage.character || simulationEditing} onClick={confirmDamage}>{simulatedDamage.character ? "Aplicar dano ao alvo" : "Selecione um alvo para aplicar"}</button></div>}</div> : <div className="quick-form"><label><span>Perícia ou teste</span><input value={skillName} onChange={(event) => setSkillName(event.target.value)} /></label>{advancedOpen && <div className="advanced-panel"><label><span>Atributo</span><select value={testAttribute} onChange={(event) => setTestAttribute(event.target.value as SecondaryAttributeKey)}>{secondaryAttributes.map((attribute) => <option key={attribute.key} value={attribute.key}>{attribute.label}</option>)}</select></label><label><span>Mod. da perícia</span><input type="number" value={skillModifier} onChange={(event) => setSkillModifier(Number(event.target.value))} /></label><label><span>Dado especial</span><select value={specialDie} onChange={(event) => setSpecialDie(event.target.value as SpecialDieId)}><option value="none">Nenhum</option><option value="luck">Sorte</option><option value="inspiration">Inspiração</option><option value="legendary-inspiration">Inspiração lendária</option><option value="divine-advantage">Divino: vantagem</option><option value="divine-disadvantage">Divino: desvantagem</option></select></label></div>}<ConfigurationButtons modifierOpen={modifierOpen} advancedOpen={advancedOpen} onModifier={() => setModifierOpen((value) => !value)} onAdvanced={() => setAdvancedOpen((value) => !value)} />{modifierOpen && <ModifierInput value={modifier} onChange={setModifier} />}<button className="execute-button test" onClick={() => runTest()}>Rolar teste</button></div>}
     {result && <div className={`roll-result ${result.tone}`}><strong>{result.title}</strong><span>{result.detail}</span></div>}{mode === "test" && activeRoll && <div className="narrative-spend"><button onClick={spendDetermination} disabled={actor.character.stats.determination <= 0 || activeRoll.outcome.includes("critical")}><b>Determinação</b><span>+{normalizeSkillName(activeRoll.skillName) === "vontade" ? 3 : 1} no teste · {actor.character.stats.determination} restante</span></button><button onClick={spendCasualty} disabled={actor.character.stats.casualty <= 0 || (normalizeSkillName(activeRoll.skillName) !== "acaso" && activeRoll.outcome.includes("critical"))}><b>Casualidade</b><span>Rolar novamente · {actor.character.stats.casualty} restante</span></button></div>}<p className="modifier-hint"><b>Modificador:</b> inteiros somam; x2 multiplica; x0,5 divide por dois.</p></div>
 }
 
@@ -564,12 +577,12 @@ function SheetEditor({ entry, tables, onClose, onSave, onTablesChange }: { entry
     })
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className="sheet-modal" role="dialog" aria-modal="true" aria-label="Editor de ficha"><header><div><p className="eyebrow">{entry.character.name ? "Editar criatura" : "Nova criatura"}</p><h2>{character.name || "Ficha sem nome"}</h2></div><div className="editor-tabs"><button className={tab === "simple" ? "active" : ""} onClick={() => switchTab("simple")}>Simplificada</button><button className={tab === "advanced" ? "active" : ""} onClick={() => switchTab("advanced")}>Avançada</button></div><button className="icon-button" onClick={onClose}><X size={20} /></button></header>
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className={`sheet-modal ${tab === "advanced" ? "advanced-mode" : "simple-mode"}`} role="dialog" aria-modal="true" aria-label="Editor de ficha"><header><div><p className="eyebrow">{entry.character.name ? "Editar criatura" : "Nova criatura"}</p><h2>{character.name || "Ficha sem nome"}</h2></div><div className="editor-tabs"><button className={tab === "simple" ? "active" : ""} onClick={() => switchTab("simple")}>Simplificada</button><button className={tab === "advanced" ? "active" : ""} onClick={() => switchTab("advanced")}>Avançada</button></div><button className="icon-button" onClick={onClose}><X size={20} /></button></header>
     {tab === "simple" ? <div className="editor-body simple-sheet-editor"><section className="form-section hero-fields simple-identity-card"><div className={`editor-rune portrait-editor ${character.portraitDataUrl ? "has-portrait" : ""}`}>{character.portraitDataUrl ? <img src={character.portraitDataUrl} alt={`Imagem de ${character.name || "criatura"}`} /> : <><span>{character.name.slice(0, 1) || "R"}</span><small>RUNAS</small></>}<label title="Selecionar imagem"><Upload size={14} /><span className="sr-only">Selecionar imagem</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void preparePortrait(file).then((portraitDataUrl) => mutate((draft) => { draft.portraitDataUrl = portraitDataUrl })) }} /></label>{character.portraitDataUrl && <button aria-label="Remover imagem da ficha" title="Remover imagem" onClick={() => mutate((draft) => { delete draft.portraitDataUrl })}><Trash2 size={13} /><span className="sr-only">Remover imagem</span></button>}</div><Field label="Nome" value={character.name} onChange={(value) => mutate((draft) => { draft.name = value })} /><Field label="Raça" value={character.info.race} onChange={(value) => mutate((draft) => { draft.info.race = value })} /><Field label="Afinidade" value={character.info.affinity} onChange={(value) => mutate((draft) => { draft.info.affinity = value })} /><PercentField label="Eficiência" value={character.info.efficiency} onChange={(value) => mutate((draft) => { draft.info.efficiency = value })} /></section>
       <section className="form-section simple-sheet-section attribute-section"><SectionTitle title="Atributos" note="Organização histórica do sistema Runas" /><AttributeBands attributes={character.attributes} onChange={(key: AttributeKey, value) => mutate((draft) => { draft.attributes[key] = value })} /></section>
       <section className="form-section simple-sheet-section resource-section"><SectionTitle title="Recursos e defesa" note="Atuais e máximos calculados automaticamente" /><button className="restore-stats-button simple" onClick={restoreStats}><RefreshCw size={14} /> Restaurar estatísticas</button><div className="field-grid six resource-ribbon"><ResourceField label="PV" value={character.stats.pv} maximum={snapshot.pvMax} onChange={(value) => mutate((draft) => { draft.stats.pv = value })} /><ResourceField label="PA" value={character.stats.pa} maximum={snapshot.paMax} onChange={(value) => mutate((draft) => { draft.stats.pa = value })} /><ResourceField label="PA extra" value={character.stats.paExtra} maximum={snapshot.paExtraMax} onChange={(value) => mutate((draft) => { draft.stats.paExtra = value })} /><ResourceField label="PE" value={character.stats.pe} maximum={snapshot.peMax} onChange={(value) => mutate((draft) => { draft.stats.pe = value })} /><ResourceField label="PE temporário" value={character.stats.peTemporary} maximum={snapshot.peTemporaryMax} onChange={(value) => mutate((draft) => { draft.stats.peTemporary = value })} /><div className="calculated-field"><span>Deslocamento</span><strong>{snapshot.movement} m</strong></div></div><div className="field-grid defense-grid"><label className="field"><span>Elemento principal</span><select value={character.stats.elementId} onChange={(event) => mutate((draft) => { const element = getCharacterElement(event.target.value); draft.stats.elementId = event.target.value; draft.stats.resistances = [...(element?.resistances ?? [])]; draft.stats.weaknesses = [...(element?.weaknesses ?? [])] })}><option value="none">Nenhum</option>{characterElements.map((element) => <option key={element.id} value={element.id}>{element.name}</option>)}</select></label><Field label="Resistências" value={character.stats.resistances.join(", ")} onChange={(value) => mutate((draft) => { draft.stats.resistances = listFromText(value) })} /><Field label="Fraquezas" value={character.stats.weaknesses.join(", ")} onChange={(value) => mutate((draft) => { draft.stats.weaknesses = listFromText(value) })} /></div></section>
       <section className="form-section simple-sheet-section linked-section"><SectionTitle title="Perícias, características e ações" note="Registros vinculados à ficha completa" /><div className="simple-linked-grid"><SimpleSkills character={character} mutate={mutate} /><SimpleRacialAbilities character={character} mutate={mutate} /></div><SimpleActions character={character} mutate={mutate} /></section>
-      <section className="form-section simple-sheet-section mastery-section"><SectionTitle title="Melhorias" note={`${availableMastery} pontos disponíveis na tabela selecionada`} /><div className="mastery-toolbar"><select value={tableId} onChange={(event) => setTableId(event.target.value)}>{tables.map((table) => <option key={table.id} value={table.id}>{table.name}</option>)}</select><button className="secondary-button" onClick={() => { const table = { id: id("table"), name: `Tabela ${tables.length + 1}`, multiplier: 1 }; onTablesChange([...tables, table]); setTableId(table.id) }}><Plus size={15} /> Nova tabela</button>{selectedTable && !["default", "double"].includes(selectedTable.id) && <><input value={selectedTable.name} onChange={(event) => onTablesChange(tables.map((table) => table.id === selectedTable.id ? { ...table, name: event.target.value } : table))} /><label className="mini-field">Multiplicador <input type="number" min="0.1" step="0.1" value={selectedTable.multiplier} onChange={(event) => onTablesChange(tables.map((table) => table.id === selectedTable.id ? { ...table, multiplier: Number(event.target.value) || 1 } : table))} /></label><button className="secondary-button danger-icon" title="Remover tabela customizada" onClick={() => { onTablesChange(tables.filter((table) => table.id !== selectedTable.id)); setTableId("default") }}><Trash2 size={15} /> Remover</button></>}</div><div className="mastery-grid">{Object.entries(character.stats.masteryImprovements).map(([key, value]) => <NumberField key={key} label={{ aura: "Aura", life: "Vida", energy: "Energia", determination: "Determinação", casualty: "Casualidade" }[key] ?? key} value={value} onChange={(next) => mutate((draft) => { draft.stats.masteryImprovements[key as keyof typeof draft.stats.masteryImprovements] = next })} />)}</div></section>
+      <section className="form-section simple-sheet-section mastery-section"><SectionTitle title="Melhorias" note={`${availableMastery} pontos disponíveis na tabela selecionada`} /><div className="mastery-toolbar"><select value={tableId} onChange={(event) => setTableId(event.target.value)}>{tables.map((table) => <option key={table.id} value={table.id}>{table.name}</option>)}</select><button className="secondary-button" onClick={() => { const table = { id: id("table"), name: `Tabela ${tables.length + 1}`, multiplier: 1 }; onTablesChange([...tables, table]); setTableId(table.id) }}><Plus size={15} /> Nova tabela</button>{selectedTable && !["default", "double"].includes(selectedTable.id) && <><input value={selectedTable.name} onChange={(event) => onTablesChange(tables.map((table) => table.id === selectedTable.id ? { ...table, name: event.target.value } : table))} /><label className="mini-field">Multiplicador <input type="number" min="0.1" step="0.1" value={selectedTable.multiplier} onChange={(event) => onTablesChange(tables.map((table) => table.id === selectedTable.id ? { ...table, multiplier: Number(event.target.value) || 1 } : table))} /></label><button className="secondary-button danger-icon" title="Remover tabela customizada" onClick={() => { onTablesChange(tables.filter((table) => table.id !== selectedTable.id)); setTableId("default") }}><Trash2 size={15} /> Remover</button></>}</div><div className="mastery-grid">{masteryImprovementOptions.map((option) => <NumberField key={option.key} label={`${option.name} / ${option.cost} pontos`} value={character.stats.masteryImprovements[option.key]} onChange={(next) => mutate((draft) => { draft.stats.masteryImprovements[option.key] = next })} />)}</div></section>
       <section className="form-section simple-sheet-section inventory-section"><SectionTitle title="Recursos carregados" note={`Essências geradas automaticamente: ${essenceYield(character)}`} /><SimpleInventory character={character} mutate={mutate} /><div className="field-grid resource-total"><Field label="Essências totais" value={character.info.essences} onChange={(value) => mutate((draft) => { draft.info.essences = value })} /></div></section></div> : <AdvancedSheetEditor character={character} onChange={setCharacter} />}
     <footer className="modal-footer"><button className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" onClick={save}>Salvar ficha</button></footer></section></div>
 }

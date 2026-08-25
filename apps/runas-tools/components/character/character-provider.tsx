@@ -6,6 +6,7 @@ import type { Character, CharacterGalleryEntry } from "@runas/core/types/charact
 import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import { createEmptyCharacter } from "@/lib/characterStorage"
 import { loadCharacterDatabase, loadCharacterGalleryDatabase, saveCharacterDatabase, saveCharacterGalleryDatabase } from "@/lib/characterDatabase"
+import { GALLERY_MAX_CHARACTERS } from "@/lib/galleryLimits"
 
 type SaveStatus = "idle" | "saving" | "saved"
 
@@ -106,7 +107,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const saveCurrentToGallery = useCallback(() => {
-    if (galleryEntries.length >= 20) return false
+    if (galleryEntries.length >= GALLERY_MAX_CHARACTERS) return false
     const id = crypto.randomUUID()
     setStoredGalleryEntries((current) => [...current, { id, character, updatedAt: Date.now() }])
     setActiveGalleryId(id)
@@ -114,7 +115,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [character, galleryEntries.length])
 
   const createGalleryCharacter = useCallback(() => {
-    if (galleryEntries.length >= 20) return false
+    if (galleryEntries.length >= GALLERY_MAX_CHARACTERS) return false
     const id = crypto.randomUUID()
     const next = createEmptyCharacter()
     setStoredGalleryEntries((current) => [
@@ -127,14 +128,14 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   }, [activeGalleryId, character, galleryEntries.length])
 
   const importGalleryCharacter = useCallback((imported: Character) => {
-    if (galleryEntries.length >= 20) return false
+    if (galleryEntries.length >= GALLERY_MAX_CHARACTERS) return false
     const id = crypto.randomUUID()
     setStoredGalleryEntries((current) => [...current, { id, character: imported, updatedAt: Date.now() }])
     return true
   }, [galleryEntries.length])
 
   const importGalleryCharacters = useCallback((imported: Character[]) => {
-    const accepted = imported.slice(0, Math.max(0, 20 - galleryEntries.length))
+    const accepted = imported.slice(0, Math.max(0, GALLERY_MAX_CHARACTERS - galleryEntries.length))
     if (accepted.length === 0) return 0
     const updatedAt = Date.now()
     setStoredGalleryEntries((current) => [

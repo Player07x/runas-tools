@@ -2,17 +2,17 @@
 
 ## Personalidade
 
-Painel operacional moderno com referências discretas às runas e à arte de Runas: Livro Azul. Não recicla o layout do Runas Tools nem copia as imagens de referência.
+Painel operacional moderno inspirado no Livro Vermelho: árvore, pedra rúnica e tons minerais foscos. O fundo usa uma interpretação própria sem tipografia da capa, coberta por camadas translúcidas. Não recicla o layout do Runas Tools.
 
 ## Temas
 
-- Escuro: obsidiana, verde-petróleo, ciano rúnico, vermelho para dano e dourado para recursos.
-- Claro: papel frio, tinta azul-esverdeada e acentos de contraste equivalente.
+- Escuro: obsidiana quente, vinho mineral e acentos foscos; brilho aparece somente em bordas, foco e runas.
+- Claro: papel quente, tinta castanha escura e acentos com contraste WCAG visualmente verificável.
 
 ## Componentes
 
 - Cartões do bestiário equilibram densidade e leitura: no desktop usam largura mínima de 420 px e altura mínima de 184 px, com nome, raça, afinidade, eficiência, recursos e atributos legíveis sem abrir a ficha.
-- A grade reduz o número de colunas automaticamente e passa para uma coluna em telas estreitas; textos funcionais usam pelo menos 9 px, rótulos e conteúdo normal usam 10–12 px e nunca podem invadir o componente vizinho.
+- A grade reduz o número de colunas automaticamente e passa para uma coluna em telas estreitas; conteúdo normal parte de 11–14 px e nunca pode invadir o componente vizinho. Compactação acontece pela organização, não por texto minúsculo.
 - Motivos rúnicos usam bordas, círculos e tipografia, sem ilustrações pesadas.
 - Ações primárias usam ciano; aplicar dano usa coral/vermelho.
 - Informações de combate ficam visíveis sem rolagem horizontal.
@@ -21,7 +21,9 @@ Painel operacional moderno com referências discretas às runas e à arte de Run
 - Inputs numéricos nunca exibem os controles nativos de incremento/decremento do navegador.
 - Imagens de ficha usam recorte quadrado ou retangular com cantos moderados; círculos são reservados às runas sem imagem. A ficha simplificada oferece seleção e remoção explícitas.
 - No cabeçalho simplificado, Nome ocupa a linha superior; Raça, Afinidade e Eficiência permanecem juntas na linha inferior. Eficiência é sempre apresentada e editada com o sufixo `%`.
-- Listas densas, como inventário e ações, mostram o resumo primeiro e abrem os campos completos sob demanda.
+- Na simplificada, listas densas mostram resumo e edição progressiva. Na avançada, perícias, vínculos, habilidades e inventário abrem os campos completos por padrão até 6 registros; acima disso, os 4 primeiros ficam completos e os demais mantêm resumo informativo, economizando rolagem sem esconder a existência dos dados.
+- Campos modificadores aparecem imediatamente antes, à esquerda, do recurso ou estado que alteram.
+- A ficha simplificada usa largura máxima aproximada de 1060 px; a avançada expande até aproximadamente 1280 px.
 - Cores têm função: vermelho para PV/dano, ciano para PA/testes, violeta para PE/magia, dourado para recursos narrativos e verde para restauração/carga.
 
 ## Velocidade percebida
@@ -30,4 +32,4 @@ Painel operacional moderno com referências discretas às runas e à arte de Run
 - Feedback de salvar, rolar e aplicar dano deve ser imediato.
 - Não esconder ações frequentes em menus de três pontos.
 - Em telas estreitas, navegação vira barra inferior e ações passam para baixo dos inimigos.
-- Na Mesa, equipamento, perícia e magia disparam ações integradas sem navegação. Dano sempre passa por simulação e edição do total final antes da aplicação.
+- Na Mesa, equipamento, perícia e magia disparam ações integradas e levam a tela até a calculadora. Dano sempre separa o valor causado da simulação no alvo antes da aplicação.

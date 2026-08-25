@@ -1,5 +1,5 @@
-const CACHE_NAME = "runas-dm-shell-v1"
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"]
+const CACHE_NAME = "runas-dm-shell-v2"
+const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/runas-red-tree-bg.webp"]
 
 function isCacheableUrl(url) {
   return url.origin === self.location.origin

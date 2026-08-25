@@ -50,7 +50,7 @@ export default function HomePage() {
           />
           <ToolCard
             title="Galeria de Personagens"
-            description="Salve e alterne entre até 20 fichas de personagem."
+            description="Salve e alterne entre até 100 fichas, com 20 personagens por página."
             icon={Images}
             href="/galeria-personagens"
             actionLabel="Abrir galeria"

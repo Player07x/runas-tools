@@ -32,7 +32,9 @@ Toda edição passa por `synchronizeCharacterDerivedValues`. A função recalcul
 
 `Character.portraitDataUrl` é opcional e versionado desde a versão 18. O Runas DM reduz o arquivo a JPEG 512×512 antes de persistir, permitindo uso offline e sincronização pelo snapshot sem armazenar a imagem original.
 
-Na Mesa, cada ator é uma cópia independente. Testes podem gastar Determinação ou Casualidade; itens vinculam sua perícia por `skillId`; magias usam `castingSkill`; e a aplicação de dano mantém as três camadas PA Extra → PA → PV, seus elementos, multiplicadores, quebra, RDF/RDM e MT. Toda rolagem de dano, inclusive a iniciada por equipamento, cria primeiro uma simulação com valor final editável e só altera a ficha após confirmação explícita.
+Na Mesa, cada ator é uma cópia independente. Testes podem gastar Determinação ou Casualidade; usos acumulados de Determinação são reaplicados às rolagens seguintes de Casualidade. Itens vinculam sua perícia por `skillId`; magias usam `castingSkill`; e a aplicação de dano mantém as três camadas PA Extra → PA → PV, seus elementos, multiplicadores, quebra, RDF/RDM e MT. Toda rolagem de dano, inclusive a iniciada por equipamento, pertence ao atacante, seleciona outro ator como alvo e cria primeiro uma simulação. `Dano causado` preserva o tipo e permite editar somente o valor; `Dano simulado` permite edição textual sob bloqueio e é recalculado ao ser bloqueado novamente. Apenas a confirmação explícita altera o alvo.
+
+A galeria do Runas Tools usa o limite de produto `GALLERY_MAX_CHARACTERS = 100`, derivado de 20 registros por página e 5 páginas. Persistência, importação individual/ZIP e interface consomem as mesmas constantes.
 
 - Vinext/React publicado como Pages Function em `runas-dm.pages.dev`.
 - Interface client-side para resposta imediata.

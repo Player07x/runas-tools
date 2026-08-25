@@ -15,7 +15,9 @@ O Runas DM reduz o tempo gasto pelo mestre procurando fichas, calculando testes 
 - Toda alteração feita em um registro na simplificada deve aparecer imediatamente na avançada, e vice-versa.
 - A simplificada pode omitir campos por velocidade. A avançada deve expor todos os campos de domínio editáveis do modelo completo.
 - A importação aceita o envelope `{ version, character }` do Runas Tools sem perder os vínculos entre entidades.
-- Não existe limite artificial para fichas.
+- Clicar em qualquer área principal do cartão abre imediatamente o modal na ficha simplificada; não existe etapa intermediária de expansão ou botão obrigatório de edição.
+- A ficha simplificada usa modal mais estreito. A avançada amplia o modal, sem ocupar desnecessariamente toda a largura da tela.
+- O Runas DM não limita fichas. No Runas Tools, a galeria aceita até 100 fichas, com 20 fichas por página e no máximo 5 páginas.
 - Tabelas customizadas de Melhoria de Maestria são configuração do sistema, não da ficha.
 - Essências geradas usam `essências totais / 10`, arredondadas para baixo.
 - Características listam apenas habilidades `Racial`.
@@ -35,6 +37,10 @@ O Runas DM reduz o tempo gasto pelo mestre procurando fichas, calculando testes 
 - Valores iniciados por `x` multiplicam. `x0,5` equivale a dividir por dois.
 - `Avançado` abre configurações completas no mesmo painel.
 - Dano percorre PA Extra, PA e PV, considerando redução, resistência e fraqueza.
+- Dano de equipamento pertence ao atacante e nunca é aplicado nele por padrão. A Mesa exige um alvo explícito para aplicar a simulação.
+- O painel mostra separadamente `Dano causado` (valor numérico editável, tipo imutável) e `Dano simulado` (texto protegido por bloqueio de edição). Ao bloquear novamente, a simulação é recalculada.
+- Ao gastar Determinação, o bônus permanece em toda nova rolagem feita por Casualidade no mesmo teste.
+- Disparar um teste por perícia, equipamento ou magia rola a página até a calculadora integrada.
 
 ## Privacidade e custo
 

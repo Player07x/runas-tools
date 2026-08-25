@@ -1,4 +1,4 @@
-const CACHE_NAME = "runas-tools-runtime-v3"
+const CACHE_NAME = "runas-tools-runtime-v4"
 const MAX_CACHE_ENTRIES = 80
 const BASE_URL = new URL("./", self.location.href)
 const OFFLINE_URL = new URL("./", BASE_URL).href

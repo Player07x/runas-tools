@@ -1,6 +1,7 @@
 import type { Character, CharacterGallery } from "@runas/core/types/character"
 import { CHARACTER_VERSION } from "@runas/core/types/character"
 import { loadCharacter, normalizeCharacter, saveCharacter } from "@/lib/characterStorage"
+import { GALLERY_MAX_CHARACTERS } from "@/lib/galleryLimits"
 
 const DATABASE_NAME = "runas-tools"
 const DATABASE_VERSION = 1
@@ -129,7 +130,7 @@ export async function loadCharacterGalleryDatabase(): Promise<CharacterGallery> 
       const record = await requestResult(transaction.objectStore(SECTION_STORE).get(GALLERY_KEY)) as StoredSection | undefined
       const value = record?.value as Partial<CharacterGallery> | undefined
       const entries = Array.isArray(value?.entries)
-        ? value.entries.slice(0, 20).flatMap((entry) => {
+        ? value.entries.slice(0, GALLERY_MAX_CHARACTERS).flatMap((entry) => {
             if (!entry || typeof entry !== "object" || typeof entry.id !== "string" || !entry.character) return []
             return [{ id: entry.id, character: normalizeCharacter(entry.character), updatedAt: Number(entry.updatedAt) || Date.now() }]
           })

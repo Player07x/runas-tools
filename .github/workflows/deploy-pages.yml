@@ -33,22 +33,38 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate shared business rules
+        run: npm test && npm run typecheck
+
+      - name: Verify Runas DM production build
+        run: npm run build:dm
+
       - name: Build static site
-        run: npm run build
+        run: npm run build:tools
+
+      - name: Verify offline artifacts
+        run: |
+          test -f apps/runas-tools/out/sw.js
+          test -f apps/runas-tools/out/manifest.webmanifest
+          test -f apps/runas-tools/out/icon-192.png
+          test -f apps/runas-tools/out/icon-512.png
+          test -f apps/runas-dm/dist/client/sw.js
+          test -f apps/runas-dm/dist/client/icon-192.png
+          test -f apps/runas-dm/dist/client/icon-512.png
 
       - name: Enforce JavaScript budget
-        run: npm run check:bundle
+        run: npm run check:bundle -w @runas/tools
 
       - name: Audit performance and accessibility
-        run: npm run lighthouse
+        run: npm run lighthouse -w @runas/tools
 
       - name: Disable Jekyll processing
-        run: touch out/.nojekyll
+        run: touch apps/runas-tools/out/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: out
+          path: apps/runas-tools/out
           include-hidden-files: true
 
   deploy:

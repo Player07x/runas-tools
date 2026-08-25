@@ -7,3 +7,32 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Regras obrigatórias da Runas Suite
+
+Antes de alterar qualquer parte desta suíte, leia integralmente:
+
+1. `docs/product-rules.md`
+2. `docs/architecture.md`
+3. `docs/design-system.md`
+4. `docs/data-sync.md`
+
+## Restrições que não podem ser quebradas
+
+- `apps/runas-tools` continua um site estático (`output: "export"`) e offline-first.
+- Cálculos de ficha, testes, dano e tabelas compartilhadas pertencem a `packages/runas-core`.
+- Nenhum aplicativo deve copiar uma regra que já exista no núcleo. Altere o núcleo e valide os dois consumidores.
+- As interfaces podem ser diferentes; somente o domínio é compartilhado.
+- O Runas DM prioriza simplicidade e velocidade. Galeria, testes, dano e encontro funcionam sem navegação desnecessária.
+- Toda ação rápida mantém os controles `Modificador` e `Avançado` na própria tela.
+- A galeria sempre resume a ficha. O modal oferece `Simplificada` e `Avançada`.
+- `Simplificada` e `Avançada` editam a mesma instância de `Character`. Perícias, habilidades, magias, ataques e itens devem permanecer registros estruturados identificados por `id`; nunca use strings ou arrays paralelos para representá-los na simplificada.
+- A ficha avançada deve expor todos os campos de domínio do modelo compartilhado. A simplificada pode apenas ocultar o que não faz parte de seu recorte rápido.
+- O estado primário do Runas DM é local (IndexedDB). O D1 é backup privado e nunca é requisito de uso.
+- Endpoints de backup exigem token secreto no servidor e hospedagem privada.
+- Não adicione limite artificial ao número de fichas ou cópias.
+- Mudanças compartilhadas exigem teste no `@runas/core`, typecheck e build dos dois aplicativos.
+- Os dois aplicativos são PWAs. A opção de instalação existe somente nas telas iniciais e nenhum fluxo principal pode depender da rede.
+- Service workers nunca armazenam `/api/backup`, autenticação ou respostas do Cloudflare Access/Sites.
+- Leia `docs/offline-pwa.md` antes de alterar cache, manifesto, IndexedDB ou instalação.
+- Leia `docs/deployment.md` antes de alterar workflows, bindings, migrações, segredos ou acesso de produção.

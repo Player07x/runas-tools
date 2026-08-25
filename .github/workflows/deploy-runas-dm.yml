@@ -52,14 +52,17 @@ jobs:
           test -f apps/runas-dm/dist/pages/icon-512.png
 
       - name: Deploy Runas DM
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
         working-directory: apps/runas-dm
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: >-
-          npx wrangler pages deploy dist/pages
-          --project-name runas-dm
-          --branch main
-          --commit-hash ${{ github.sha }}
-          --commit-message "Automated Runas DM deployment"
-          --commit-dirty=false
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN is not configured; skipping deploy."
+            exit 0
+          fi
+          npx wrangler pages deploy dist/pages \
+            --project-name runas-dm \
+            --branch main \
+            --commit-hash ${{ github.sha }} \
+            --commit-message "Automated Runas DM deployment" \
+            --commit-dirty=false

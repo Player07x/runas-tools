@@ -477,8 +477,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   min-width: 50vw;
   max-width: calc(100vw - 48px);
 }
-.simple-resize-handle { position: absolute; z-index: 8; top: 92px; bottom: 68px; width: 14px; padding: 0; border: 0; background: transparent; color: var(--line-strong); cursor: ew-resize; touch-action: none; }
-.simple-resize-handle.left { left: 0; }.simple-resize-handle.right { right: 0; }
+.simple-resize-handle { position: absolute; z-index: 8; top: 50%; width: 14px; height: 112px; padding: 0; border: 0; background: transparent; color: var(--line-strong); cursor: ew-resize; touch-action: none; transform: translateY(-50%); }
+.simple-resize-handle.left { left: -7px; }.simple-resize-handle.right { right: -7px; }
 .simple-resize-handle span { display: block; width: 3px; height: 52px; margin: auto; border-radius: 4px; background: currentColor; opacity: .45; transition: height 120ms ease, opacity 120ms ease, color 120ms ease; }
 .simple-resize-handle:hover span, .simple-resize-handle:focus-visible span { height: 86px; color: var(--cyan); opacity: 1; }
 
@@ -555,6 +555,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .simple-sheet-editor .linked-item input, .simple-sheet-editor .linked-item select { height: 27px; font-size: 11px; }
 .simple-sheet-editor .linked-source, .simple-sheet-editor .linked-lock { min-height: 23px; gap: 4px; padding-inline: 6px; font-size: 10px; white-space: nowrap; }
 .simple-sheet-editor .linked-source svg { flex: 0 0 auto; color: currentColor; }
+.simple-sheet-editor .linked-source-emoji { font-size: 13px; line-height: 1; }
 .simple-sheet-editor .linked-source.equipped { background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); }
 .simple-sheet-editor .linked-source.rune { background: color-mix(in srgb, var(--violet) 12%, transparent); color: var(--violet); }
 .simple-sheet-editor .linked-source.spell { color: var(--violet); }

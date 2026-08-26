@@ -677,7 +677,14 @@ const simpleRangeTypes = [
 ] as const
 
 function ResizeHandle({ side, onPointerDown, onPointerMove, onPointerUp, onKeyDown }: { side: "left" | "right"; onPointerDown: (event: React.PointerEvent<HTMLButtonElement>, side: "left" | "right") => void; onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => void; onPointerUp: (event: React.PointerEvent<HTMLButtonElement>) => void; onKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>) => void }) {
-  return <button type="button" className={`simple-resize-handle ${side}`} role="separator" aria-orientation="vertical" aria-label={`Redimensionar pela lateral ${side === "left" ? "esquerda" : "direita"}`} title="Arraste para redimensionar a ficha" onPointerDown={(event) => onPointerDown(event, side)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onKeyDown={onKeyDown}><span /></button>
+  function scrollSheet(event: React.WheelEvent<HTMLButtonElement>) {
+    const editor = event.currentTarget.closest<HTMLElement>(".sheet-modal")?.querySelector<HTMLElement>(".editor-body")
+    if (!editor) return
+    event.preventDefault()
+    editor.scrollBy({ left: event.deltaX, top: event.deltaY })
+  }
+
+  return <button type="button" className={`simple-resize-handle ${side}`} role="separator" aria-orientation="vertical" aria-label={`Redimensionar pela lateral ${side === "left" ? "esquerda" : "direita"}`} title="Arraste para redimensionar a ficha" onPointerDown={(event) => onPointerDown(event, side)} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onKeyDown={onKeyDown} onWheel={scrollSheet}><span /></button>
 }
 
 function SimpleSection({ className, title, note, action, collapsed, onToggle, children }: { className: string; title: string; note?: string; action?: React.ReactNode; collapsed: boolean; onToggle: () => void; children: React.ReactNode }) {

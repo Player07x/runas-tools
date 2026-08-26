@@ -469,3 +469,136 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .inventory-row { grid-template-columns: 1fr 1fr auto; gap: 8px; padding: 13px; }
   .inventory-row > :nth-child(2), .inventory-row > :nth-child(4) { grid-column: 1 / -1; }.inventory-row > :nth-child(7) { grid-column: 3; grid-row: 1; }
 }
+
+/* Ficha simplificada compacta, recolhível e redimensionável pelas duas laterais. */
+.sheet-modal.simple-mode {
+  position: relative;
+  width: var(--simple-sheet-width, clamp(50vw, 880px, calc(100vw - 48px)));
+  min-width: 50vw;
+  max-width: calc(100vw - 48px);
+}
+.simple-resize-handle { position: absolute; z-index: 8; top: 92px; bottom: 68px; width: 14px; padding: 0; border: 0; background: transparent; color: var(--line-strong); cursor: ew-resize; touch-action: none; }
+.simple-resize-handle.left { left: 0; }.simple-resize-handle.right { right: 0; }
+.simple-resize-handle span { display: block; width: 3px; height: 52px; margin: auto; border-radius: 4px; background: currentColor; opacity: .45; transition: height 120ms ease, opacity 120ms ease, color 120ms ease; }
+.simple-resize-handle:hover span, .simple-resize-handle:focus-visible span { height: 86px; color: var(--cyan); opacity: 1; }
+
+.simple-sheet-editor { padding: 14px 16px 22px; font-size: 12px; }
+.simple-sheet-editor .form-section { margin-bottom: 10px; padding: 14px 16px; border-radius: 14px; }
+.simple-sheet-editor .simple-sheet-section.collapsed { padding-block: 12px; }
+.simple-sheet-editor .simple-sheet-section::before { width: 2px; }
+.simple-sheet-editor .statistics-section::before { background: linear-gradient(var(--red), color-mix(in srgb, var(--red) 8%, transparent)); }
+.simple-sheet-editor .statistics-section .section-title h3 { color: color-mix(in srgb, var(--red) 78%, var(--text)); }
+.simple-sheet-editor .inventory-section::before { background: linear-gradient(var(--green), color-mix(in srgb, var(--green) 8%, transparent)); }
+
+.simple-section-title { align-items: center; margin: 0; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.simple-section-title > div:first-child { display: grid; gap: 2px; }
+.simple-section-title h3, .simple-sheet-editor .section-title h3 { font-size: 15px; line-height: 1.2; }
+.simple-section-title span, .simple-sheet-editor .section-title span { font-size: 11px; line-height: 1.35; }
+.simple-section-content { margin-top: 10px; }
+.simple-section-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.collapse-section-button { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--muted); cursor: pointer; }
+.collapse-section-button svg { transition: transform 140ms ease; }.simple-sheet-section.collapsed .collapse-section-button svg { transform: rotate(-90deg); }
+.simple-sheet-section.collapsed .simple-section-title { padding-bottom: 0; border-bottom: 0; }
+
+.simple-sheet-editor .simple-identity-card, .simple-sheet-editor .simple-identity-card:has(.portrait-editor.has-portrait) { min-height: 148px; grid-template-columns: 116px repeat(4, minmax(100px, 1fr)); grid-template-areas: "portrait name name name name" "portrait race affinity efficiency essences"; align-items: center; gap: 10px; }
+.simple-identity-card .portrait-editor { grid-area: portrait; }
+.simple-identity-card .field:nth-of-type(1), .simple-identity-card:has(.portrait-editor.has-portrait) .field:nth-of-type(1) { grid-area: name; }
+.simple-identity-card .field:nth-of-type(2), .simple-identity-card:has(.portrait-editor.has-portrait) .field:nth-of-type(2) { grid-area: race; }
+.simple-identity-card .field:nth-of-type(3), .simple-identity-card:has(.portrait-editor.has-portrait) .field:nth-of-type(3) { grid-area: affinity; }
+.simple-identity-card .field:nth-of-type(4), .simple-identity-card:has(.portrait-editor.has-portrait) .field:nth-of-type(4) { grid-area: efficiency !important; }
+.simple-identity-card .field:nth-of-type(5), .simple-identity-card:has(.portrait-editor.has-portrait) .field:nth-of-type(5) { grid-area: essences; }
+.simple-sheet-editor .editor-rune { width: 92px; height: 92px; }
+.simple-sheet-editor .portrait-editor.has-portrait { width: 108px; height: 118px; border-radius: 14px; }
+.simple-sheet-editor .simple-identity-card .field:first-of-type input { font-size: 16px; }
+
+.simple-sheet-editor .field { gap: 4px; }
+.simple-sheet-editor .field > span, .simple-sheet-editor .mini-field { font-size: 10px; line-height: 1.25; }
+.simple-sheet-editor .field input, .simple-sheet-editor .field select, .simple-sheet-editor .field textarea, .simple-sheet-editor .mastery-toolbar input, .simple-sheet-editor .mastery-toolbar select { min-height: 35px; padding-inline: 9px; border-radius: 8px; font-size: 12px; }
+.simple-sheet-editor .field textarea { min-height: 68px; padding-block: 8px; line-height: 1.45; }
+.simple-sheet-editor .number-field input { font-size: 13px; }
+.simple-sheet-editor .percent-input b { font-size: 12px; }
+
+.simple-sheet-editor .attribute-bands { gap: 7px; }
+.simple-sheet-editor .attribute-band { min-height: 55px; border-radius: 12px; }
+.simple-sheet-editor .attribute-band-name, .simple-sheet-editor .attribute-secondary span { font-size: 11px; }
+.simple-sheet-editor .attribute-primary input, .simple-sheet-editor .attribute-secondary input { height: 35px; border-radius: 9px; font-size: 14px; }
+.simple-sheet-editor .attribute-primary input { font-size: 16px; }
+
+.simple-sheet-editor .resource-ribbon { gap: 7px; }
+.simple-sheet-editor .resource-ribbon .field, .simple-sheet-editor .resource-ribbon .calculated-field { padding: 7px; border-radius: 10px; }
+.simple-sheet-editor .resource-ribbon .field input { min-height: 32px; font-size: 16px; }
+.simple-sheet-editor .resource-ribbon .calculated-field { min-height: 57px; }.simple-sheet-editor .resource-ribbon .calculated-field strong { font-size: 15px; }
+.simple-sheet-editor .resource-value output { font-size: 11px; }
+.simple-sheet-editor .defense-grid { gap: 7px; margin-top: 8px; }.simple-sheet-editor .defense-grid .field { padding: 7px 9px; border-radius: 9px; }
+.restore-stats-button.simple { float: none; min-height: 32px; margin: 0; padding-inline: 9px; font-size: 11px; }
+
+.compact-mastery { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.compact-mastery-title h4 { margin: 0; color: var(--gold); font-size: 13px; }.compact-mastery-title span { color: var(--muted); font-size: 10px; }
+.simple-sheet-editor .mastery-toolbar { gap: 6px; margin: 7px 0; padding: 7px; border-radius: 9px; }
+.simple-sheet-editor .mastery-toolbar > select { width: 160px; }.simple-sheet-editor .mastery-toolbar > input { width: 145px; }
+.simple-sheet-editor .mastery-toolbar .secondary-button { min-height: 34px; padding-inline: 9px; font-size: 11px; }
+.simple-sheet-editor .mastery-grid { gap: 6px; }
+.simple-sheet-editor .mastery-grid .field { padding: 6px; border-radius: 8px; }
+
+.empty-linked-actions, .resource-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.empty-linked-actions { margin-bottom: 8px; }
+.empty-linked-actions:empty { display: none; }
+.empty-linked-actions button, .resource-actions button { display: inline-flex; min-height: 32px; align-items: center; gap: 5px; padding: 0 9px; border: 1px dashed color-mix(in srgb, var(--cyan) 45%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--cyan) 5%, var(--panel)); color: var(--cyan); cursor: pointer; font-size: 11px; font-weight: 700; }
+.resource-actions { justify-content: flex-end; margin-bottom: 8px; }.resource-actions button { border-style: solid; border-color: color-mix(in srgb, var(--green) 38%, var(--line)); color: var(--green); }
+.simple-linked-grid.single { grid-template-columns: 1fr; }
+.simple-sheet-editor .linked-panel { border-radius: 10px; }
+.simple-sheet-editor .linked-panel > header { min-height: 42px; padding: 7px 9px; }
+.simple-sheet-editor .linked-panel > header strong { font-size: 12px; }.simple-sheet-editor .linked-panel > header span { font-size: 10px; }
+.simple-sheet-editor .linked-panel > header button, .simple-sheet-editor .linked-add-group button { min-height: 28px; padding-inline: 7px; font-size: 11px; }
+.simple-sheet-editor .linked-list, .simple-sheet-editor .linked-action-list { max-height: 330px; gap: 5px; padding: 6px; }
+.simple-sheet-editor .linked-item { min-height: 32px; padding: 4px; border-radius: 7px; }
+.simple-sheet-editor .linked-item input, .simple-sheet-editor .linked-item select { height: 27px; font-size: 11px; }
+.simple-sheet-editor .linked-source, .simple-sheet-editor .linked-lock { min-height: 23px; gap: 4px; padding-inline: 6px; font-size: 10px; white-space: nowrap; }
+.simple-sheet-editor .linked-source svg { flex: 0 0 auto; color: currentColor; }
+.simple-sheet-editor .linked-source.equipped { background: color-mix(in srgb, var(--red) 10%, transparent); color: var(--red); }
+.simple-sheet-editor .linked-source.rune { background: color-mix(in srgb, var(--violet) 12%, transparent); color: var(--violet); }
+.simple-sheet-editor .linked-source.spell { color: var(--violet); }
+.simple-sheet-editor .linked-source.racial { color: var(--gold); }
+.simple-sheet-editor .actions-panel { margin-top: 8px; }
+.simple-sheet-editor .linked-item.action.summary { grid-template-columns: auto minmax(0, 1fr) 28px 28px; align-items: center; }
+.linked-action-copy, .inventory-copy { display: grid; min-width: 0; gap: 2px; }
+.linked-action-copy strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.linked-action-copy span, .inventory-copy span { overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.simple-linked-record, .simple-inventory-item { overflow: hidden; border: 1px solid transparent; border-radius: 9px; }
+.simple-linked-record.open, .simple-inventory-item.open { border-color: color-mix(in srgb, var(--cyan) 25%, var(--line)); background: color-mix(in srgb, var(--cyan) 3%, transparent); }
+.simple-record-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; padding: 9px; border-top: 1px solid var(--line); }
+.simple-record-details .wide { grid-column: 1 / -1; }
+.simple-record-details .field:first-child { grid-column: span 2; }
+.simple-record-details textarea { min-height: 82px; }
+
+.essence-yield { display: flex; align-items: center; gap: 7px; margin: 0 0 7px; padding: 9px 10px; border: 1px solid color-mix(in srgb, var(--gold) 34%, var(--line)); border-radius: 9px; background: color-mix(in srgb, var(--gold) 7%, var(--bg)); color: var(--gold); font-size: 12px; }
+.essence-yield svg { filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gold) 55%, transparent)); }
+.resource-inventory-list { display: grid; gap: 5px; }
+.simple-empty-state { margin: 0; padding: 18px; border: 1px dashed var(--line); border-radius: 9px; color: var(--muted); font-size: 11px; text-align: center; }
+.simple-sheet-editor .linked-item.inventory { grid-template-columns: 86px minmax(0, 1fr) 48px 28px 28px; }
+.inventory-copy input { width: 100%; min-width: 0; height: 27px; padding: 0 5px; border: 0; border-radius: 4px; outline: 0; background: transparent; color: var(--text); font-size: 11px; }
+.inventory-copy input:focus { background: var(--panel-2); box-shadow: inset 0 0 0 1px var(--cyan-dim); }
+.simple-sheet-editor .linked-edit, .simple-sheet-editor .linked-remove { width: 26px; height: 26px; }
+
+@media (max-width: 900px) {
+  .simple-sheet-editor .simple-identity-card, .simple-sheet-editor .simple-identity-card:has(.portrait-editor.has-portrait) { grid-template-columns: 100px repeat(2, minmax(0, 1fr)); grid-template-areas: "portrait name name" "portrait race affinity" "portrait efficiency essences"; }
+  .simple-sheet-editor .portrait-editor.has-portrait { width: 92px; height: 112px; }
+  .simple-record-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }.simple-record-details .field:first-child { grid-column: auto; }
+}
+
+@media (max-width: 760px) {
+  .sheet-modal.simple-mode { width: 100%; min-width: 0; max-width: 100%; }
+  .simple-resize-handle { display: none; }
+  .simple-sheet-editor { padding: 10px; }
+  .simple-sheet-editor .form-section { padding: 12px; }
+  .simple-sheet-editor .simple-identity-card, .simple-sheet-editor .simple-identity-card:has(.portrait-editor.has-portrait) { grid-template-columns: 1fr 1fr; grid-template-areas: "portrait portrait" "name name" "race affinity" "efficiency essences"; }
+  .simple-sheet-editor .simple-identity-card .editor-rune { display: grid; grid-area: portrait; justify-self: center; }
+  .simple-sheet-editor .simple-identity-card .portrait-editor.has-portrait { width: min(260px, 100%); height: 170px; }
+  .simple-section-title { align-items: flex-start; gap: 8px; }
+  .simple-section-actions { flex-wrap: wrap; }
+  .restore-stats-button.simple { min-height: 30px; }
+  .simple-record-details { grid-template-columns: 1fr; }.simple-record-details .wide { grid-column: auto; }
+  .simple-sheet-editor .linked-item.action.summary { grid-template-columns: minmax(0, 1fr) 28px 28px; }
+  .simple-sheet-editor .linked-item.action.summary .linked-source { grid-column: 1 / -1; justify-self: start; }
+  .simple-sheet-editor .linked-item.inventory { grid-template-columns: 78px minmax(0, 1fr) 42px 28px 28px; }
+}

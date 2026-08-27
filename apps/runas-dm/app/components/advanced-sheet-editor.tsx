@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Edit3, Handshake, Plus, RefreshCw, RotateCcw, Shield, Trash2, X } from "lucide-react"
 import { attributeGroups } from "@runas/core/data/attributes"
 import { characterElements } from "@runas/core/data/elements"
+import { systemSkills } from "@runas/core/data/skills"
 import { calculateBondQuality, calculateBondTest, formatSigned } from "@runas/core/lib/bondCalculations"
 import { calculateCharacterStatSnapshot } from "@runas/core/lib/characterStatCalculations"
 import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
@@ -17,7 +18,7 @@ import {
   clampMasteryImprovementQuantity,
   masteryImprovementOptions,
 } from "@runas/core/lib/masteryImprovements"
-import { calculateAttributeTest, calculateSkillLevel } from "@runas/core/lib/skillCalculations"
+import { calculateAttributeTest, calculateSkillLevel, findExactSystemSkill } from "@runas/core/lib/skillCalculations"
 import type {
   AttributeKey, Character, CharacterAbility, CharacterInfo, CharacterInventoryItem,
   CharacterNote, CharacterSpell, SecondaryAttributeKey,
@@ -169,10 +170,11 @@ function StatisticsSection({ character, update }: { character: Character; update
 function updateStat(update: UpdateCharacter, key: keyof Character["stats"], value: number) { update((draft) => { (draft.stats[key] as number) = value }) }
 
 function SkillsSection({ character, update }: { character: Character; update: UpdateCharacter }) {
-  return <AdvancedSection title="Perícias" description="Edição direta, sem cartões expansíveis e sem botões de rolagem." action={() => update((draft) => { draft.skills.push({ id: uid("skill"), name: "Nova perícia", attributeKey: "knowledge", points: 0, modifier: 0, locked: false }) })}>
+  return <AdvancedSection title="Perícias" description="Edição direta, sem cartões expansíveis e sem botões de rolagem." action={() => update((draft) => { draft.skills.push({ id: uid("skill"), name: "Nova perícia", attributeKey: "", points: 0, modifier: 0, locked: false }) })}>
+    <datalist id="advanced-system-skill-suggestions">{systemSkills.map((skill) => <option key={skill.name} value={skill.name} />)}</datalist>
     <div className="tools-table skill-table"><TableHeader labels={["Nome", "Teste", "Nível", "Atributo", "Pontos", "Mod.", ""]} />
       {character.skills.map((skill) => { const level = calculateSkillLevel(skill.points); const test = skill.attributeKey ? calculateAttributeTest(character.attributes, skill.attributeKey) + level + skill.modifier : null; return <div className="tools-table-row" key={skill.id}>
-        <InlineText label="Nome" value={skill.name} readOnly={skill.locked} onChange={(value) => update((draft) => { find(draft.skills, skill.id).name = value })} />
+        <InlineText label="Nome" value={skill.name} list="advanced-system-skill-suggestions" readOnly={skill.locked} onChange={(value) => update((draft) => { const target = find(draft.skills, skill.id); const detected = findExactSystemSkill(value); target.name = detected?.name ?? value; if (detected) target.attributeKey = detected.attributeKey })} />
         <OutputCell label="Teste" value={test ?? "—"} /><OutputCell label="Nível" value={formatSigned(level)} />
         <InlineSelect label="Atributo" value={skill.attributeKey} options={[{ value: "", label: "Nenhum" }, ...secondaryAttributes.map((attribute) => ({ value: attribute.key, label: attribute.name }))]} onChange={(value) => update((draft) => { find(draft.skills, skill.id).attributeKey = value as SecondaryAttributeKey | "" })} />
         <InlineNumber label="Pontos" value={skill.points} onChange={(value) => update((draft) => { find(draft.skills, skill.id).points = Math.max(0, value) })} />
@@ -267,7 +269,7 @@ function SelectField({ label, value, options, onChange }: { label: string; value
 function Select({ value, options, onChange, ariaLabel }: { value: string; options: ReadonlyArray<{ value: string; label: string }>; onChange: (value: string) => void; ariaLabel: string }) { return <select aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }
 function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="field text-area-field"><span>{label}</span><textarea value={value} onChange={(event) => onChange(event.target.value)} /></label> }
 function CheckField({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="check-field"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /><span>{label}</span></label> }
-function InlineText({ label, value, onChange, readOnly = false }: { label: string; value: string; onChange: (value: string) => void; readOnly?: boolean }) { return <label className="inline-field"><span>{label}</span><input value={value} readOnly={readOnly} onChange={(event) => onChange(event.target.value)} /></label> }
+function InlineText({ label, value, onChange, readOnly = false, list }: { label: string; value: string; onChange: (value: string) => void; readOnly?: boolean; list?: string }) { return <label className="inline-field"><span>{label}</span><input value={value} list={list} readOnly={readOnly} onChange={(event) => onChange(event.target.value)} /></label> }
 function InlineNumber({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) { return <label className="inline-field inline-number"><span>{label}</span><input type="number" value={value} onChange={(event) => onChange(Number(event.target.value))} /></label> }
 function InlineSelect({ label, value, options, onChange, onClick }: { label: string; value: string; options: ReadonlyArray<{ value: string; label: string }>; onChange: (value: string) => void; onClick?: (event: React.MouseEvent<HTMLSelectElement>) => void }) { return <label className="inline-field"><span>{label}</span><select value={value} onClick={onClick} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }
 function OutputCell({ label, value }: { label: string; value: string | number }) { return <output className="table-output"><span>{label}</span><strong>{value}</strong></output> }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { applyDeterminationUsesToRoll } from "../src/lib/skillCalculations"
+import { applyDeterminationUsesToRoll, findExactSystemSkill } from "../src/lib/skillCalculations"
 import type { SkillRoll } from "../src/types/skillTest"
 
 function roll(skillName: string): SkillRoll {
@@ -22,5 +22,16 @@ describe("Determinação em novas rolagens de Casualidade", () => {
 
   it("usa +1 por uso nas demais perícias", () => {
     expect(applyDeterminationUsesToRoll(roll("Reflexo"), 2).totalTest).toBe(12)
+  })
+})
+
+describe("Detecção exata de perícias do sistema", () => {
+  it("reconhece nome canônico e alias ignorando acentos e caixa", () => {
+    expect(findExactSystemSkill("PERCEPCAO")?.attributeKey).toBe("knowledge")
+    expect(findExactSystemSkill("reflexos")?.attributeKey).toBe("dexterity")
+  })
+
+  it("não completa nomes parciais", () => {
+    expect(findExactSystemSkill("per")).toBeUndefined()
   })
 })

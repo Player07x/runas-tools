@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  Archive, Bolt, ChevronDown, Copy, Database, Download, Edit3, Moon, Plus, RefreshCw,
+  Archive, ArrowUpDown, Bolt, ChevronDown, Copy, Database, Download, Edit3, Filter, Moon, Plus, RefreshCw,
   Search, Shield, Sparkles, Sun, Swords, Trash2, Upload, X,
 } from "lucide-react"
 import { attributeGroups } from "@runas/core/data/attributes"
+import { systemSkills } from "@runas/core/data/skills"
 import { characterElements, getCharacterElement } from "@runas/core/data/elements"
 import { calculateCharacterStatSnapshot } from "@runas/core/lib/characterStatCalculations"
 import { calculateDamage, convertDamageBonusesToDice, rollDice } from "@runas/core/lib/damageCalculator"
@@ -15,7 +16,7 @@ import { calculateMasteryImprovementPoints, calculateSpentMasteryImprovementPoin
 import { inventoryTypeOptions, inventoryUsageOptions } from "@runas/core/lib/inventoryCalculations"
 import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import { applyQuickModifier } from "@runas/core/lib/quickModifier"
-import { applyDeterminationToRoll, applyDeterminationUsesToRoll, compareSkillRolls, normalizeSkillName, rollSkillTest } from "@runas/core/lib/skillCalculations"
+import { applyDeterminationToRoll, applyDeterminationUsesToRoll, calculateAttributeTest, calculateSkillLevel, compareSkillRolls, findExactSystemSkill, normalizeSkillName, rollSkillTest } from "@runas/core/lib/skillCalculations"
 import type { AttributeKey, Character, CharacterSkill, CharacterSpell, SecondaryAttributeKey } from "@runas/core/types/character"
 import type { SkillRoll, SkillRollOutcome, SpecialDieId } from "@runas/core/types/skillTest"
 import {
@@ -80,6 +81,9 @@ export function DmDashboard() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("loading")
   const [view, setView] = useState<WorkspaceView>("gallery")
   const [search, setSearch] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [elementFilter, setElementFilter] = useState("all")
+  const [gallerySort, setGallerySort] = useState<"name" | "affinity" | "essences">("name")
   const [editing, setEditing] = useState<BestiaryEntry | null>(null)
   const [editingActor, setEditingActor] = useState<EncounterActor | null>(null)
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null)
@@ -119,14 +123,25 @@ export function DmDashboard() {
     return () => clearTimeout(timeout)
   }, [ready, state])
 
+  const galleryCategoryOptions = useMemo(() => [...new Set(state.entries.map(({ character }) => character.info.race.trim()).filter(Boolean))].sort((left, right) => left.localeCompare(right, "pt-BR")), [state.entries])
+  const galleryElementOptions = useMemo(() => [...new Set(state.entries.map(({ character }) => character.stats.elementId).filter((value) => value && value !== "none"))].map((id) => ({ id, name: getCharacterElement(id)?.name ?? id })).sort((left, right) => left.name.localeCompare(right.name, "pt-BR")), [state.entries])
+
   const filteredEntries = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR")
-    if (!term) return state.entries
-    return state.entries.filter(({ character }) =>
-      [character.name, character.info.race, character.info.affinity, getCharacterElement(character.stats.elementId)?.name]
-        .some((value) => value?.toLocaleLowerCase("pt-BR").includes(term)),
-    )
-  }, [search, state.entries])
+    const numberFromText = (value: string) => {
+      const match = value.replace(/\./g, "").replace(",", ".").match(/-?\d+(?:\.\d+)?/)
+      return match ? Number(match[0]) : 0
+    }
+    return state.entries
+      .filter(({ character }) => !term || [character.name, character.info.race, character.info.affinity, getCharacterElement(character.stats.elementId)?.name].some((value) => value?.toLocaleLowerCase("pt-BR").includes(term)))
+      .filter(({ character }) => categoryFilter === "all" || character.info.race === categoryFilter)
+      .filter(({ character }) => elementFilter === "all" || character.stats.elementId === elementFilter)
+      .sort((left, right) => {
+        if (gallerySort === "affinity") return numberFromText(right.character.info.affinity) - numberFromText(left.character.info.affinity) || left.character.name.localeCompare(right.character.name, "pt-BR")
+        if (gallerySort === "essences") return numberFromText(right.character.info.essences) - numberFromText(left.character.info.essences) || left.character.name.localeCompare(right.character.name, "pt-BR")
+        return left.character.name.localeCompare(right.character.name, "pt-BR")
+      })
+  }, [categoryFilter, elementFilter, gallerySort, search, state.entries])
 
   const selectedActor = state.encounter.find((actor) => actor.id === selectedActorId) ?? state.encounter[0] ?? null
 
@@ -135,7 +150,7 @@ export function DmDashboard() {
   }
 
   function createSheet() {
-    setEditing({ id: id("sheet"), character: createEmptyCharacter(), updatedAt: Date.now() })
+    setEditing({ id: id("sheet"), character: createEmptyCharacter(), masteryTableId: "default", updatedAt: Date.now() })
   }
 
   function saveSheet(entry: BestiaryEntry) {
@@ -149,7 +164,7 @@ export function DmDashboard() {
   }
 
   function saveActorSheet(entry: BestiaryEntry) {
-    updateActor(entry.id, entry.character)
+    updateActor(entry.id, entry.character, entry.masteryTableId)
     setEditingActor(null)
   }
 
@@ -164,7 +179,7 @@ export function DmDashboard() {
   function addToEncounter(entry: BestiaryEntry) {
     const copies = state.encounter.filter((actor) => actor.sourceId === entry.id).length
     const actor: EncounterActor = {
-      id: id("actor"), sourceId: entry.id, copyNumber: copies + 1, character: cloneCharacter(entry.character),
+      id: id("actor"), sourceId: entry.id, copyNumber: copies + 1, character: cloneCharacter(entry.character), masteryTableId: entry.masteryTableId,
     }
     updateState((current) => ({ ...current, encounter: [...current.encounter, actor] }))
     setSelectedActorId(actor.id)
@@ -181,13 +196,13 @@ export function DmDashboard() {
   function restoreActor(actor: EncounterActor) {
     const source = state.entries.find((entry) => entry.id === actor.sourceId)
     if (!source) return
-    updateActor(actor.id, cloneCharacter(source.character))
+    updateActor(actor.id, cloneCharacter(source.character), source.masteryTableId)
   }
 
-  function updateActor(actorId: string, character: Character) {
+  function updateActor(actorId: string, character: Character, masteryTableId?: string) {
     updateState((current) => ({
       ...current,
-      encounter: current.encounter.map((actor) => actor.id === actorId ? { ...actor, character } : actor),
+      encounter: current.encounter.map((actor) => actor.id === actorId ? { ...actor, character, masteryTableId: masteryTableId ?? actor.masteryTableId } : actor),
     }))
   }
 
@@ -246,7 +261,7 @@ export function DmDashboard() {
       return {
         ...base,
         entries: [
-          ...characters.map((character) => ({ id: id("sheet"), character, updatedAt: now })),
+          ...characters.map((character) => ({ id: id("sheet"), character, masteryTableId: "default", updatedAt: now })),
           ...base.entries,
         ],
         updatedAt: now,
@@ -330,7 +345,12 @@ export function DmDashboard() {
           </div>
           {syncMessage && <div className="inline-notice">{syncMessage}</div>}
           <div className="gallery-toolbar">
-            <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nome, raça, afinidade ou elemento…" /></label>
+            <div className="gallery-controls">
+              <label className="search-box"><Search size={18} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar nome, raça, afinidade ou elemento…" /></label>
+              <label className="gallery-select"><Filter size={15} /><span>Categoria</span><select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="all">Todas</option>{galleryCategoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+              <label className="gallery-select"><Filter size={15} /><span>Elemento</span><select value={elementFilter} onChange={(event) => setElementFilter(event.target.value)}><option value="all">Todos</option>{galleryElementOptions.map((element) => <option key={element.id} value={element.id}>{element.name}</option>)}</select></label>
+              <label className="gallery-select"><ArrowUpDown size={15} /><span>Organizar</span><select value={gallerySort} onChange={(event) => setGallerySort(event.target.value as typeof gallerySort)}><option value="name">Nome (A–Z)</option><option value="affinity">Afinidade (maior)</option><option value="essences">Essências (maior)</option></select></label>
+            </div>
             <span>{filteredEntries.length} exibidas</span>
           </div>
           <div className="sheet-grid">
@@ -343,7 +363,7 @@ export function DmDashboard() {
       )}
 
       {editing && <SheetEditor entry={editing} tables={state.masteryTables} onClose={() => setEditing(null)} onSave={saveSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
-      {editingActor && <SheetEditor entry={{ id: editingActor.id, character: editingActor.character, updatedAt: Date.now() }} tables={state.masteryTables} onClose={() => setEditingActor(null)} onSave={saveActorSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
+      {editingActor && <SheetEditor entry={{ id: editingActor.id, character: editingActor.character, masteryTableId: editingActor.masteryTableId, updatedAt: Date.now() }} tables={state.masteryTables} onClose={() => setEditingActor(null)} onSave={saveActorSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
       {!ready && <div className="loading-screen"><span className="brand-rune">R</span><p>Abrindo a mesa…</p></div>}
     </main>
   )
@@ -578,7 +598,7 @@ function ModifierInput({ value, onChange }: { value: string; onChange: (value: s
 function SheetEditor({ entry, tables, onClose, onSave, onTablesChange }: { entry: BestiaryEntry; tables: MasteryTable[]; onClose: () => void; onSave: (entry: BestiaryEntry) => void; onTablesChange: (tables: MasteryTable[]) => void }) {
   const [character, setCharacter] = useState(() => cloneCharacter(entry.character))
   const [tab, setTab] = useState<"simple" | "advanced">("simple")
-  const [tableId, setTableId] = useState("default")
+  const [tableId, setTableId] = useState(() => tables.some((table) => table.id === entry.masteryTableId) ? entry.masteryTableId : "default")
   const [simpleWidth, setSimpleWidth] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState({ attributes: false, statistics: false, connections: false, resources: false })
   const resizeState = useRef<{ pointerId: number; startX: number; startWidth: number; side: "left" | "right" } | null>(null)
@@ -593,7 +613,7 @@ function SheetEditor({ entry, tables, onClose, onSave, onTablesChange }: { entry
   }
 
   function save() {
-    onSave({ ...entry, character })
+    onSave({ ...entry, character, masteryTableId: tableId })
   }
 
   function switchTab(next: "simple" | "advanced") {
@@ -693,7 +713,7 @@ function SimpleSection({ className, title, note, action, collapsed, onToggle, ch
   return <section className={`form-section simple-sheet-section ${className} ${collapsed ? "collapsed" : ""}`}><div className="section-title simple-section-title"><div><h3>{title}</h3>{note && <span>{note}</span>}</div><div className="simple-section-actions">{action}<button type="button" className="collapse-section-button" onClick={onToggle} aria-expanded={!collapsed} aria-label={`${collapsed ? "Expandir" : "Minimizar"} ${title}`}><ChevronDown size={16} /></button></div></div>{!collapsed && <div className="simple-section-content">{children}</div>}</section>
 }
 
-function addQuickSkill(mutate: CharacterMutator) { mutate((draft) => { draft.skills.push({ id: id("skill"), name: "Nova perícia", attributeKey: "knowledge", points: 0, modifier: 0, locked: false }) }) }
+function addQuickSkill(mutate: CharacterMutator) { mutate((draft) => { draft.skills.push({ id: id("skill"), name: "Nova perícia", attributeKey: "", points: 0, modifier: 0, locked: false }) }) }
 function addQuickRacial(mutate: CharacterMutator) { mutate((draft) => { draft.abilities.push(createQuickAbility("Nova característica", "Racial")) }) }
 function addQuickAbility(mutate: CharacterMutator) { mutate((draft) => { draft.abilities.push(createQuickAbility("Nova habilidade", "Combate")) }) }
 function addQuickSpell(mutate: CharacterMutator) { mutate((draft) => { draft.spells.push(createQuickSpell()) }) }
@@ -712,8 +732,9 @@ function SimpleConnections({ character, mutate }: { character: Character; mutate
 
 function SimpleSkills({ character, mutate }: { character: Character; mutate: CharacterMutator }) {
   return <LinkedPanel title="Perícias" count={character.skills.length} actions={<button onClick={() => addQuickSkill(mutate)}><Plus size={13} /> Adicionar</button>}>
-    <div className="linked-skill-header" aria-hidden="true"><span>Nome</span><span>Atributo</span><span>Pontos</span><span>Mod.</span><span>Estado</span></div>
-    {character.skills.map((skill) => <div className="linked-item skill" key={skill.id}><input aria-label={`Nome da perícia ${skill.name}`} value={skill.name} readOnly={skill.locked} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { name: event.target.value }))} /><select aria-label={`Atributo de ${skill.name}`} value={skill.attributeKey} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { attributeKey: event.target.value as SecondaryAttributeKey }))}>{secondaryAttributes.map((attribute) => <option key={attribute.key} value={attribute.key}>{attribute.label.slice(0, 3)}</option>)}</select><input className="linked-number" aria-label={`Pontos de ${skill.name}`} type="number" value={skill.points} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { points: Number(event.target.value) }))} /><input className="linked-number" aria-label={`Modificador de ${skill.name}`} type="number" value={skill.modifier} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { modifier: Number(event.target.value) }))} />{skill.locked ? <span className="linked-lock">fixa</span> : <button className="linked-remove" title="Remover perícia" onClick={() => mutate((draft) => { draft.skills = draft.skills.filter((item) => item.id !== skill.id) })}><X size={13} /></button>}</div>)}
+    <datalist id="dm-system-skill-suggestions">{systemSkills.map((skill) => <option key={skill.name} value={skill.name} />)}</datalist>
+    <div className="linked-skill-header" aria-hidden="true"><span>Nome</span><span>Atributo</span><span>Teste</span><span>Nível</span><span>Pontos</span><span>Mod.</span><span>Estado</span></div>
+    {character.skills.map((skill) => { const level = calculateSkillLevel(skill.points); const test = skill.attributeKey ? calculateAttributeTest(character.attributes, skill.attributeKey) + level + skill.modifier : null; return <div className="linked-item skill" key={skill.id}><input aria-label={`Nome da perícia ${skill.name}`} list="dm-system-skill-suggestions" value={skill.name} readOnly={skill.locked} onChange={(event) => { const typedName = event.target.value; const detected = findExactSystemSkill(typedName); mutate((draft) => assignById(draft.skills, skill.id, detected ? { name: detected.name, attributeKey: detected.attributeKey } : { name: typedName })) }} /><select aria-label={`Atributo de ${skill.name}`} value={skill.attributeKey} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { attributeKey: event.target.value as SecondaryAttributeKey | "" }))}><option value="">—</option>{secondaryAttributes.map((attribute) => <option key={attribute.key} value={attribute.key}>{attribute.label.slice(0, 3)}</option>)}</select><output className="linked-test" aria-label={`Teste de ${skill.name}`}>{test ?? "—"}</output><output className="linked-test linked-level" aria-label={`Nível de ${skill.name}`}>{level}</output><input className="linked-number" aria-label={`Pontos de ${skill.name}`} type="number" value={skill.points} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { points: Number(event.target.value) }))} /><input className="linked-number" aria-label={`Modificador de ${skill.name}`} type="number" value={skill.modifier} onChange={(event) => mutate((draft) => assignById(draft.skills, skill.id, { modifier: Number(event.target.value) }))} />{skill.locked ? <span className="linked-lock">fixa</span> : <button className="linked-remove" title="Remover perícia" onClick={() => mutate((draft) => { draft.skills = draft.skills.filter((item) => item.id !== skill.id) })}><X size={13} /></button>}</div> })}
   </LinkedPanel>
 }
 
@@ -758,8 +779,9 @@ function SimpleEquippedRecord({ item, character, mutate }: { item: Character["in
 
 function SimpleAbilityRecord({ ability, kind, mutate }: { ability: Character["abilities"][number]; kind: "racial" | "rune" | "ability"; mutate: CharacterMutator }) {
   const [open, setOpen] = useState(false)
-  const label = kind === "racial" ? "Racial" : kind === "rune" ? "Runa" : "Habilidade"
-  return <article className={`simple-linked-record ${open ? "open" : ""}`}><div className="linked-item action summary"><span className={`linked-source ${kind}`}>{kind === "rune" ? <Sparkles size={13} /> : kind === "ability" ? <span className="linked-source-emoji" aria-hidden="true">🌀</span> : null}{label}</span><div className="linked-action-copy"><strong>{ability.name}</strong>{kind !== "racial" && <span>{plainTextSummary(ability.description, 180) || "Sem descrição"}</span>}</div><button className="linked-edit" aria-expanded={open} title={`Editar ${label.toLocaleLowerCase("pt-BR")}`} onClick={() => setOpen((value) => !value)}><Edit3 size={13} /></button><button className="linked-remove" title={`Remover ${label.toLocaleLowerCase("pt-BR")}`} onClick={() => mutate((draft) => { draft.abilities = draft.abilities.filter((candidate) => candidate.id !== ability.id) })}><X size={13} /></button></div>{open && <SimpleAbilityDetails ability={ability} mutate={mutate} />}</article>
+  const isInnate = kind === "ability" && ability.category.trim().toLocaleLowerCase("pt-BR") === "inata"
+  const label = kind === "racial" ? "Racial" : kind === "rune" ? "Runa" : isInnate ? "Inata" : "Habilidade"
+  return <article className={`simple-linked-record ${open ? "open" : ""}`}><div className="linked-item action summary"><span className={`linked-source ${kind} ${isInnate ? "innate" : ""}`}>{kind === "rune" ? <Sparkles size={13} /> : kind === "ability" ? <span className="linked-source-emoji" aria-hidden="true">{isInnate ? "🗡️" : "🌀"}</span> : null}{label}</span><div className="linked-action-copy"><strong>{ability.name}</strong>{kind !== "racial" && <span>{plainTextSummary(ability.description, 180) || "Sem descrição"}</span>}</div><button className="linked-edit" aria-expanded={open} title={`Editar ${label.toLocaleLowerCase("pt-BR")}`} onClick={() => setOpen((value) => !value)}><Edit3 size={13} /></button><button className="linked-remove" title={`Remover ${label.toLocaleLowerCase("pt-BR")}`} onClick={() => mutate((draft) => { draft.abilities = draft.abilities.filter((candidate) => candidate.id !== ability.id) })}><X size={13} /></button></div>{open && <SimpleAbilityDetails ability={ability} mutate={mutate} />}</article>
 }
 
 function SimpleSpellRecord({ spell, mutate }: { spell: CharacterSpell; mutate: CharacterMutator }) {

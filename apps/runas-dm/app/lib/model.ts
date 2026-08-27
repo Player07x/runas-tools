@@ -5,6 +5,7 @@ import type { Character } from "@runas/core/types/character"
 export interface BestiaryEntry {
   id: string
   character: Character
+  masteryTableId: string
   updatedAt: number
 }
 
@@ -13,6 +14,7 @@ export interface EncounterActor {
   sourceId: string
   copyNumber: number
   character: Character
+  masteryTableId: string
 }
 
 export interface MasteryTable {
@@ -71,8 +73,8 @@ export function createInitialState(): RunasDmState {
   return {
     version: 1,
     entries: [
-      { id: "sentinela-vidro", character: sampleSentinel(), updatedAt: now },
-      { id: "fera-cinzas", character: sampleAshBeast(), updatedAt: now },
+      { id: "sentinela-vidro", character: sampleSentinel(), masteryTableId: "default", updatedAt: now },
+      { id: "fera-cinzas", character: sampleAshBeast(), masteryTableId: "default", updatedAt: now },
     ],
     encounter: [],
     masteryTables: [
@@ -85,15 +87,19 @@ export function createInitialState(): RunasDmState {
 
 /** Normaliza dados antigos/importados com as regras atuais sem restaurar recursos gastos. */
 export function normalizeRunasDmState(state: RunasDmState): RunasDmState {
+  const masteryTableIds = new Set(state.masteryTables.map((table) => table.id))
+  const normalizeMasteryTableId = (value: unknown) => typeof value === "string" && masteryTableIds.has(value) ? value : "default"
   return {
     ...state,
     entries: state.entries.map((entry) => ({
       ...entry,
       character: normalizeCharacter(entry.character),
+      masteryTableId: normalizeMasteryTableId(entry.masteryTableId),
     })),
     encounter: state.encounter.map((actor) => ({
       ...actor,
       character: normalizeCharacter(actor.character),
+      masteryTableId: normalizeMasteryTableId(actor.masteryTableId),
     })),
   }
 }

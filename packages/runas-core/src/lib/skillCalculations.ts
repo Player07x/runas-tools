@@ -59,8 +59,17 @@ export function findCharacterSkill(skills: CharacterSkill[], name: string): Char
 }
 
 export function findSystemSkill(name: string) {
-  const exact = systemSkills.find((skill) => matchesName(name, [skill.name, ...(skill.aliases ?? [])]))
-  return exact
+  const exact = findExactSystemSkill(name)
+  if (exact) return exact
+  return systemSkills.find((skill) => matchesName(name, [skill.name, ...(skill.aliases ?? [])]))
+}
+
+export function findExactSystemSkill(name: string) {
+  const normalized = normalizeSkillName(name)
+  if (!normalized) return undefined
+  return systemSkills.find((skill) =>
+    [skill.name, ...(skill.aliases ?? [])].some((candidate) => normalizeSkillName(candidate) === normalized),
+  )
 }
 
 export function findSpecialDie(name: string): SpecialDieId {

@@ -31,6 +31,26 @@ export function calculateSpentMasteryImprovementPoints(improvements: MasteryImpr
   return masteryImprovementOptions.reduce((total, option) => total + Math.max(0, Math.trunc(improvements[option.key])) * option.cost, 0)
 }
 
+export function clampMasteryImprovementQuantity(
+  improvements: MasteryImprovements,
+  key: MasteryImprovementKey,
+  requestedQuantity: number,
+  totalPoints: number,
+): number {
+  const currentQuantity = Math.max(0, Math.trunc(Number.isFinite(improvements[key]) ? improvements[key] : 0))
+  const requested = Math.max(0, Math.trunc(Number.isFinite(requestedQuantity) ? requestedQuantity : 0))
+
+  // Reductions must remain possible even when an imported sheet is already over budget.
+  if (requested <= currentQuantity) return requested
+
+  const option = masteryImprovementOptions.find((candidate) => candidate.key === key)
+  if (!option) return currentQuantity
+
+  const spentWithoutCurrent = calculateSpentMasteryImprovementPoints({ ...improvements, [key]: 0 })
+  const availableForOption = Math.max(0, (Number.isFinite(totalPoints) ? totalPoints : 0) - spentWithoutCurrent)
+  return Math.min(requested, Math.floor(availableForOption / option.cost))
+}
+
 export function createEmptyMasteryImprovements(): MasteryImprovements {
   return { aura: 0, life: 0, energy: 0, determination: 0, casualty: 0 }
 }

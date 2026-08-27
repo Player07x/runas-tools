@@ -54,8 +54,9 @@ const groupStyles = {
 
 const damageSuggestions = [
   ...damageTypes.map((damage) => damage.name),
-  "Todos os Físicos",
-  "Todos os Mágicos",
+  "Todos os Danos",
+  "Todos os Danos Físicos",
+  "Todos os Danos Mágicos",
 ]
 
 function formatSignedInteger(value: number): string {

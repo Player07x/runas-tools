@@ -109,9 +109,13 @@ function parseMultiplier(value: string): number | null {
 function tokenMatches(token: string, damageName: string, category: "physical" | "magical" | "special"): boolean {
   const value = normalize(token)
   const name = normalize(damageName)
+  const matchesAllDamage = value.includes("todos os danos") &&
+    !value.includes("fisicos") &&
+    !value.includes("magicos")
   return value.includes(name) ||
-    (category === "physical" && value.includes("todos os fisicos")) ||
-    (category === "magical" && value.includes("todos os magicos"))
+    matchesAllDamage ||
+    (category === "physical" && (value.includes("todos os fisicos") || value.includes("todos os danos fisicos"))) ||
+    (category === "magical" && (value.includes("todos os magicos") || value.includes("todos os danos magicos")))
 }
 
 function resistanceMultiplier(tokens: string[], damageName: string, category: "physical" | "magical" | "special"): number {
@@ -236,12 +240,24 @@ function simulateDirectPvDamage(
 }
 
 function directSpecialAmount(config: DamageApplicationConfig, amount: number, steps: string[]): number | null {
+  const damageType = getDamageType(config.damage.damageTypeId)!
   const mtMultiplier = config.mtEnabled ? getTargetMtDamageMultiplier(config.mtValue) : 1
   const pvLayer = config.layers.find((layer) => layer.resource === "pv")
-  const otherMultiplier = parseMultiplier(pvLayer?.multiplier ?? "1")
-  if (otherMultiplier === null) return null
-  const result = amount * mtMultiplier * otherMultiplier
-  steps.push(`${amount} × MT ${mtMultiplier} × outro multiplicador ${otherMultiplier} = ${rounded(result)}`)
+  const multiplier = pvLayer ? layerMultiplier(pvLayer, damageType.name, damageType.category) : 1
+  if (multiplier === null) return null
+  const result = amount * mtMultiplier * multiplier
+  steps.push(`${amount} × MT ${mtMultiplier} × multiplicadores da Vida ${multiplier} = ${rounded(result)}`)
+  return result
+}
+
+function directSpecialResistanceAmount(config: DamageApplicationConfig, amount: number, steps: string[]): number {
+  const damageType = getDamageType(config.damage.damageTypeId)!
+  const pvLayer = config.layers.find((layer) => layer.resource === "pv")
+  if (!pvLayer) return amount
+  const resistance = resistanceMultiplier(pvLayer.resistances, damageType.name, damageType.category)
+  const weakness = pvLayer.weaknesses.some((token) => tokenMatches(token, damageType.name, damageType.category)) ? 2 : 1
+  const result = amount * resistance * weakness
+  steps.push(`${amount} × resistências/fraquezas da Vida ${resistance * weakness} = ${rounded(result)}`)
   return result
 }
 
@@ -312,14 +328,16 @@ function simulateSpecialDamage(config: DamageApplicationConfig): { value: Damage
   const rawDamage = Math.max(0, config.damage.amount)
 
   if (damageType.id === "temporal") {
-    notices.push(`Seu personagem envelhecerá ${rawDamage} ano(s). Após 1 minuto, se o personagem não morrer de velhice, você volta à sua idade atual.`)
+    const adjusted = directSpecialResistanceAmount(config, rawDamage, steps)
+    notices.push(`Seu personagem envelhecerá ${rounded(adjusted)} ano(s). Após 1 minuto, se o personagem não morrer de velhice, você volta à sua idade atual.`)
   } else if (damageType.id === "virtual") {
     const adjusted = directSpecialAmount(config, rawDamage, steps)
     if (adjusted === null) return { value: null, error: "Revise o Outro Multiplicador da Vida." }
     const breach = Math.max(0, Math.round(adjusted))
     notices.push(`O personagem receberá “Brecha ${breach}” (se esse efeito tiver um nível igual ou maior que seu PA atual, tanto sua aura extra quanto a atual ficam desativadas até o fim do seu próximo turno; o efeito cai a zero após desativar suas auras).`)
   } else if (damageType.id === "psiquica") {
-    const insanity = config.specialTestSucceeded ? Math.floor(rawDamage / 2) : rawDamage
+    const adjusted = directSpecialResistanceAmount(config, rawDamage, steps)
+    const insanity = config.specialTestSucceeded ? Math.floor(adjusted / 2) : adjusted
     notices.push(`O personagem receberá “Insanidade ${insanity}”${config.specialTestSucceeded === true ? " após o sucesso no Teste de Sanidade" : config.specialTestSucceeded === false ? " após a falha no Teste de Sanidade" : ", ou metade desse valor (arredondada para baixo) em um sucesso no Teste de Sanidade"}.`)
     specialTest = { kind: "sanity", label: "Teste de Sanidade", penalty: 0 }
   } else if (damageType.id === "toxina") {

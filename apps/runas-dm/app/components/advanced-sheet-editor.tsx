@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Edit3, Handshake, Plus, Shield, Trash2, X } from "lucide-react"
+import { Edit3, Handshake, Plus, RefreshCw, RotateCcw, Shield, Trash2, X } from "lucide-react"
 import { attributeGroups } from "@runas/core/data/attributes"
 import { characterElements } from "@runas/core/data/elements"
 import { calculateBondQuality, calculateBondTest, formatSigned } from "@runas/core/lib/bondCalculations"
@@ -11,7 +11,12 @@ import {
   calculateEquippedArmorDefense, calculateInventoryLoad, calculateItemRealWeight, formatWeight,
   inventoryTypeLabel, inventoryTypeOptions, inventoryUsageLabel, inventoryUsageOptions, itemAffinityOptions, itemRarity,
 } from "@runas/core/lib/inventoryCalculations"
-import { masteryImprovementOptions } from "@runas/core/lib/masteryImprovements"
+import {
+  calculateMasteryImprovementPoints,
+  calculateSpentMasteryImprovementPoints,
+  clampMasteryImprovementQuantity,
+  masteryImprovementOptions,
+} from "@runas/core/lib/masteryImprovements"
 import { calculateAttributeTest, calculateSkillLevel } from "@runas/core/lib/skillCalculations"
 import type {
   AttributeKey, Character, CharacterAbility, CharacterInfo, CharacterInventoryItem,
@@ -123,19 +128,22 @@ function updateInfo(update: UpdateCharacter, key: keyof CharacterInfo, value: st
 function StatisticsSection({ character, update }: { character: Character; update: UpdateCharacter }) {
   const { stats } = character
   const snapshot = calculateCharacterStatSnapshot(character.attributes, character.info, stats, character.skills, character.abilities)
+  const masteryPoints = calculateMasteryImprovementPoints(character.info)
+  const spentMasteryPoints = calculateSpentMasteryImprovementPoints(stats.masteryImprovements)
+  const remainingMasteryPoints = masteryPoints - spentMasteryPoints
   function restore() { update((draft) => { draft.stats.pv = snapshot.pvMax; draft.stats.pa = snapshot.paMax; draft.stats.paExtra = snapshot.paExtraMax; draft.stats.pe = snapshot.peMax; draft.stats.peTemporary = snapshot.peTemporaryMax; draft.stats.determination = snapshot.determinationMax; draft.stats.casualty = snapshot.casualtyMax; draft.stats.focusCurrent = snapshot.focusMaximum }) }
   return <AdvancedSection title="Estatísticas" description="Recursos, atributos, resistências e melhorias na disposição histórica do Runas Tools.">
-    <div className="tools-stats-top"><button className="secondary-button" onClick={restore}>Restaurar estatísticas</button></div>
+    <div className="tools-stats-top"><button className="restore-stats-button" onClick={restore}><RefreshCw size={15} /> Restaurar estatísticas</button></div>
     <AttributeBands attributes={character.attributes} onChange={(key: AttributeKey, value) => update((draft) => { draft.attributes[key] = value })} />
     <div className="tools-resource-grid">
       <ResourceCard tone="life" label="PV atual" current={stats.pv} maximum={snapshot.pvMax} modifier={stats.pvBonus} onCurrent={(value) => updateStat(update, "pv", value)} onModifier={(value) => updateStat(update, "pvBonus", value)} />
       <ResourceCard tone="aura" label="PA atual" current={stats.pa} maximum={snapshot.paMax} modifier={stats.paBonus} onCurrent={(value) => updateStat(update, "pa", value)} onModifier={(value) => updateStat(update, "paBonus", value)} />
       <ResourceCard tone="energy" label="PE atual" current={stats.pe} maximum={snapshot.peMax} modifier={stats.peBonus} onCurrent={(value) => updateStat(update, "pe", value)} onModifier={(value) => updateStat(update, "peBonus", value)} />
-      <ResourceCard tone="aura" label="PA extra" current={stats.paExtra} maximum={snapshot.paExtraMax} modifier={stats.paExtraBonus} onCurrent={(value) => updateStat(update, "paExtra", value)} onModifier={(value) => updateStat(update, "paExtraBonus", value)} />
-      <ResourceCard tone="energy" label="PE temporário" current={stats.peTemporary} maximum={snapshot.peTemporaryMax} modifier={0} onCurrent={(value) => updateStat(update, "peTemporary", value)} />
-      <ResourceCard tone="focus" label="Tempo de foco" current={stats.focusCurrent} maximum={snapshot.focusMaximum} modifier={stats.focusModifier} onCurrent={(value) => updateStat(update, "focusCurrent", value)} onModifier={(value) => updateStat(update, "focusModifier", value)} />
-      <ResourceCard tone="narrative" label="Determinação" current={stats.determination} maximum={snapshot.determinationMax} modifier={stats.determinationBonus} onCurrent={(value) => updateStat(update, "determination", value)} onModifier={(value) => updateStat(update, "determinationBonus", value)} />
-      <ResourceCard tone="chance" label="Casualidade" current={stats.casualty} maximum={snapshot.casualtyMax} modifier={stats.casualtyBonus} onCurrent={(value) => updateStat(update, "casualty", value)} onModifier={(value) => updateStat(update, "casualtyBonus", value)} />
+      <ResourceCard className="supporting" tone="aura" label="PA extra" current={stats.paExtra} maximum={snapshot.paExtraMax} modifier={stats.paExtraBonus} onCurrent={(value) => updateStat(update, "paExtra", value)} onModifier={(value) => updateStat(update, "paExtraBonus", value)} />
+      <ResourceCard className="supporting" tone="energy" label="PE temporário" current={stats.peTemporary} maximum={snapshot.peTemporaryMax} modifier={0} onCurrent={(value) => updateStat(update, "peTemporary", value)} onRestore={() => updateStat(update, "peTemporary", snapshot.peTemporaryMax)} />
+      <ResourceCard className="focus-resource" tone="focus" label="Tempo de foco" current={stats.focusCurrent} maximum={snapshot.focusMaximum} modifier={stats.focusModifier} onCurrent={(value) => updateStat(update, "focusCurrent", value)} onModifier={(value) => updateStat(update, "focusModifier", value)} footer={<><RotateCcw size={14} /> Tempo de Descanso: {snapshot.restMinutes} min.</>} />
+      <ResourceCard className="supporting" tone="narrative" label="Determinação" current={stats.determination} maximum={snapshot.determinationMax} modifier={stats.determinationBonus} onCurrent={(value) => updateStat(update, "determination", value)} onModifier={(value) => updateStat(update, "determinationBonus", value)} />
+      <ResourceCard className="supporting" tone="chance" label="Casualidade" current={stats.casualty} maximum={snapshot.casualtyMax} modifier={stats.casualtyBonus} onCurrent={(value) => updateStat(update, "casualty", value)} onModifier={(value) => updateStat(update, "casualtyBonus", value)} />
     </div>
     <div className="tools-derived-grid">
       <DerivedEdit label="Deslocamento" value={`${snapshot.movement} m`} modifier={stats.movementBonus} onModifier={(value) => updateStat(update, "movementBonus", value)} />
@@ -154,7 +162,7 @@ function StatisticsSection({ character, update }: { character: Character; update
       <NumberField label="MT" value={stats.mt} onChange={(value) => updateStat(update, "mt", value)} />
       <TextArea label="Efeitos" value={stats.effects} onChange={(value) => update((draft) => { draft.stats.effects = value })} />
     </div>
-    <section className="tools-mastery"><header><div><h4>Melhoria de Maestria</h4><p>Pontos definidos por Afinidade e Eficiência.</p></div></header><div>{masteryImprovementOptions.map((option) => <NumberField key={option.key} label={`${option.name} / ${option.cost} pontos`} value={stats.masteryImprovements[option.key]} onChange={(value) => update((draft) => { draft.stats.masteryImprovements[option.key] = Math.max(0, value) })} />)}</div></section>
+    <section className="tools-mastery"><header><div><h4>Melhoria de Maestria</h4><p>Pontos definidos por Afinidade e Eficiência.</p></div><MasterySummary total={masteryPoints} spent={spentMasteryPoints} remaining={remainingMasteryPoints} /></header><div>{masteryImprovementOptions.map((option) => { const current = stats.masteryImprovements[option.key]; const maximum = Math.floor(Math.max(0, remainingMasteryPoints + current * option.cost) / option.cost); return <NumberField key={option.key} label={`${option.name} / ${option.cost} pontos`} value={current} min={0} max={maximum} onChange={(value) => update((draft) => { draft.stats.masteryImprovements[option.key] = clampMasteryImprovementQuantity(draft.stats.masteryImprovements, option.key, value, masteryPoints) })} /> })}</div>{remainingMasteryPoints < 0 && <p className="mastery-overage" role="alert">As melhorias excedem o limite atual. Reduza compras ou aumente Afinidade/Eficiência.</p>}</section>
   </AdvancedSection>
 }
 
@@ -253,7 +261,7 @@ function emptyItem(id: string): CharacterInventoryItem { return { id, usage: "st
 function AdvancedSection({ title, description, action, children }: { title: string; description: string; action?: () => void; children: React.ReactNode }) { return <section className="advanced-section"><header><div><h3>{title}</h3><p>{description}</p></div>{action && <button className="primary-button" onClick={action}><Plus size={16} /> Adicionar</button>}</header>{children}</section> }
 function TableHeader({ labels }: { labels: string[] }) { return <div className="tools-table-header" aria-hidden="true">{labels.map((label, index) => <span key={`${label}-${index}`}>{label}</span>)}</div> }
 function Field({ label, value, onChange, className = "" }: { label: string; value: string; onChange: (value: string) => void; className?: string }) { return <label className={`field ${className}`}><span>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} /></label> }
-function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) { return <label className="field number-field"><span>{label}</span><input type="number" value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value))} /></label> }
+function NumberField({ label, value, onChange, min, max }: { label: string; value: number; onChange: (value: number) => void; min?: number; max?: number }) { return <label className="field number-field"><span>{label}</span><input type="number" min={min} max={max} value={Number.isFinite(value) ? value : 0} onChange={(event) => onChange(Number(event.target.value))} /></label> }
 function NullableNumber({ label, value, onChange }: { label: string; value: number | null; onChange: (value: number | null) => void }) { return <label className="field number-field"><span>{label}</span><input type="number" value={value ?? ""} placeholder="—" onChange={(event) => onChange(event.target.value === "" ? null : Number(event.target.value))} /></label> }
 function SelectField({ label, value, options, onChange }: { label: string; value: string; options: ReadonlyArray<{ value: string; label: string }>; onChange: (value: string) => void }) { return <label className="field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }
 function Select({ value, options, onChange, ariaLabel }: { value: string; options: ReadonlyArray<{ value: string; label: string }>; onChange: (value: string) => void; ariaLabel: string }) { return <select aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> }
@@ -264,8 +272,9 @@ function InlineNumber({ label, value, onChange }: { label: string; value: number
 function InlineSelect({ label, value, options, onChange, onClick }: { label: string; value: string; options: ReadonlyArray<{ value: string; label: string }>; onChange: (value: string) => void; onClick?: (event: React.MouseEvent<HTMLSelectElement>) => void }) { return <label className="inline-field"><span>{label}</span><select value={value} onClick={onClick} onChange={(event) => onChange(event.target.value)}>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }
 function OutputCell({ label, value }: { label: string; value: string | number }) { return <output className="table-output"><span>{label}</span><strong>{value}</strong></output> }
 function RowRemove({ onClick, label, disabled = false }: { onClick: () => void; label: string; disabled?: boolean }) { return <button className="row-remove" disabled={disabled} onClick={onClick} aria-label={label}><Trash2 size={15} /></button> }
-function ResourceCard({ label, current, maximum, modifier, onCurrent, onModifier, tone }: { label: string; current: number; maximum: number; modifier: number; onCurrent: (value: number) => void; onModifier?: (value: number) => void; tone: string }) { return <section className={`tools-resource-card ${tone}`}><h4>{label}</h4><div><InlineNumber label="Atual" value={current} onChange={onCurrent} /><OutputCell label="Máximo" value={maximum} />{onModifier ? <InlineNumber label="Mod." value={modifier} onChange={onModifier} /> : <OutputCell label="Mod." value="—" />}</div></section> }
+function ResourceCard({ label, current, maximum, modifier, onCurrent, onModifier, onRestore, tone, className = "", footer }: { label: string; current: number; maximum: number; modifier: number; onCurrent: (value: number) => void; onModifier?: (value: number) => void; onRestore?: () => void; tone: string; className?: string; footer?: React.ReactNode }) { return <section className={`tools-resource-card ${tone} ${className}`}><header><h4>{label}</h4>{onRestore ? <button type="button" onClick={onRestore}><RotateCcw size={13} /> Restaurar</button> : <span>Recurso</span>}</header><div className="resource-card-values"><InlineNumber label="Atual" value={current} onChange={onCurrent} /><OutputCell label="Máximo" value={maximum} />{onModifier ? <InlineNumber label="Mod." value={modifier} onChange={onModifier} /> : <OutputCell label="Mod." value="—" />}</div>{footer && <div className="resource-card-footer">{footer}</div>}</section> }
 function DerivedEdit({ label, value, modifier, onModifier }: { label: string; value: string | number; modifier: number; onModifier: (value: number) => void }) { return <section className="derived-edit"><h4>{label}</h4><OutputCell label="Atual" value={value} /><InlineNumber label="Mod." value={modifier} onChange={onModifier} /></section> }
+function MasterySummary({ total, spent, remaining }: { total: number; spent: number; remaining: number }) { return <div className="mastery-summary" aria-label="Resumo dos pontos de melhoria"><span>Total <strong>{total}</strong></span><span>Usados <strong>{spent}</strong></span><span className={remaining < 0 ? "over" : ""}>Restantes <strong>{remaining}</strong></span></div> }
 function InfoMetric({ label, value }: { label: string; value: string | number }) { return <div className="info-metric"><span>{label}</span><strong>{value}</strong></div> }
 function InfoBlock({ label, value }: { label: string; value: string }) { return <div className="info-block"><span>{label}</span><p>{value}</p></div> }
 function RecordModal({ title, subtitle, onClose, children }: { title: string; subtitle?: string; onClose: () => void; children: React.ReactNode }) { return <div className="record-modal-backdrop" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose() }}><section className="record-modal" role="dialog" aria-modal="true" aria-label={title}><header><div><small>{subtitle ? "Visualização do item" : "Ficha completa"}</small><h3>{title}</h3>{subtitle && <p>{subtitle}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Fechar"><X size={20} /></button></header><div className="record-modal-body">{children}</div></section></div> }

@@ -44,7 +44,7 @@ interface QuickDamageTestResult {
 }
 
 const emptyElement: ElementState = { elementId: "none", resistances: [], weaknesses: [] }
-const damageSuggestions = ["Todos os Físicos", "Todos os Mágicos", ...damageTypes.map((item) => item.name)]
+const damageSuggestions = ["Todos os Danos", "Todos os Danos Físicos", "Todos os Danos Mágicos", ...damageTypes.map((item) => item.name)]
 
 function elementState(elementId: string): ElementState {
   const element = getCharacterElement(elementId)

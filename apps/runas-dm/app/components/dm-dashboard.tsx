@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  Archive, ArrowUpDown, Bolt, ChevronDown, Copy, Database, Download, Edit3, Filter, Moon, Plus, RefreshCw,
+  Archive, ArrowUpDown, Bolt, ChevronDown, Copy, Database, Download, Edit3, FileArchive, Filter, Moon, Plus, RefreshCw,
   Search, Shield, Sparkles, Sun, Swords, Trash2, Upload, X,
 } from "lucide-react"
 import { attributeGroups } from "@runas/core/data/attributes"
@@ -30,6 +30,9 @@ import { AdvancedSheetEditor } from "./advanced-sheet-editor"
 import { AttributeBands } from "./attribute-bands"
 import { PwaInstallCard } from "./pwa-install-card"
 import { clampSimpleSheetWidth, plainTextSummary } from "../lib/simple-sheet"
+import { BatchExportDialog } from "./batch-export-dialog"
+import { PortraitCropDialog } from "./portrait-crop-dialog"
+import { exportCharacterJson } from "../lib/export"
 
 type WorkspaceView = "gallery" | "encounter"
 type SaveStatus = "loading" | "saving" | "saved" | "error"
@@ -40,29 +43,6 @@ const secondaryAttributes: Array<{ key: SecondaryAttributeKey; label: string }> 
 
 function id(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`
-}
-
-async function preparePortrait(file: File): Promise<string> {
-  if (!file.type.startsWith("image/")) throw new Error("Selecione uma imagem válida.")
-  const source = URL.createObjectURL(file)
-  try {
-    const image = new Image()
-    image.src = source
-    await image.decode()
-    const size = 512
-    const canvas = document.createElement("canvas")
-    canvas.width = size
-    canvas.height = size
-    const context = canvas.getContext("2d")
-    if (!context) throw new Error("Não foi possível processar a imagem.")
-    const scale = Math.max(size / image.naturalWidth, size / image.naturalHeight)
-    const width = image.naturalWidth * scale
-    const height = image.naturalHeight * scale
-    context.drawImage(image, (size - width) / 2, (size - height) / 2, width, height)
-    return canvas.toDataURL("image/jpeg", 0.82)
-  } finally {
-    URL.revokeObjectURL(source)
-  }
 }
 
 function listFromText(value: string): string[] {
@@ -89,6 +69,7 @@ export function DmDashboard() {
   const [selectedActorId, setSelectedActorId] = useState<string | null>(null)
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const [syncMessage, setSyncMessage] = useState("")
+  const [batchExportOpen, setBatchExportOpen] = useState(false)
   const importRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -341,7 +322,7 @@ export function DmDashboard() {
           <PwaInstallCard />
           <div className="workspace-heading">
             <div><p className="eyebrow">Galeria de fichas</p><h1>Seu bestiário, pronto para agir.</h1><p>{state.entries.length} fichas salvas sem limite artificial.</p></div>
-            <div className="heading-actions"><button className="secondary-button" onClick={() => importRef.current?.click()}><Upload size={16} /> Importar fichas</button><button className="secondary-button" onClick={() => void restoreFromCloud()}><RefreshCw size={16} /> Restaurar</button><button className="secondary-button" onClick={() => void backupToCloud()}><Database size={17} /> Backup</button><button className="primary-button" onClick={createSheet}><Plus size={18} /> Nova ficha</button></div>
+            <div className="heading-actions"><button className="secondary-button" disabled={state.entries.length === 0} onClick={() => setBatchExportOpen(true)}><FileArchive size={16} /> Exportar fichas</button><button className="secondary-button" onClick={() => importRef.current?.click()}><Upload size={16} /> Importar fichas</button><button className="secondary-button" onClick={() => void restoreFromCloud()}><RefreshCw size={16} /> Restaurar</button><button className="secondary-button" onClick={() => void backupToCloud()}><Database size={17} /> Backup</button><button className="primary-button" onClick={createSheet}><Plus size={18} /> Nova ficha</button></div>
           </div>
           {syncMessage && <div className="inline-notice">{syncMessage}</div>}
           <div className="gallery-toolbar">
@@ -364,6 +345,7 @@ export function DmDashboard() {
 
       {editing && <SheetEditor entry={editing} tables={state.masteryTables} onClose={() => setEditing(null)} onSave={saveSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
       {editingActor && <SheetEditor entry={{ id: editingActor.id, character: editingActor.character, masteryTableId: editingActor.masteryTableId, updatedAt: Date.now() }} tables={state.masteryTables} onClose={() => setEditingActor(null)} onSave={saveActorSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
+      {batchExportOpen && <BatchExportDialog entries={state.entries} onClose={() => setBatchExportOpen(false)} />}
       {!ready && <div className="loading-screen"><span className="brand-rune">R</span><p>Abrindo a mesa…</p></div>}
     </main>
   )
@@ -546,9 +528,10 @@ function QuickActions({ actor, targets, onUpdate, onUpdateTarget }: { actor: Enc
     setSimulationEditing(false)
     const parsed = parseDamageExpression(requestedExpression)
     if (!parsed.hasDamageValue || !parsed.damageTypeId) { setResult({ tone: "bad", title: "Dano incompleto", detail: "Use algo como 3D+2 cortante." }); return }
-    const conversion = convertDamageBonusesToDice(parsed.numDice, [parsed.bonus])
+    const attributeValue = parsed.attributeKey ? actor.character.attributes[parsed.attributeKey] : 0
+    const conversion = convertDamageBonusesToDice(parsed.numDice, [attributeValue, parsed.bonus])
     const rolled = parsed.numDice > 0 ? rollDice(conversion.numDice) : []
-    const calculated = calculateDamage({ config: { numDice: parsed.numDice, damageTypeId: parsed.damageTypeId, attributeKey: parsed.attributeKey ?? "none", otherModifier: parsed.bonus, mtEnabled: requestedMt, mtValue: actor.character.stats.mt, otherMultiplier: "1", rdf: 0, rdm: 0 }, diceRolls: rolled, attributeValue: parsed.attributeKey ? actor.character.attributes[parsed.attributeKey] : 0 })
+    const calculated = calculateDamage({ config: { numDice: parsed.numDice, damageTypeId: parsed.damageTypeId, attributeKey: parsed.attributeKey ?? "none", otherModifier: parsed.bonus, mtEnabled: requestedMt, mtValue: actor.character.stats.mt, otherMultiplier: "1", rdf: 0, rdm: 0 }, diceRolls: rolled, attributeValue })
     stageDamage(applyQuickModifier(calculated.total, modifier), parsed.damageTypeId, calculated.damageTypeName, makeDamageSignature(requestedExpression, requestedMt))
   }
 
@@ -601,6 +584,7 @@ function SheetEditor({ entry, tables, onClose, onSave, onTablesChange }: { entry
   const [tableId, setTableId] = useState(() => tables.some((table) => table.id === entry.masteryTableId) ? entry.masteryTableId : "default")
   const [simpleWidth, setSimpleWidth] = useState<number | null>(null)
   const [collapsed, setCollapsed] = useState({ attributes: false, statistics: false, connections: false, resources: false })
+  const [portraitFile, setPortraitFile] = useState<File | null>(null)
   const resizeState = useRef<{ pointerId: number; startX: number; startWidth: number; side: "left" | "right" } | null>(null)
   const selectedTable = tables.find((table) => table.id === tableId) ?? tables[0]
   const snapshot = calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities)
@@ -674,12 +658,14 @@ function SheetEditor({ entry, tables, onClose, onSave, onTablesChange }: { entry
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section style={modalStyle} className={`sheet-modal ${tab === "advanced" ? "advanced-mode" : "simple-mode"}`} role="dialog" aria-modal="true" aria-label="Editor de ficha">
     {tab === "simple" && <><ResizeHandle side="left" onPointerDown={beginResize} onPointerMove={resize} onPointerUp={finishResize} onKeyDown={resizeWithKeyboard} /><ResizeHandle side="right" onPointerDown={beginResize} onPointerMove={resize} onPointerUp={finishResize} onKeyDown={resizeWithKeyboard} /></>}
     <header><div><p className="eyebrow">{entry.character.name ? "Editar criatura" : "Nova criatura"}</p><h2>{character.name || "Ficha sem nome"}</h2></div><div className="editor-tabs"><button className={tab === "simple" ? "active" : ""} onClick={() => switchTab("simple")}>Simplificada</button><button className={tab === "advanced" ? "active" : ""} onClick={() => switchTab("advanced")}>Avançada</button></div><button className="icon-button" onClick={onClose}><X size={20} /></button></header>
-    {tab === "simple" ? <div className="editor-body simple-sheet-editor"><section className="form-section hero-fields simple-identity-card"><div className={`editor-rune portrait-editor ${character.portraitDataUrl ? "has-portrait" : ""}`}>{character.portraitDataUrl ? <img src={character.portraitDataUrl} alt={`Imagem de ${character.name || "criatura"}`} /> : <><span>{character.name.slice(0, 1) || "R"}</span><small>RUNAS</small></>}<label title="Selecionar imagem"><Upload size={14} /><span className="sr-only">Selecionar imagem</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void preparePortrait(file).then((portraitDataUrl) => mutate((draft) => { draft.portraitDataUrl = portraitDataUrl })) }} /></label>{character.portraitDataUrl && <button aria-label="Remover imagem da ficha" title="Remover imagem" onClick={() => mutate((draft) => { delete draft.portraitDataUrl })}><Trash2 size={13} /><span className="sr-only">Remover imagem</span></button>}</div><Field label="Nome" value={character.name} onChange={(value) => mutate((draft) => { draft.name = value })} /><Field label="Raça" value={character.info.race} onChange={(value) => mutate((draft) => { draft.info.race = value })} /><Field label="Afinidade" value={character.info.affinity} onChange={(value) => mutate((draft) => { draft.info.affinity = value })} /><PercentField label="Eficiência" value={character.info.efficiency} onChange={(value) => mutate((draft) => { draft.info.efficiency = value })} /><Field label="Essências totais" value={character.info.essences} onChange={(value) => mutate((draft) => { draft.info.essences = value })} /></section>
+    {tab === "simple" ? <div className="editor-body simple-sheet-editor"><section className="form-section hero-fields simple-identity-card"><div className={`editor-rune portrait-editor ${character.portraitDataUrl ? "has-portrait" : ""}`}>{character.portraitDataUrl ? <img src={character.portraitDataUrl} alt={`Imagem de ${character.name || "criatura"}`} /> : <><span>{character.name.slice(0, 1) || "R"}</span><small>RUNAS</small></>}<label title="Selecionar imagem"><Upload size={14} /><span className="sr-only">Selecionar imagem</span><input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file?.type.startsWith("image/")) setPortraitFile(file); event.currentTarget.value = "" }} /></label>{character.portraitDataUrl && <button aria-label="Remover imagem da ficha" title="Remover imagem" onClick={() => mutate((draft) => { delete draft.portraitDataUrl })}><Trash2 size={13} /><span className="sr-only">Remover imagem</span></button>}</div><Field label="Nome" value={character.name} onChange={(value) => mutate((draft) => { draft.name = value })} /><Field label="Raça" value={character.info.race} onChange={(value) => mutate((draft) => { draft.info.race = value })} /><Field label="Afinidade" value={character.info.affinity} onChange={(value) => mutate((draft) => { draft.info.affinity = value })} /><PercentField label="Eficiência" value={character.info.efficiency} onChange={(value) => mutate((draft) => { draft.info.efficiency = value })} /><Field label="Essências totais" value={character.info.essences} onChange={(value) => mutate((draft) => { draft.info.essences = value })} /></section>
       <SimpleSection className="attribute-section" title="Atributos" note="Organização histórica do sistema Runas" collapsed={collapsed.attributes} onToggle={() => toggleSection("attributes")}><AttributeBands attributes={character.attributes} onChange={(key: AttributeKey, value) => mutate((draft) => { draft.attributes[key] = value })} /></SimpleSection>
       <SimpleSection className="statistics-section" title="Estatísticas" collapsed={collapsed.statistics} onToggle={() => toggleSection("statistics")} action={<button className="restore-stats-button simple" onClick={restoreStats}><RefreshCw size={14} /> Restaurar estatísticas</button>}><div className="field-grid six resource-ribbon"><ResourceField label="PV" value={character.stats.pv} maximum={snapshot.pvMax} onChange={(value) => mutate((draft) => { draft.stats.pv = value })} /><ResourceField label="PA" value={character.stats.pa} maximum={snapshot.paMax} onChange={(value) => mutate((draft) => { draft.stats.pa = value })} /><ResourceField label="PA extra" value={character.stats.paExtra} maximum={snapshot.paExtraMax} onChange={(value) => mutate((draft) => { draft.stats.paExtra = value })} /><ResourceField label="PE" value={character.stats.pe} maximum={snapshot.peMax} onChange={(value) => mutate((draft) => { draft.stats.pe = value })} /><ResourceField label="PE temporário" value={character.stats.peTemporary} maximum={snapshot.peTemporaryMax} onChange={(value) => mutate((draft) => { draft.stats.peTemporary = value })} /><div className="calculated-field"><span>Deslocamento</span><strong>{snapshot.movement} m</strong></div></div><div className="field-grid defense-grid"><label className="field"><span>Elemento principal</span><select value={character.stats.elementId} onChange={(event) => mutate((draft) => { const element = getCharacterElement(event.target.value); draft.stats.elementId = event.target.value; draft.stats.resistances = [...(element?.resistances ?? [])]; draft.stats.weaknesses = [...(element?.weaknesses ?? [])] })}><option value="none">Nenhum</option>{characterElements.map((element) => <option key={element.id} value={element.id}>{element.name}</option>)}</select></label><Field label="Resistências" value={character.stats.resistances.join(", ")} onChange={(value) => mutate((draft) => { draft.stats.resistances = listFromText(value) })} /><Field label="Fraquezas" value={character.stats.weaknesses.join(", ")} onChange={(value) => mutate((draft) => { draft.stats.weaknesses = listFromText(value) })} /></div><section className="compact-mastery"><div className="compact-mastery-title"><div><h4>Melhorias</h4><span>Pontos definidos por Afinidade, Eficiência e tabela selecionada.</span></div><MasterySummary total={availableMastery} spent={spentMastery} remaining={remainingMastery} /></div><div className="mastery-toolbar"><select value={tableId} onChange={(event) => setTableId(event.target.value)}>{tables.map((table) => <option key={table.id} value={table.id}>{table.name}</option>)}</select><button className="secondary-button" onClick={() => { const table = { id: id("table"), name: `Tabela ${tables.length + 1}`, multiplier: 1 }; onTablesChange([...tables, table]); setTableId(table.id) }}><Plus size={15} /> Nova tabela</button>{selectedTable && !["default", "double"].includes(selectedTable.id) && <><input value={selectedTable.name} onChange={(event) => onTablesChange(tables.map((table) => table.id === selectedTable.id ? { ...table, name: event.target.value } : table))} /><label className="mini-field">Multiplicador <input type="number" min="0.1" step="0.1" value={selectedTable.multiplier} onChange={(event) => onTablesChange(tables.map((table) => table.id === selectedTable.id ? { ...table, multiplier: Number(event.target.value) || 1 } : table))} /></label><button className="secondary-button danger-icon" title="Remover tabela customizada" onClick={() => { onTablesChange(tables.filter((table) => table.id !== selectedTable.id)); setTableId("default") }}><Trash2 size={15} /> Remover</button></>}</div><div className="mastery-grid">{masteryImprovementOptions.map((option) => { const current = character.stats.masteryImprovements[option.key]; const maximum = Math.floor(Math.max(0, remainingMastery + current * option.cost) / option.cost); return <NumberField key={option.key} label={`${option.name} / ${option.cost} pontos`} value={current} min={0} max={maximum} onChange={(next) => mutate((draft) => { draft.stats.masteryImprovements[option.key] = clampMasteryImprovementQuantity(draft.stats.masteryImprovements, option.key, next, availableMastery) })} /> })}</div>{remainingMastery < 0 && <p className="mastery-overage" role="alert">As melhorias excedem o limite da tabela. Reduza compras ou aumente os pontos disponíveis.</p>}</section></SimpleSection>
       <SimpleSection className="linked-section" title="Perícias, características e ações" note="Registros vinculados à ficha completa" collapsed={collapsed.connections} onToggle={() => toggleSection("connections")}><SimpleConnections character={character} mutate={mutate} /></SimpleSection>
       <SimpleSection className="inventory-section" title="Recursos" collapsed={collapsed.resources} onToggle={() => toggleSection("resources")}><SimpleInventory character={character} mutate={mutate} /></SimpleSection></div> : <AdvancedSheetEditor character={character} onChange={setCharacter} />}
-    <footer className="modal-footer"><button className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" onClick={save}>Salvar ficha</button></footer></section></div>
+    <footer className="modal-footer">{tab === "simple" && <button className="secondary-button export-current-sheet" onClick={() => exportCharacterJson(character)}><Download size={16} /> Exportar ficha</button>}<button className="secondary-button" onClick={onClose}>Cancelar</button><button className="primary-button" onClick={save}>Salvar ficha</button></footer>
+    {portraitFile && <PortraitCropDialog file={portraitFile} onCancel={() => setPortraitFile(null)} onConfirm={(portraitDataUrl) => { mutate((draft) => { draft.portraitDataUrl = portraitDataUrl }); setPortraitFile(null) }} />}
+  </section></div>
 }
 
 type CharacterMutator = (updater: (draft: Character) => void) => void

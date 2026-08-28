@@ -642,6 +642,13 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 .portrait-crop-stage > span::after { left: 33.333%; right: 33.333%; top: 0; bottom: 0; border-left: 1px solid rgb(255 255 255 / 20%); border-right: 1px solid rgb(255 255 255 / 20%); }
 .portrait-crop-controls { display: grid; gap: 18px; }.portrait-crop-controls label { display: grid; gap: 7px; color: var(--muted); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .05em; }.portrait-crop-controls input { width: 100%; accent-color: var(--cyan); }
 .portrait-crop-modal > footer { display: flex; justify-content: flex-end; gap: 9px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); }
+.backup-token-backdrop { z-index: 110; }
+.backup-token-modal { display: grid; width: min(460px, 100%); overflow: hidden; border: 1px solid var(--line-strong); border-radius: 18px; background: var(--bg); box-shadow: var(--shadow); }
+.backup-token-modal > header { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.backup-token-modal > header h2 { margin: 2px 0 0; font-size: 19px; }.backup-token-icon { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid var(--cyan-dim); border-radius: 10px; background: color-mix(in srgb, var(--cyan) 8%, var(--panel)); color: var(--cyan); }
+.backup-token-body { position: relative; display: grid; gap: 15px; padding: 20px; }.backup-token-body > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }.backup-token-body > small { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.backup-token-username { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); opacity: 0; pointer-events: none; }
+.backup-token-modal > footer { display: flex; justify-content: flex-end; gap: 9px; padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel); }
 
 /* O retrato é informação primária na ficha simplificada. */
 .simple-sheet-editor .simple-identity-card, .simple-sheet-editor .simple-identity-card:has(.portrait-editor.has-portrait) { min-height: 184px; grid-template-columns: 166px repeat(4, minmax(100px, 1fr)); }

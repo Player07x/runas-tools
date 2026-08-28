@@ -31,7 +31,7 @@ Antes de publicar:
 2. Confirme que `sw.js`, manifesto e ícones 192/512 existem nos artefatos.
 3. Em produção, abra uma vez online até aparecer `Offline pronto`.
 4. Desative a rede, recarregue e valide criação/edição de ficha, teste, dano e exportação.
-5. Confirme que Backup e Restaurar falham de forma informativa e não alteram os dados locais.
+5. Confirme que Backup e Sincronizar falham de forma informativa e não alteram os dados locais.
 6. Reative a rede e confirme a atualização do backup.
 
 ## Limites

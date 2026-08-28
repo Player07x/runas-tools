@@ -18,7 +18,11 @@ Antes de publicar, aplique `apps/runas-dm/drizzle/0000_backup_snapshots.sql` ao 
 
 ## Conflitos
 
-O snapshot possui `updatedAt`. A restauração informa a data remota e pede confirmação antes de substituir o estado local. Não mescle automaticamente fichas com mesmo id sem política explícita.
+O snapshot possui `updatedAt`. A sincronização informa a data remota e pede confirmação antes de mesclar as fichas. A identidade de uma ficha é composta por nome, raça e elemento, comparados sem diferença de caixa e ignorando espaços excedentes.
+
+- Ao criar o backup, a ficha local substitui a remota com a mesma identidade; fichas exclusivas dos dois lados continuam no snapshot.
+- Ao sincronizar, a ficha remota substitui a local com a mesma identidade; fichas exclusivas dos dois lados continuam no navegador.
+- A sincronização preserva o identificador local da ficha substituída para não quebrar cópias já anexadas à mesa.
 
 ## PWA
 

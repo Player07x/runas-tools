@@ -33,9 +33,12 @@ import { clampSimpleSheetWidth, plainTextSummary } from "../lib/simple-sheet"
 import { BatchExportDialog } from "./batch-export-dialog"
 import { PortraitCropDialog } from "./portrait-crop-dialog"
 import { exportCharacterJson } from "../lib/export"
+import { createRunasDmBackup, synchronizeRunasDmState } from "../lib/backup-sync"
+import { BackupTokenDialog } from "./backup-token-dialog"
 
 type WorkspaceView = "gallery" | "encounter"
 type SaveStatus = "loading" | "saving" | "saved" | "error"
+type CloudAction = "backup" | "synchronize"
 
 const secondaryAttributes: Array<{ key: SecondaryAttributeKey; label: string }> = attributeGroups.flatMap((group) =>
   group.attributes.map((attribute) => ({ key: attribute.key as SecondaryAttributeKey, label: attribute.name })),
@@ -70,6 +73,7 @@ export function DmDashboard() {
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const [syncMessage, setSyncMessage] = useState("")
   const [batchExportOpen, setBatchExportOpen] = useState(false)
+  const [pendingCloudAction, setPendingCloudAction] = useState<CloudAction | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -238,7 +242,7 @@ export function DmDashboard() {
 
     const now = Date.now()
     setState((current) => {
-      const base = workspace ?? current
+      const base = workspace ? synchronizeRunasDmState(current, workspace, now) : current
       return {
         ...base,
         entries: [
@@ -249,26 +253,37 @@ export function DmDashboard() {
       }
     })
     const imported = characters.length
-    const parts = [workspace ? "backup do Runas DM restaurado" : "", imported ? `${imported} ${imported === 1 ? "ficha importada" : "fichas importadas"} do Runas Tools` : "", ignored ? `${ignored} arquivo(s) ignorado(s)` : ""].filter(Boolean)
+    const parts = [workspace ? "backup do Runas DM sincronizado" : "", imported ? `${imported} ${imported === 1 ? "ficha importada" : "fichas importadas"} do Runas Tools` : "", ignored ? `${ignored} arquivo(s) ignorado(s)` : ""].filter(Boolean)
     setSyncMessage(parts.join(" · "))
   }
 
-  function getBackupToken(): string {
-    let token = sessionStorage.getItem("runas-dm.backup-token") ?? ""
+  function requestCloudAction(action: CloudAction) {
+    const token = sessionStorage.getItem("runas-dm.backup-token") ?? ""
     if (!token) {
-      token = window.prompt("Informe o token privado de backup desta sessão:")?.trim() ?? ""
-      if (!token) return ""
-      sessionStorage.setItem("runas-dm.backup-token", token)
+      setPendingCloudAction(action)
+      return
     }
-    return token
+    if (action === "backup") void backupToCloud(token)
+    else void synchronizeFromCloud(token)
   }
 
-  async function backupToCloud() {
-    const token = getBackupToken()
-    if (!token) { setSyncMessage("Backup cancelado: token não informado"); return }
+  function submitBackupToken(token: string) {
+    const action = pendingCloudAction
+    sessionStorage.setItem("runas-dm.backup-token", token)
+    setPendingCloudAction(null)
+    if (action === "backup") void backupToCloud(token)
+    if (action === "synchronize") void synchronizeFromCloud(token)
+  }
+
+  async function backupToCloud(token: string) {
     setSyncMessage("Enviando backup…")
     try {
-      const response = await fetch("/api/backup", { method: "PUT", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify(state) })
+      const currentResponse = await fetch("/api/backup", { headers: { authorization: `Bearer ${token}` } })
+      if (currentResponse.status === 401) sessionStorage.removeItem("runas-dm.backup-token")
+      if (!currentResponse.ok) throw new Error()
+      const currentBackup = await currentResponse.json() as { state: RunasDmState | null }
+      const completeBackup = createRunasDmBackup(state, currentBackup.state)
+      const response = await fetch("/api/backup", { method: "PUT", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify(completeBackup) })
       if (response.status === 401) sessionStorage.removeItem("runas-dm.backup-token")
       if (!response.ok) throw new Error()
       setSyncMessage("Backup remoto atualizado")
@@ -277,9 +292,7 @@ export function DmDashboard() {
     }
   }
 
-  async function restoreFromCloud() {
-    const token = getBackupToken()
-    if (!token) { setSyncMessage("Restauração cancelada: token não informado"); return }
+  async function synchronizeFromCloud(token: string) {
     setSyncMessage("Consultando backup remoto…")
     try {
       const response = await fetch("/api/backup", { headers: { authorization: `Bearer ${token}` } })
@@ -288,12 +301,11 @@ export function DmDashboard() {
       const payload = await response.json() as { state: RunasDmState | null; updatedAt: number | null }
       if (!payload.state) { setSyncMessage("Ainda não existe backup remoto"); return }
       const date = payload.updatedAt ? new Date(payload.updatedAt).toLocaleString("pt-BR") : "data desconhecida"
-      if (!window.confirm(`Substituir os dados deste dispositivo pelo backup de ${date}?`)) { setSyncMessage("Restauração cancelada"); return }
-      setState(payload.state)
-      setSelectedActorId(null)
-      setSyncMessage(`Backup de ${date} restaurado`)
+      if (!window.confirm(`Sincronizar as fichas deste dispositivo com o backup de ${date}? Fichas com o mesmo nome, raça e elemento serão atualizadas pelo backup; as demais serão preservadas.`)) { setSyncMessage("Sincronização cancelada"); return }
+      setState((current) => synchronizeRunasDmState(current, payload.state as RunasDmState))
+      setSyncMessage(`Fichas sincronizadas com o backup de ${date}`)
     } catch {
-      setSyncMessage("Não foi possível restaurar o backup remoto")
+      setSyncMessage("Não foi possível sincronizar o backup remoto")
     }
   }
 
@@ -322,7 +334,7 @@ export function DmDashboard() {
           <PwaInstallCard />
           <div className="workspace-heading">
             <div><p className="eyebrow">Galeria de fichas</p><h1>Seu bestiário, pronto para agir.</h1><p>{state.entries.length} fichas salvas sem limite artificial.</p></div>
-            <div className="heading-actions"><button className="secondary-button" disabled={state.entries.length === 0} onClick={() => setBatchExportOpen(true)}><FileArchive size={16} /> Exportar fichas</button><button className="secondary-button" onClick={() => importRef.current?.click()}><Upload size={16} /> Importar fichas</button><button className="secondary-button" onClick={() => void restoreFromCloud()}><RefreshCw size={16} /> Restaurar</button><button className="secondary-button" onClick={() => void backupToCloud()}><Database size={17} /> Backup</button><button className="primary-button" onClick={createSheet}><Plus size={18} /> Nova ficha</button></div>
+            <div className="heading-actions"><button className="secondary-button" disabled={state.entries.length === 0} onClick={() => setBatchExportOpen(true)}><FileArchive size={16} /> Exportar fichas</button><button className="secondary-button" onClick={() => importRef.current?.click()}><Upload size={16} /> Importar fichas</button><button className="secondary-button" onClick={() => requestCloudAction("synchronize")}><RefreshCw size={16} /> Sincronizar</button><button className="secondary-button" onClick={() => requestCloudAction("backup")}><Database size={17} /> Backup</button><button className="primary-button" onClick={createSheet}><Plus size={18} /> Nova ficha</button></div>
           </div>
           {syncMessage && <div className="inline-notice">{syncMessage}</div>}
           <div className="gallery-toolbar">
@@ -346,6 +358,7 @@ export function DmDashboard() {
       {editing && <SheetEditor entry={editing} tables={state.masteryTables} onClose={() => setEditing(null)} onSave={saveSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
       {editingActor && <SheetEditor entry={{ id: editingActor.id, character: editingActor.character, masteryTableId: editingActor.masteryTableId, updatedAt: Date.now() }} tables={state.masteryTables} onClose={() => setEditingActor(null)} onSave={saveActorSheet} onTablesChange={(masteryTables) => updateState((current) => ({ ...current, masteryTables }))} />}
       {batchExportOpen && <BatchExportDialog entries={state.entries} onClose={() => setBatchExportOpen(false)} />}
+      {pendingCloudAction && <BackupTokenDialog onClose={() => setPendingCloudAction(null)} onSubmit={submitBackupToken} />}
       {!ready && <div className="loading-screen"><span className="brand-rune">R</span><p>Abrindo a mesa…</p></div>}
     </main>
   )

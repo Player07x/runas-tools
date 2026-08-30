@@ -41,10 +41,10 @@ function configWithParsed(previous: DamageConfig, parsed: ParsedDamage): DamageC
 export function useDamageCalculator() {
   const { character } = useCharacter()
   const searchParams = useSearchParams()
-  const [config, setConfig] = useState<DamageConfig>(defaultConfig)
+  const [configs, setConfigs] = useState<DamageConfig[]>(() => [defaultConfig()])
+  const config = configs[0]
   const [result, setResult] = useState<DamageResult | null>(null)
   const [results, setResults] = useState<DamageResult[]>([])
-  const [quickExpression, setQuickExpression] = useState("")
   const handledRollToken = useRef<string | null>(null)
   const requestedDamage = searchParams.get("damage") ?? ""
   const requestedRollToken = searchParams.get("roll")
@@ -59,55 +59,66 @@ export function useDamageCalculator() {
     [character.attributes],
   )
 
-  const update = useCallback(<K extends keyof DamageConfig>(key: K, value: DamageConfig[K]) => {
-    setConfig((prev) => ({ ...prev, [key]: value }))
+  const updateAt = useCallback(<K extends keyof DamageConfig>(index: number, key: K, value: DamageConfig[K]) => {
+    setConfigs((previous) => previous.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item))
   }, [])
 
+  const update = useCallback(<K extends keyof DamageConfig>(key: K, value: DamageConfig[K]) => {
+    updateAt(0, key, value)
+  }, [updateAt])
+
   /** Ativa o MT e carrega o valor inicial da ficha. */
-  const setMtEnabled = useCallback(
-    (enabled: boolean) => {
-      setConfig((prev) => ({
-        ...prev,
+  const setMtEnabledAt = useCallback(
+    (index: number, enabled: boolean) => {
+      setConfigs((previous) => previous.map((item, itemIndex) => itemIndex === index ? {
+        ...item,
         mtEnabled: enabled,
-        mtValue: enabled ? (prev.mtValue || character.stats.mt || 0) : prev.mtValue,
-      }))
+        mtValue: enabled ? (item.mtValue || character.stats.mt || 0) : item.mtValue,
+      } : item))
     },
     [character.stats.mt],
   )
 
+  const setMtEnabled = useCallback((enabled: boolean) => setMtEnabledAt(0, enabled), [setMtEnabledAt])
+
   /** Aplica um resultado de parser aos campos. */
   const applyParsed = useCallback((parsed: ParsedDamage, expression = "") => {
-    setConfig((prev) => configWithParsed(prev, parsed))
-    setQuickExpression(expression)
+    const parsedParts = expression ? parseDamageExpressions(expression) : []
+    setConfigs((previous) => {
+      const primary = previous[0] ?? defaultConfig()
+      if (parsedParts.length === 0) return [configWithParsed(primary, parsed)]
+      return parsedParts.map((part, index) => configWithParsed(previous[index] ?? primary, part))
+    })
   }, [])
 
   useEffect(() => {
     if (!requestedDamage || !requestedRollToken || handledRollToken.current === requestedRollToken) return
     handledRollToken.current = requestedRollToken
-    const next = configWithParsed(config, parseDamageExpression(requestedDamage))
-    if (requestedApplyMt) {
-      next.mtEnabled = true
-      next.mtValue = character.stats.mt || 0
-    }
-    const attributeValue = next.attributeKey === "none" ? 0 : character.attributes[next.attributeKey] ?? 0
-    const conversion = convertDamageBonusesToDice(next.numDice, [attributeValue, next.otherModifier])
-    setConfig(next)
-    const rolled = calculateDamage({ config: next, diceRolls: rollDice(conversion.numDice), attributeValue })
-    setResult(rolled)
-    setResults([rolled])
+    const parsedParts = parseDamageExpressions(requestedDamage)
+    const nextConfigs = (parsedParts.length ? parsedParts : [parseDamageExpression(requestedDamage)]).map((part) => {
+      const next = configWithParsed(config, part)
+      if (requestedApplyMt) {
+        next.mtEnabled = true
+        next.mtValue = character.stats.mt || 0
+      }
+      return next
+    })
+    setConfigs(nextConfigs)
+    const sequence = calculateDamageSequence(nextConfigs.map((next) => {
+      const attributeValue = next.attributeKey === "none" ? 0 : character.attributes[next.attributeKey] ?? 0
+      const conversion = convertDamageBonusesToDice(next.numDice, [attributeValue, next.otherModifier])
+      return { config: next, diceRolls: rollDice(conversion.numDice), attributeValue }
+    }), nextConfigs[0]?.rdf ?? 0, nextConfigs[0]?.rdm ?? 0)
+    setResult(sequence.results[0] ?? null)
+    setResults(sequence.results)
   }, [character.attributes, character.stats.mt, config, requestedApplyMt, requestedDamage, requestedRollToken])
 
   const roll = useCallback(() => {
-    const parsedParts = parseDamageExpressions(quickExpression)
-    if (parsedParts.length > 1) {
-      const sequence = calculateDamageSequence(parsedParts.map((part) => {
-        const attributeValue = part.attributeKey ? character.attributes[part.attributeKey] ?? 0 : 0
-        const conversion = convertDamageBonusesToDice(part.numDice, [attributeValue, part.bonus])
-        return {
-          config: { ...config, numDice: part.numDice, damageTypeId: part.damageTypeId ?? config.damageTypeId, attributeKey: part.attributeKey ?? "none", otherModifier: part.bonus, rdf: 0, rdm: 0 },
-          diceRolls: rollDice(conversion.numDice),
-          attributeValue,
-        }
+    if (configs.length > 1) {
+      const sequence = calculateDamageSequence(configs.map((partConfig) => {
+        const attributeValue = getAttributeValue(partConfig.attributeKey)
+        const conversion = convertDamageBonusesToDice(partConfig.numDice, [attributeValue, partConfig.otherModifier])
+        return { config: partConfig, diceRolls: rollDice(conversion.numDice), attributeValue }
       }), config.rdf, config.rdm)
       setResults(sequence.results)
       setResult(sequence.results[0] ?? null)
@@ -119,14 +130,17 @@ export function useDamageCalculator() {
     const rolled = calculateDamage({ config, diceRolls, attributeValue })
     setResult(rolled)
     setResults([rolled])
-  }, [character.attributes, config, getAttributeValue, quickExpression])
+  }, [config, configs, getAttributeValue])
 
   return {
     config,
+    configs,
     result,
     results,
     update,
+    updateAt,
     setMtEnabled,
+    setMtEnabledAt,
     applyParsed,
     roll,
     attributeValue: getAttributeValue(config.attributeKey),

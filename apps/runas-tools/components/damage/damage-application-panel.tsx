@@ -500,6 +500,7 @@ function TargetDamageApplicationPanel({ rolledResult, rolledResults = rolledResu
             {(resultText || simulationSteps.length > 0 || notices.length > 0 || specialTest) && (
               <div className={`rounded-2xl border p-4 sm:p-5 ${fatal ? "border-black bg-black text-white" : "border-primary/30 bg-primary/5"}`}>
                 <h3 className={`text-sm font-bold ${fatal ? "text-white" : "text-foreground"}`}>Resumo dos danos</h3>
+                {fatal && <p role="alert" className="mt-3 rounded-xl border border-red-400/50 bg-red-950/70 p-3 text-sm font-extrabold text-red-100">FULMINANTE 💀 — o dano sofrido nos PVs foi igual ou superior ao PV máximo.</p>}
                 {resultText && <label className="mt-3 block">
                   <span className={`mb-1.5 block text-xs font-medium ${fatal ? "text-white/70" : "text-muted-foreground"}`}>Resultado editável</span>
                   <textarea

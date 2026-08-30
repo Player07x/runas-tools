@@ -16,11 +16,22 @@ interface Props {
   attributeValue: number
   onUpdate: <K extends keyof DamageConfig>(key: K, value: DamageConfig[K]) => void
   onMtToggle: (enabled: boolean) => void
+  title?: string
+  description?: string
+  showReduction?: boolean
 }
 
 const damageTypeOptions = damageTypes.map((d) => ({ value: d.id, label: d.name }))
 
-export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Props) {
+export function DamageForm({
+  config,
+  attributeValue,
+  onUpdate,
+  onMtToggle,
+  title = "Configuração do dano",
+  description = "Ajuste os campos ou use a entrada rápida acima.",
+  showReduction = true,
+}: Props) {
   const category = getDamageType(config.damageTypeId)?.category
   const usesRdf = category === "physical"
   const usesRdm = category === "magical"
@@ -36,7 +47,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
   }`
 
   return (
-    <SectionCard title="Configuração do dano" description="Ajuste os campos ou use a entrada rápida acima.">
+    <SectionCard title={title} description={description}>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <NumberInput
           label="Dados de Dano"
@@ -107,7 +118,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
         <p className="mt-2 text-xs font-medium text-primary">Dano Psíquico e Temporal ignoram MT e Outro Multiplicador.</p>
       )}
 
-      <div className="mt-4">
+      {showReduction && <div className="mt-4">
         <span className="mb-2 block text-xs font-medium text-muted-foreground">Redução de Dano do alvo (opcional)</span>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
@@ -122,7 +133,7 @@ export function DamageForm({ config, attributeValue, onUpdate, onMtToggle }: Pro
         {isSpecial && (
           <p className="mt-2 text-xs font-medium text-primary">Dano especial ignora RDF e RDM.</p>
         )}
-      </div>
+      </div>}
     </SectionCard>
   )
 }

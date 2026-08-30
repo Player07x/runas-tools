@@ -14,8 +14,8 @@ const DamageApplicationPanel = lazy(() =>
 )
 
 export function DamageCalculator() {
-  const { config, result, results, update, setMtEnabled, applyParsed, roll, attributeValue, requestedDamage } = useDamageCalculator()
-  const { isReady } = useCharacter()
+  const { config, configs, result, results, update, updateAt, setMtEnabled, setMtEnabledAt, applyParsed, roll, attributeValue, requestedDamage } = useDamageCalculator()
+  const { isReady, character } = useCharacter()
   const [applicationOpen, setApplicationOpen] = useState(false)
   const [applicationLoaded, setApplicationLoaded] = useState(false)
 
@@ -29,7 +29,29 @@ export function DamageCalculator() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,390px)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-5">
           <QuickDamageInput onParsed={applyParsed} initialText={requestedDamage} />
-          <DamageForm config={config} attributeValue={attributeValue} onUpdate={update} onMtToggle={setMtEnabled} />
+          <DamageForm
+            config={config}
+            attributeValue={attributeValue}
+            onUpdate={update}
+            onMtToggle={setMtEnabled}
+            description={configs.length > 1 ? "Dano principal. RDF e RDM abaixo são compartilhadas e consumidas na ordem." : undefined}
+          />
+          {configs.slice(1).map((additionalConfig, additionalIndex) => {
+            const configIndex = additionalIndex + 1
+            const additionalAttributeValue = additionalConfig.attributeKey === "none"
+              ? 0
+              : character.attributes[additionalConfig.attributeKey] ?? 0
+            return <DamageForm
+              key={configIndex}
+              config={additionalConfig}
+              attributeValue={additionalAttributeValue}
+              onUpdate={(key, value) => updateAt(configIndex, key, value)}
+              onMtToggle={(enabled) => setMtEnabledAt(configIndex, enabled)}
+              title={`Dano adicional ${configIndex}`}
+              description="Este componente é calculado separadamente; a redução restante vem do dano principal."
+              showReduction={false}
+            />
+          })}
           <Button size="lg" className="w-full shadow-[0_12px_30px_color-mix(in_srgb,var(--primary)_25%,transparent)]" onClick={roll}>
             <Dices />
             Rolar dano

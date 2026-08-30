@@ -373,11 +373,12 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 .brand strong { font-size: 16px; }.brand small, .save-state { font-size: 11px; }
 .damage-target-field select { border-color: color-mix(in srgb, var(--red) 24%, var(--line)); }
 .damage-confirmation { gap: 12px; padding: 13px; border-color: color-mix(in srgb, var(--red) 35%, var(--line)); background: color-mix(in srgb, var(--red) 5%, var(--panel)); }
-.damage-caused-line { display: grid; grid-template-columns: 1fr minmax(150px, 190px); align-items: center; gap: 10px; padding: 10px; border: 1px solid color-mix(in srgb, var(--red) 35%, var(--line)); border-radius: 10px; background: var(--bg); }
-.damage-caused-line > span, .simulated-damage-editor > div > span { color: var(--red); font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.damage-caused-line label { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; }
-.damage-caused-line input { min-height: 38px; color: var(--red); font-family: var(--font-mono); font-size: 17px; font-weight: 800; text-align: center; }
-.damage-caused-line b { font-size: 12px; text-transform: capitalize; }
+.damage-caused-list { display: grid; gap: 8px; padding: 10px; border: 1px solid color-mix(in srgb, var(--red) 35%, var(--line)); border-radius: 10px; background: var(--bg); }
+.damage-caused-list > span, .simulated-damage-editor > div > span { color: var(--red); font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.damage-caused-list label { display: grid; grid-template-columns: 72px 76px minmax(0, 1fr); align-items: center; gap: 8px; }
+.damage-caused-list small { color: var(--muted); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.damage-caused-list input { min-height: 38px; color: var(--red); font-family: var(--font-mono); font-size: 17px; font-weight: 800; text-align: center; }
+.damage-caused-list b { overflow: hidden; font-size: 12px; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
 .simulated-damage-editor { display: grid; gap: 8px; }
 .simulated-damage-editor > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .simulated-damage-editor button { min-height: 30px; padding: 0 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); color: var(--muted); cursor: pointer; font-size: 10px; font-weight: 700; }
@@ -388,7 +389,7 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 
 @media (max-width: 760px) {
   .sheet-modal.simple-mode, .sheet-modal.advanced-mode { width: 100%; }
-  .damage-caused-line { grid-template-columns: 1fr; }
+  .damage-caused-list label { grid-template-columns: 64px 70px minmax(0, 1fr); }
   .record-toggle em { display: none; }
 }
 

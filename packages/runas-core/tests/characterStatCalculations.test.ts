@@ -37,4 +37,10 @@ describe("calculateCharacterStatSnapshot", () => {
     const snapshot = calculateCharacterStatSnapshot(attributes, info, stats(999))
     expect(snapshot.peTemporaryMax).toBe(snapshot.peMax)
   })
+
+  it("calcula Primeiras Impressões como Mental + Social + modificadores", () => {
+    const current = stats(3)
+    current.firstImpressionsBonus = 2
+    expect(calculateCharacterStatSnapshot(attributes, info, current).firstImpressions).toBe(11)
+  })
 })

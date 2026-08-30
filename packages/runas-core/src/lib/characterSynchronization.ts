@@ -3,7 +3,7 @@ import { getCharacterElement } from "../data/elements"
 import type { Character } from "../types/character"
 import { calculateLoadBase, convertCalendarYear, deriveCharacterInfo, modifierToNumber } from "./characterCalculations"
 import { calculateCharacterStatSnapshot } from "./characterStatCalculations"
-import { calculateEquippedArmorDefense, calculateInventoryLoad } from "./inventoryCalculations"
+import { calculateEquippedArmorDefense, calculateInventoryLoad, normalizeInventoryUsage } from "./inventoryCalculations"
 
 function finite(value: number): number {
   return Number.isFinite(value) ? value : 0
@@ -18,6 +18,7 @@ function finite(value: number): number {
  */
 export function synchronizeCharacterDerivedValues(previous: Character, changed: Character): Character {
   const attributes = { ...changed.attributes }
+  const inventory = changed.inventory.map((item) => ({ ...item, usage: normalizeInventoryUsage(item.type, item.usage) }))
 
   for (const group of attributeGroups) {
     const primaryKey = group.primary.key
@@ -43,8 +44,8 @@ export function synchronizeCharacterDerivedValues(previous: Character, changed: 
     stats.weaknesses = [...new Set([...element.weaknesses, ...stats.weaknesses])]
   }
   stats.mt = modifierToNumber(info.sizeModifier)
-  stats.currentLoad = calculateInventoryLoad(changed.inventory, info.scaleMultiplier)
-  const defense = calculateEquippedArmorDefense(changed.inventory)
+  stats.currentLoad = calculateInventoryLoad(inventory, info.scaleMultiplier)
+  const defense = calculateEquippedArmorDefense(inventory)
   stats.armorRdf = defense.rdf
   stats.armorRdm = defense.rdm
 
@@ -58,5 +59,5 @@ export function synchronizeCharacterDerivedValues(previous: Character, changed: 
   stats.determination = Math.min(snapshot.determinationMax, Math.max(0, finite(stats.determination)))
   stats.casualty = Math.min(snapshot.casualtyMax, Math.max(0, finite(stats.casualty)))
 
-  return { ...changed, attributes, info, stats }
+  return { ...changed, attributes, info, stats, inventory }
 }

@@ -31,6 +31,7 @@ import {
   inventoryTypeOptions,
   inventoryUsageLabel,
   inventoryUsageOptions,
+  normalizeInventoryUsage,
   isBondAbilityCategory,
   itemAffinityOptions,
   itemRarity,
@@ -121,6 +122,7 @@ function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond
     : Math.min(prMaximum ?? Number.POSITIVE_INFINITY, Math.max(0, Math.trunc(item.prCurrent)))
   return {
     ...item,
+    usage: normalizeInventoryUsage(item.type, item.usage),
     name: item.name.trim().slice(0, 80) || "Item sem nome",
     affinity,
     bondPoints: Math.max(0, Math.trunc(item.bondPoints)),
@@ -387,8 +389,8 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
                 <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Modo edição</p><h2 id="inventory-editor-title" className="mt-1 text-lg font-bold text-foreground">{draftIsNew ? "Novo item" : draft.name}</h2></div><button type="button" onClick={() => setDraft(null)} aria-label="Fechar item" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <label className="sm:col-span-2"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Nome</span><input required maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>
-                  <Select label="Uso" value={draft.usage} options={inventoryUsageOptions} onChange={(value) => setDraft({ ...draft, usage: value as InventoryUsage })} />
-                  <Select label="Tipo" value={draft.type} options={inventoryTypeOptions} onChange={(value) => setDraft({ ...draft, type: value as InventoryItemType })} />
+                  <Select label="Uso" value={draft.usage} options={draft.type === "innate" ? inventoryUsageOptions.filter((option) => option.value !== "stored") : inventoryUsageOptions} onChange={(value) => setDraft({ ...draft, usage: value as InventoryUsage })} />
+                  <Select label="Tipo" value={draft.type} options={inventoryTypeOptions} onChange={(value) => { const type = value as InventoryItemType; setDraft({ ...draft, type, usage: normalizeInventoryUsage(type, draft.usage) }) }} />
                   <Select label="Afinidade" value={String(draft.affinity)} options={itemAffinityOptions.map((option) => ({ value: String(option.value), label: option.label }))} onChange={(value) => setDraft({ ...draft, affinity: Number(value) as CharacterInventoryItem["affinity"] })} />
                   <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Pontos de Vínculo</span><input type="number" min={0} step={1} value={draft.bondPoints} onChange={(event) => setDraft({ ...draft, bondPoints: Math.max(0, Math.trunc(Number(event.target.value) || 0)) })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring" /><span className="mt-1 block text-xs text-muted-foreground">Raridade: {itemRarity(draft.bondPoints)}</span></label>
                   <NumberInput label="Peso Base (kg)" value={draft.baseWeight} min={0} step={0.001} onChange={(baseWeight) => setDraft({ ...draft, baseWeight: Math.max(0, baseWeight) })} />

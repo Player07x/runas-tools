@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { simulateDamageApplication, type DamageApplicationConfig } from "../src/lib/damageApplication"
+import { simulateDamageApplication, simulateDamageApplications, type DamageApplicationConfig } from "../src/lib/damageApplication"
 
 function config(
   damageTypeId: string,
@@ -51,5 +51,29 @@ describe("damage category resistances and weaknesses", () => {
     const simulation = simulateDamageApplication(config("psiquica", ["Todos os Danos"]))
     expect(simulation.error).toBeNull()
     expect(simulation.value?.notices[0]).toContain("Insanidade 5")
+  })
+})
+
+describe("aplicação de danos adicionais", () => {
+  it("compartilha RDF/RDM e acumula mensagens de todos os danos especiais", () => {
+    const base = config("cortante")
+    const result = simulateDamageApplications({
+      ...base,
+      damages: [
+        { amount: 5, damageTypeId: "cortante" },
+        { amount: 8, damageTypeId: "queimadura" },
+        { amount: 8, damageTypeId: "perfurante" },
+        { amount: 10, damageTypeId: "congelante" },
+        { amount: 4, damageTypeId: "temporal" },
+        { amount: 3, damageTypeId: "virtual" },
+      ],
+      rdf: 10,
+      rdm: 6,
+    })
+    expect(result.error).toBeNull()
+    expect(result.value?.changes).toEqual([{ resource: "pv", amount: -15 }])
+    expect(result.value?.notices).toHaveLength(2)
+    expect(result.value?.notices.join(" ")).toContain("envelhecerá")
+    expect(result.value?.notices.join(" ")).toContain("Brecha")
   })
 })

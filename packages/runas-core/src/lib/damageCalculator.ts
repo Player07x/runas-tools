@@ -1,4 +1,4 @@
-import type { DamageBreakdownItem, DamageConfig, DamageResult } from "../types/damage"
+import type { DamageBreakdownItem, DamageConfig, DamageResult, DamageSequenceResult } from "../types/damage"
 import { getDamageType } from "../data/damageTypes"
 import { getMtDamageMultiplier } from "./damageMt"
 
@@ -74,6 +74,12 @@ interface CalculateArgs {
   attributeValue: number
 }
 
+export interface DamageSequencePart {
+  config: DamageConfig
+  diceRolls: number[]
+  attributeValue: number
+}
+
 /**
  * Aplica a fórmula de dano:
  * ((dados + bônus restante) * MT - reduçãoDeDano) * outroMultiplicador
@@ -141,5 +147,48 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
     breakdown,
     damageTypeName: damageType?.name ?? "",
     damageTypeId: damageType?.id ?? config.damageTypeId,
+  }
+}
+
+/**
+ * Calcula vários danos na ordem informada. RDF e RDM formam dois reservatórios
+ * compartilhados e reduzem somente os primeiros danos compatíveis até zerar.
+ */
+export function calculateDamageSequence(parts: DamageSequencePart[], rdf: number, rdm: number): DamageSequenceResult {
+  let remainingRdf = Math.max(0, Number.isFinite(rdf) ? rdf : 0)
+  let remainingRdm = Math.max(0, Number.isFinite(rdm) ? rdm : 0)
+  const results: DamageResult[] = []
+
+  for (const part of parts) {
+    const damageType = getDamageType(part.config.damageTypeId)
+    const available = damageType?.category === "physical"
+      ? remainingRdf
+      : damageType?.category === "magical"
+        ? remainingRdm
+        : 0
+    const withoutReduction = calculateDamage({
+      ...part,
+      config: { ...part.config, rdf: 0, rdm: 0 },
+    })
+    const reductionApplied = Math.min(available, Math.max(0, withoutReduction.totalBeforeReduction))
+    const result = calculateDamage({
+      ...part,
+      config: {
+        ...part.config,
+        rdf: damageType?.category === "physical" ? reductionApplied : 0,
+        rdm: damageType?.category === "magical" ? reductionApplied : 0,
+      },
+    })
+    results.push({ ...result, reductionApplied })
+    if (damageType?.category === "physical") remainingRdf -= reductionApplied
+    if (damageType?.category === "magical") remainingRdm -= reductionApplied
+  }
+
+  return {
+    results,
+    total: results.reduce((sum, result) => sum + Math.max(0, result.total), 0),
+    totalBeforeReduction: results.reduce((sum, result) => sum + Math.max(0, result.totalBeforeReduction), 0),
+    remainingRdf,
+    remainingRdm,
   }
 }

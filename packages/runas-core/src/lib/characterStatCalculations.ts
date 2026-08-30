@@ -124,7 +124,7 @@ export function calculateCharacterStatSnapshot(
       ? Math.max(1, movementBeforeSize + mt)
       : movementBeforeSize
   const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus) + abilityModifiers.movement))
-  const firstImpressions = Math.trunc(attributes.social + finite(stats.firstImpressionsBonus) + abilityModifiers.firstImpressions)
+  const firstImpressions = Math.trunc(attributes.mental + attributes.social + finite(stats.firstImpressionsBonus) + abilityModifiers.firstImpressions)
   const willTest = Math.max(0, willSkillTest + finite(stats.willModifier))
   const chanceTest = Math.max(0, chanceSkillTest + finite(stats.chanceModifier))
   const perceptionTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.perception, 2) + finite(stats.perceptionModifier))

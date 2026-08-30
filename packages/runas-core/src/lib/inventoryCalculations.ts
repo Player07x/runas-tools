@@ -8,6 +8,7 @@ export const inventoryUsageOptions: { value: InventoryUsage; label: string }[] =
 ]
 
 export const inventoryTypeOptions: { value: InventoryItemType; label: string }[] = [
+  { value: "innate", label: "Inato" },
   { value: "weapon", label: "Arma" },
   { value: "armor", label: "Armadura" },
   { value: "shield", label: "Escudo" },
@@ -35,6 +36,11 @@ export function inventoryUsageLabel(value: InventoryUsage): string {
 
 export function inventoryTypeLabel(value: InventoryItemType): string {
   return inventoryTypeOptions.find((option) => option.value === value)?.label ?? "Outro"
+}
+
+/** Itens inatos existem no personagem ou estão ausentes; nunca ficam armazenados. */
+export function normalizeInventoryUsage(type: InventoryItemType, usage: InventoryUsage): InventoryUsage {
+  return type === "innate" && usage === "stored" ? "equipped" : usage
 }
 
 export function parseScaleMultiplier(value: string): number {

@@ -23,11 +23,20 @@ export interface MasteryTable {
   multiplier: number
 }
 
+export interface InitiativeEntry {
+  id: string
+  actorId: string | null
+  name: string
+  value: number | null
+}
+
 export interface RunasDmState {
-  version: 1
+  version: 2
   entries: BestiaryEntry[]
   encounter: EncounterActor[]
   masteryTables: MasteryTable[]
+  workspaceNotesHtml: string
+  initiative: InitiativeEntry[]
   updatedAt: number
 }
 
@@ -71,7 +80,7 @@ function sampleAshBeast(): Character {
 export function createInitialState(): RunasDmState {
   const now = Date.now()
   return {
-    version: 1,
+    version: 2,
     entries: [
       { id: "sentinela-vidro", character: sampleSentinel(), masteryTableId: "default", updatedAt: now },
       { id: "fera-cinzas", character: sampleAshBeast(), masteryTableId: "default", updatedAt: now },
@@ -81,6 +90,8 @@ export function createInitialState(): RunasDmState {
       { id: "default", name: "Padrão", multiplier: 1 },
       { id: "double", name: "Pontos dobrados", multiplier: 2 },
     ],
+    workspaceNotesHtml: "",
+    initiative: [],
     updatedAt: now,
   }
 }
@@ -91,6 +102,15 @@ export function normalizeRunasDmState(state: RunasDmState): RunasDmState {
   const normalizeMasteryTableId = (value: unknown) => typeof value === "string" && masteryTableIds.has(value) ? value : "default"
   return {
     ...state,
+    version: 2,
+    workspaceNotesHtml: typeof state.workspaceNotesHtml === "string" ? state.workspaceNotesHtml : "",
+    initiative: Array.isArray(state.initiative) ? state.initiative.flatMap((entry, index) => {
+      if (!entry || typeof entry !== "object") return []
+      const candidate = entry as InitiativeEntry
+      const name = typeof candidate.name === "string" ? candidate.name.trim().slice(0, 100) : ""
+      if (!name) return []
+      return [{ id: typeof candidate.id === "string" && candidate.id ? candidate.id : `initiative-${index + 1}`, actorId: typeof candidate.actorId === "string" ? candidate.actorId : null, name, value: typeof candidate.value === "number" && Number.isFinite(candidate.value) ? Math.trunc(candidate.value) : null }]
+    }) : [],
     entries: state.entries.map((entry) => ({
       ...entry,
       character: normalizeCharacter(entry.character),

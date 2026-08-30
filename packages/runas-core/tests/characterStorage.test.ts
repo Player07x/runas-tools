@@ -23,4 +23,11 @@ describe("characterStorage compartilhado", () => {
     expect(parsed.skills.length).toBeGreaterThan(0)
     expect(parsed.inventory).toEqual([])
   })
+
+  it("preserva peso zero e impede item Inato armazenado", () => {
+    const character = createEmptyCharacter()
+    character.inventory.push({ id: "innate", usage: "stored", name: "Garras", type: "innate", affinity: 0, bondPoints: 0, baseWeight: 0, quantity: 1, applyScaleWeight: false, damage: "2D cortante", rdf: 0, rdm: 0, prCurrent: null, prMaximum: null, enchantmentSpellId: "", bondId: "", bondAbilityId: "", skillId: "", description: "" })
+    const normalized = normalizeCharacter(character)
+    expect(normalized.inventory[0]).toMatchObject({ type: "innate", usage: "equipped", baseWeight: 0 })
+  })
 })

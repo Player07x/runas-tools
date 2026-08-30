@@ -40,6 +40,11 @@ export interface DamageApplicationSimulation {
   resultText: string
   notices: string[]
   specialTest: SpecialDamageTest | null
+  specialTests?: SpecialDamageTest[]
+}
+
+export interface DamageSequenceApplicationConfig extends Omit<DamageApplicationConfig, "damage"> {
+  damages: FixedDamage[]
 }
 
 function normalize(value: string): string {
@@ -90,6 +95,23 @@ export function parseFixedDamage(input: string): { value: FixedDamage | null; er
     }
   }
   return { value: { amount, damageTypeId: damageType.id, variant: toxinVariant }, error: null }
+}
+
+export function parseFixedDamages(input: string): { value: FixedDamage[] | null; error: string | null } {
+  const starts = [...input.matchAll(/(?:^|[,;]|\be\b)\s*(\d+)\s+/giu)]
+    .map((match) => (match.index ?? 0) + match[0].lastIndexOf(match[1]))
+  if (starts.length <= 1) {
+    const parsed = parseFixedDamage(input)
+    return { value: parsed.value ? [parsed.value] : null, error: parsed.error }
+  }
+  const damages: FixedDamage[] = []
+  for (let index = 0; index < starts.length; index += 1) {
+    const chunk = input.slice(starts[index], starts[index + 1] ?? input.length).replace(/\badicional\b\s*$/iu, "").trim()
+    const parsed = parseFixedDamage(chunk)
+    if (!parsed.value) return { value: null, error: parsed.error }
+    damages.push(parsed.value)
+  }
+  return { value: damages, error: null }
 }
 
 function parseMultiplier(value: string): number | null {
@@ -216,6 +238,64 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
   const resultText = formatAppliedChanges(changes)
   return {
     value: { changes, steps, resultText: resultText || "0 PV", notices: [], specialTest: null },
+    error: null,
+  }
+}
+
+/** Aplica danos sequencialmente, compartilhando RDF/RDM e o estado das camadas. */
+export function simulateDamageApplications(config: DamageSequenceApplicationConfig): { value: DamageApplicationSimulation | null; error: string | null } {
+  if (config.damages.length === 0) return { value: null, error: "Informe ao menos um dano." }
+  let remainingRdf = Math.max(0, config.rdf)
+  let remainingRdm = Math.max(0, config.rdm)
+  const layers = config.layers.map((layer) => ({ ...layer }))
+  const changes = new Map<DamageResourceKey, AppliedDamageChange>()
+  const steps: string[] = []
+  const notices: string[] = []
+  const specialTests: SpecialDamageTest[] = []
+
+  for (let index = 0; index < config.damages.length; index += 1) {
+    const damage = config.damages[index]
+    const damageType = getDamageType(damage.damageTypeId)
+    if (!damageType) return { value: null, error: "Tipo de dano inválido." }
+    const pool = damageType.category === "physical" ? remainingRdf : damageType.category === "magical" ? remainingRdm : 0
+    const mtMultiplier = config.mtEnabled ? getTargetMtDamageMultiplier(config.mtValue) : 1
+    const consumed = Math.min(pool, Math.max(0, damage.amount * mtMultiplier))
+    const simulation = simulateDamageApplication({
+      ...config,
+      damage,
+      rdf: damageType.category === "physical" ? consumed : 0,
+      rdm: damageType.category === "magical" ? consumed : 0,
+      layers,
+    })
+    if (!simulation.value) return simulation
+    if (damageType.category === "physical") remainingRdf -= consumed
+    if (damageType.category === "magical") remainingRdm -= consumed
+    steps.push(`Dano ${index + 1} — ${damage.amount} ${damageType.name}`)
+    steps.push(...simulation.value.steps)
+    notices.push(...simulation.value.notices)
+    if (simulation.value.specialTest) specialTests.push(simulation.value.specialTest)
+    for (const change of simulation.value.changes) {
+      const previous = changes.get(change.resource)
+      changes.set(change.resource, {
+        resource: change.resource,
+        amount: (previous?.amount ?? 0) + change.amount,
+        note: change.note ?? previous?.note,
+      })
+      const layer = layers.find((candidate) => candidate.resource === change.resource)
+      if (layer) layer.current = Math.max(0, layer.current + change.amount)
+    }
+  }
+
+  const aggregated = [...changes.values()].filter((change) => change.amount !== 0)
+  return {
+    value: {
+      changes: aggregated,
+      steps,
+      resultText: formatAppliedChanges(aggregated) || "0 PV",
+      notices,
+      specialTest: specialTests[0] ?? null,
+      specialTests,
+    },
     error: null,
   }
 }

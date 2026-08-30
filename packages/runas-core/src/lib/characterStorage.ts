@@ -4,7 +4,7 @@ import { CORE_SKILL_IDS, createCoreSkills } from "../data/skills"
 import { calculateLoadBase, deriveCharacterInfo, modifierToNumber } from "./characterCalculations"
 import { calculateAttributeTest, calculateSkillModifier, normalizeSkillName } from "./skillCalculations"
 import { sumAbilityModifiers } from "./abilityModifiers"
-import { calculateEquippedArmorDefense, calculateInventoryLoad } from "./inventoryCalculations"
+import { calculateEquippedArmorDefense, calculateInventoryLoad, normalizeInventoryUsage } from "./inventoryCalculations"
 import { createEmptyMasteryImprovements } from "./masteryImprovements"
 
 /** Ficha em branco usada como estado inicial. */
@@ -290,7 +290,7 @@ function normalizeNotes(partialNotes: CharacterNote[] | undefined): CharacterNot
 
 const inventoryUsages = new Set<InventoryUsage>(["equipped", "stored", "absent"])
 const inventoryItemTypes = new Set<InventoryItemType>([
-  "weapon", "armor", "shield", "artifact", "material", "consumable", "tool", "utility", "accessory", "currency", "other",
+  "innate", "weapon", "armor", "shield", "artifact", "material", "consumable", "tool", "utility", "accessory", "currency", "other",
 ])
 
 function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined): CharacterInventoryItem[] {
@@ -306,7 +306,7 @@ function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined):
     while (usedIds.has(id)) id = `${id}-${index + 1}`
     usedIds.add(id)
     const type = inventoryItemTypes.has(item.type as InventoryItemType) ? item.type as InventoryItemType : "other"
-    let usage = inventoryUsages.has(item.usage as InventoryUsage) ? item.usage as InventoryUsage : "stored"
+    let usage = normalizeInventoryUsage(type, inventoryUsages.has(item.usage as InventoryUsage) ? item.usage as InventoryUsage : "stored")
     if (type === "armor" && usage === "equipped") {
       if (equippedArmorFound) usage = "stored"
       equippedArmorFound = true

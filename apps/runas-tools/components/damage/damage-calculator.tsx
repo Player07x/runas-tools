@@ -14,7 +14,7 @@ const DamageApplicationPanel = lazy(() =>
 )
 
 export function DamageCalculator() {
-  const { config, result, update, setMtEnabled, applyParsed, roll, attributeValue, requestedDamage } = useDamageCalculator()
+  const { config, result, results, update, setMtEnabled, applyParsed, roll, attributeValue, requestedDamage } = useDamageCalculator()
   const { isReady } = useCharacter()
   const [applicationOpen, setApplicationOpen] = useState(false)
   const [applicationLoaded, setApplicationLoaded] = useState(false)
@@ -37,7 +37,7 @@ export function DamageCalculator() {
         </div>
 
         <div className="lg:sticky lg:top-24">
-          <DamageRollResult result={result} />
+          <DamageRollResult results={results} />
         </div>
       </div>
       <div className="mt-6">
@@ -49,7 +49,7 @@ export function DamageCalculator() {
         {applicationLoaded && (
           <div className={applicationOpen ? "mt-4" : "hidden"}>
             <Suspense fallback={<div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Carregando aplicação de dano…</div>}>
-              <DamageApplicationPanel rolledResult={result} />
+              <DamageApplicationPanel rolledResult={result} rolledResults={results} />
             </Suspense>
           </div>
         )}

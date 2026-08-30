@@ -21,6 +21,14 @@ export interface ParsedDamage {
   attributeKey: AttributeKey | null
 }
 
+/** Um componente de uma expressão que pode causar vários danos em ordem. */
+export interface ParsedDamagePart extends ParsedDamage {
+  /** Trecho original, útil para mensagens e edição na interface. */
+  source: string
+  /** O primeiro dano é o principal; os seguintes são adicionais. */
+  additional: boolean
+}
+
 /** Configuração completa usada pela calculadora de dano. */
 export interface DamageConfig {
   numDice: number
@@ -50,6 +58,16 @@ export interface DamageResult {
   breakdown: DamageBreakdownItem[]
   damageTypeName: string
   damageTypeId: string
+  /** Parcela de RDF/RDM efetivamente consumida por este dano. */
+  reductionApplied?: number
+}
+
+export interface DamageSequenceResult {
+  results: DamageResult[]
+  total: number
+  totalBeforeReduction: number
+  remainingRdf: number
+  remainingRdm: number
 }
 
 export type DamageResourceKey = "pv" | "pa" | "paExtra" | "pe" | "peTemporary"

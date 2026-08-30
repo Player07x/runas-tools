@@ -103,6 +103,7 @@ export interface CharacterNote {
 
 export type InventoryUsage = "equipped" | "stored" | "absent"
 export type InventoryItemType =
+  | "innate"
   | "weapon"
   | "armor"
   | "shield"
@@ -216,4 +217,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 18
+export const CHARACTER_VERSION = 19

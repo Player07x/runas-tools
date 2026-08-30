@@ -1,5 +1,5 @@
 import type { AttributeKey } from "../types/character"
-import type { ParsedDamage } from "../types/damage"
+import type { ParsedDamage, ParsedDamagePart } from "../types/damage"
 import { damageTypes } from "../data/damageTypes"
 import { damageAttributes } from "../data/attributes"
 
@@ -122,4 +122,32 @@ export function parseDamageExpression(input: string): ParsedDamage {
   }
 
   return result
+}
+
+/**
+ * Divide uma entrada em danos consecutivos. Vírgulas, a conjunção "e" e a
+ * palavra opcional "adicional" são aceitas apenas como separadores humanos;
+ * a ordem dos componentes é sempre preservada para o consumo de RDF/RDM.
+ */
+export function parseDamageExpressions(input: string): ParsedDamagePart[] {
+  const starts = [...input.matchAll(/(?:^|[\s,;])([+-]?\s*\d+\s*d(?:\s*[+-]\s*\d+)?|[+-]?\s*\d+)(?=\s|$)/giu)]
+    .map((match) => (match.index ?? 0) + match[0].indexOf(match[1]))
+
+  if (starts.length <= 1) {
+    const parsed = parseDamageExpression(input)
+    return parsed.hasDamageValue ? [{ ...parsed, source: input.trim(), additional: false }] : []
+  }
+
+  return starts.flatMap((start, index) => {
+    const end = starts[index + 1] ?? input.length
+    const source = input
+      .slice(start, end)
+      .replace(/(?:[,;]|\be\b)\s*$/iu, "")
+      .replace(/\badicional\b\s*$/iu, "")
+      .trim()
+    const parsed = parseDamageExpression(source)
+    return parsed.hasDamageValue
+      ? [{ ...parsed, source, additional: index > 0 }]
+      : []
+  })
 }

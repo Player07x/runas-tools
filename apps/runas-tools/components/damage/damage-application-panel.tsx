@@ -15,8 +15,8 @@ import { elementOptions, getCharacterElement } from "@runas/core/data/elements"
 import {
   getDamageResourceLabel,
   parseAppliedChanges,
-  parseFixedDamage,
-  simulateDamageApplication,
+  parseFixedDamages,
+  simulateDamageApplications,
 } from "@runas/core/lib/damageApplication"
 import { calculateCharacterStatSnapshot } from "@runas/core/lib/characterStatCalculations"
 import { calculateAttributeTest, calculateSkillModifier, determineSkillRollOutcome, findCharacterSkill } from "@runas/core/lib/skillCalculations"
@@ -27,6 +27,11 @@ import { ItemDamageApplicationPanel } from "./item-damage-application-panel"
 
 interface Props {
   rolledResult: DamageResult | null
+  rolledResults?: DamageResult[]
+}
+
+function formatRolledDamages(results: DamageResult[]): string {
+  return results.map((result) => `${Math.max(0, result.totalBeforeReduction)} ${result.damageTypeName}`).join(", ")
 }
 
 interface ElementState {
@@ -132,7 +137,7 @@ function ElementFields({
   )
 }
 
-export function DamageApplicationPanel({ rolledResult }: Props) {
+export function DamageApplicationPanel({ rolledResult, rolledResults = rolledResult ? [rolledResult] : [] }: Props) {
   const [activeTab, setActiveTab] = useState<"target" | "item">("target")
   return (
     <div>
@@ -140,12 +145,12 @@ export function DamageApplicationPanel({ rolledResult }: Props) {
         <button type="button" role="tab" aria-selected={activeTab === "target"} onClick={() => setActiveTab("target")} className={`min-h-11 rounded-xl px-3 text-sm font-bold transition ${activeTab === "target" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>Aplicar Dano em Alvo</button>
         <button type="button" role="tab" aria-selected={activeTab === "item"} onClick={() => setActiveTab("item")} className={`min-h-11 rounded-xl px-3 text-sm font-bold transition ${activeTab === "item" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>Aplicar Dano em Item</button>
       </div>
-      {activeTab === "target" ? <TargetDamageApplicationPanel rolledResult={rolledResult} /> : <ItemDamageApplicationPanel rolledResult={rolledResult} />}
+      {activeTab === "target" ? <TargetDamageApplicationPanel rolledResult={rolledResult} rolledResults={rolledResults} /> : <ItemDamageApplicationPanel rolledResult={rolledResult} />}
     </div>
   )
 }
 
-function TargetDamageApplicationPanel({ rolledResult }: Props) {
+function TargetDamageApplicationPanel({ rolledResult, rolledResults = rolledResult ? [rolledResult] : [] }: Props) {
   const { character, updateCharacter, isReady } = useCharacter()
   const snapshot = useMemo(
     () => calculateCharacterStatSnapshot(character.attributes, character.info, character.stats, character.skills, character.abilities),
@@ -225,9 +230,7 @@ function TargetDamageApplicationPanel({ rolledResult }: Props) {
     setLuckBonus(character.attributes.luck)
     setVitalityTest(calculateAttributeTest(character.attributes, "vitality"))
     setSanityTest(calculateSanityTest(character))
-    if (rolledResult) {
-      setDamageInput(`${Math.max(0, rolledResult.totalBeforeReduction)} ${rolledResult.damageTypeName}`)
-    }
+    if (rolledResults.length) setDamageInput(formatRolledDamages(rolledResults))
     setUsingOwnSheet(true)
     setApplyMessage(null)
   }
@@ -272,13 +275,13 @@ function TargetDamageApplicationPanel({ rolledResult }: Props) {
   }
 
   function useRolledDamage() {
-    if (!rolledResult) return
-    setDamageInput(`${Math.max(0, rolledResult.totalBeforeReduction)} ${rolledResult.damageTypeName}`)
+    if (!rolledResults.length) return
+    setDamageInput(formatRolledDamages(rolledResults))
     setSimulationError(null)
   }
 
   function simulate(specialTestSucceeded: boolean | null = null) {
-    const parsed = parseFixedDamage(damageInput)
+    const parsed = parseFixedDamages(damageInput)
     if (!parsed.value) {
       setSimulationError(parsed.error)
       setSimulationSteps([])
@@ -288,8 +291,8 @@ function TargetDamageApplicationPanel({ rolledResult }: Props) {
       setResultText("")
       return
     }
-    const simulation = simulateDamageApplication({
-      damage: parsed.value,
+    const simulation = simulateDamageApplications({
+      damages: parsed.value,
       mtEnabled,
       mtValue,
       rdf,
@@ -438,9 +441,9 @@ function TargetDamageApplicationPanel({ rolledResult }: Props) {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <TextField label="Nome do Alvo (opcional)" value={targetName} onChange={setTargetName} placeholder="Primeiro nome usado nos campos" />
               <div className="flex flex-col gap-1.5">
-                <TextField label="Dano Causado" value={damageInput} onChange={setDamageInput} placeholder="15 queimadura" />
+                <TextField label="Dano Causado" value={damageInput} onChange={setDamageInput} placeholder="15 cortante, 8 queimadura" />
                 <button type="button" disabled={!rolledResult} onClick={useRolledDamage} className="self-start text-xs font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-45">
-                  Usar o Dano Rolado{rolledResult ? ` (${rolledResult.totalBeforeReduction} ${rolledResult.damageTypeName})` : ""}
+                  Usar o Dano Rolado{rolledResults.length ? ` (${formatRolledDamages(rolledResults)})` : ""}
                 </button>
               </div>
             </div>

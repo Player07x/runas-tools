@@ -6,9 +6,9 @@ import type { AttributeKey } from "@runas/core/types/character"
 import type { DamageConfig, DamageResult, ParsedDamage } from "@runas/core/types/damage"
 import { damageTypes } from "@runas/core/data/damageTypes"
 import { useCharacter } from "@/components/character/character-provider"
-import { calculateDamage, convertDamageBonusesToDice, rollDice } from "@runas/core/lib/damageCalculator"
+import { calculateDamage, calculateDamageSequence, convertDamageBonusesToDice, rollDice } from "@runas/core/lib/damageCalculator"
 import { isAttributeKey } from "@/lib/attributeOptions"
-import { parseDamageExpression } from "@runas/core/lib/damageParser"
+import { parseDamageExpression, parseDamageExpressions } from "@runas/core/lib/damageParser"
 
 function defaultConfig(): DamageConfig {
   return {
@@ -43,6 +43,8 @@ export function useDamageCalculator() {
   const searchParams = useSearchParams()
   const [config, setConfig] = useState<DamageConfig>(defaultConfig)
   const [result, setResult] = useState<DamageResult | null>(null)
+  const [results, setResults] = useState<DamageResult[]>([])
+  const [quickExpression, setQuickExpression] = useState("")
   const handledRollToken = useRef<string | null>(null)
   const requestedDamage = searchParams.get("damage") ?? ""
   const requestedRollToken = searchParams.get("roll")
@@ -74,8 +76,9 @@ export function useDamageCalculator() {
   )
 
   /** Aplica um resultado de parser aos campos. */
-  const applyParsed = useCallback((parsed: ParsedDamage) => {
+  const applyParsed = useCallback((parsed: ParsedDamage, expression = "") => {
     setConfig((prev) => configWithParsed(prev, parsed))
+    setQuickExpression(expression)
   }, [])
 
   useEffect(() => {
@@ -89,19 +92,39 @@ export function useDamageCalculator() {
     const attributeValue = next.attributeKey === "none" ? 0 : character.attributes[next.attributeKey] ?? 0
     const conversion = convertDamageBonusesToDice(next.numDice, [attributeValue, next.otherModifier])
     setConfig(next)
-    setResult(calculateDamage({ config: next, diceRolls: rollDice(conversion.numDice), attributeValue }))
+    const rolled = calculateDamage({ config: next, diceRolls: rollDice(conversion.numDice), attributeValue })
+    setResult(rolled)
+    setResults([rolled])
   }, [character.attributes, character.stats.mt, config, requestedApplyMt, requestedDamage, requestedRollToken])
 
   const roll = useCallback(() => {
+    const parsedParts = parseDamageExpressions(quickExpression)
+    if (parsedParts.length > 1) {
+      const sequence = calculateDamageSequence(parsedParts.map((part) => {
+        const attributeValue = part.attributeKey ? character.attributes[part.attributeKey] ?? 0 : 0
+        const conversion = convertDamageBonusesToDice(part.numDice, [attributeValue, part.bonus])
+        return {
+          config: { ...config, numDice: part.numDice, damageTypeId: part.damageTypeId ?? config.damageTypeId, attributeKey: part.attributeKey ?? "none", otherModifier: part.bonus, rdf: 0, rdm: 0 },
+          diceRolls: rollDice(conversion.numDice),
+          attributeValue,
+        }
+      }), config.rdf, config.rdm)
+      setResults(sequence.results)
+      setResult(sequence.results[0] ?? null)
+      return
+    }
     const attributeValue = getAttributeValue(config.attributeKey)
     const conversion = convertDamageBonusesToDice(config.numDice, [attributeValue, config.otherModifier])
     const diceRolls = rollDice(conversion.numDice)
-    setResult(calculateDamage({ config, diceRolls, attributeValue }))
-  }, [config, getAttributeValue])
+    const rolled = calculateDamage({ config, diceRolls, attributeValue })
+    setResult(rolled)
+    setResults([rolled])
+  }, [character.attributes, config, getAttributeValue, quickExpression])
 
   return {
     config,
     result,
+    results,
     update,
     setMtEnabled,
     applyParsed,

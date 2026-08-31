@@ -40,7 +40,7 @@ export function CharacterPanelOverlay({ isOpen, close, activeTab, setActiveTab }
       <div
         onClick={close}
         className={cn(
-          "absolute inset-0 bg-[#151923]/65 transition-opacity duration-300 sm:backdrop-blur-[3px]",
+          "absolute inset-0 bg-[#151923]/78 transition-opacity duration-200",
           isOpen ? "opacity-100" : "opacity-0",
         )}
       />

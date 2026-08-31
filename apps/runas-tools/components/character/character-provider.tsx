@@ -38,6 +38,7 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [storedGalleryEntries, setStoredGalleryEntries] = useState<CharacterGalleryEntry[]>([])
+  const [isGalleryReady, setIsGalleryReady] = useState(false)
   const [activeGalleryId, setActiveGalleryId] = useState<string | null>(null)
   const savedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const galleryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -45,22 +46,33 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   // Hidrata a ficha do IndexedDB e migra automaticamente o formato legado.
   useEffect(() => {
     let active = true
-    void Promise.all([loadCharacterDatabase(), loadCharacterGalleryDatabase()]).then(([stored, gallery]) => {
+    let idleId: number | null = null
+    void loadCharacterDatabase().then((stored) => {
       if (!active) return
-      let entries = gallery.entries
-      let activeId = gallery.activeId
-      if (entries.length === 0 && stored) {
-        activeId = crypto.randomUUID()
-        entries = [{ id: activeId, character: stored, updatedAt: Date.now() }]
-      }
-      const activeEntry = entries.find((entry) => entry.id === activeId)
-      const loadedCharacter = stored ?? activeEntry?.character ?? createEmptyCharacter()
-      setCharacter(loadedCharacter)
-      setStoredGalleryEntries(entries.map((entry) => entry.id === activeId ? { ...entry, character: loadedCharacter } : entry))
-      setActiveGalleryId(activeId)
+      setCharacter(stored ?? createEmptyCharacter())
       setIsReady(true)
+
+      const hydrateGallery = () => void loadCharacterGalleryDatabase().then((gallery) => {
+        if (!active) return
+        let entries = gallery.entries
+        let activeId = gallery.activeId
+        if (entries.length === 0 && stored) {
+          activeId = crypto.randomUUID()
+          entries = [{ id: activeId, character: stored, updatedAt: Date.now() }]
+        }
+        setStoredGalleryEntries(entries.map((entry) => entry.id === activeId && stored ? { ...entry, character: stored } : entry))
+        setActiveGalleryId(activeId)
+        setIsGalleryReady(true)
+      }).catch(() => setIsGalleryReady(true))
+
+      idleId = window.requestIdleCallback(hydrateGallery, { timeout: 1200 })
     })
-    return () => { active = false }
+    return () => {
+      active = false
+      if (idleId !== null) {
+        window.cancelIdleCallback(idleId)
+      }
+    }
   }, [])
 
   // Autosave com debounce: agrupa edições rápidas em uma única transação.
@@ -85,14 +97,14 @@ export function CharacterProvider({ children }: { children: React.ReactNode }) {
   const galleryEntries = storedGalleryEntries
 
   useEffect(() => {
-    if (!isReady) return
+    if (!isReady || !isGalleryReady) return
     if (galleryTimeout.current) clearTimeout(galleryTimeout.current)
     const timeout = setTimeout(() => {
       void saveCharacterGalleryDatabase({ activeId: activeGalleryId, entries: galleryEntries })
     }, 350)
     galleryTimeout.current = timeout
     return () => clearTimeout(timeout)
-  }, [activeGalleryId, galleryEntries, isReady])
+  }, [activeGalleryId, galleryEntries, isGalleryReady, isReady])
 
   const updateCharacter = useCallback((updater: (prev: Character) => Character) => {
     setCharacter((prev) => synchronizeCharacterDerivedValues(prev, updater(prev)))

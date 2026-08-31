@@ -47,9 +47,9 @@ export const RunicCardPreview = forwardRef<HTMLDivElement, RunicCardPreviewProps
       >
         {card.artDataUrl && <div className="runic-card__full-art" style={{ backgroundImage: `url(${card.artDataUrl})` }} />}
         <header className="runic-card__header">
-          <div className="runic-card__element">{element?.name ?? "Sem elemento"}</div>
+          {card.kind !== "spell" && <div className="runic-card__element">{element?.name ?? "Sem elemento"}</div>}
           <div className="runic-card__title-row">
-            <h2>{card.name || "Carta sem nome"}</h2>
+            <h2 className={cn(card.name.length > 24 && "runic-card__title--dense", card.name.length > 17 && card.name.length <= 24 && "runic-card__title--medium")}>{card.name || "Carta sem nome"}</h2>
             <div className="runic-card__header-meta">
               {card.kind !== "spell" && <span>{card.type || kindLabel}</span>}
               {card.kind !== "adventurer" && <strong>{rarity.label} · {rarity.copies}</strong>}
@@ -112,7 +112,7 @@ export const RunicCardPreview = forwardRef<HTMLDivElement, RunicCardPreviewProps
         </div>
 
         <footer className="runic-card__footer">
-          <span>ORDEM × CAOS</span>
+          <span>{card.edition || "Coleção básica"}</span>
           <span>RÚNICA</span>
         </footer>
       </article>

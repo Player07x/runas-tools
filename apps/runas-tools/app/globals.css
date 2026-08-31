@@ -246,7 +246,7 @@
     display: grid;
     aspect-ratio: 63 / 88;
     width: 100%;
-    grid-template-rows: 8.8% 52.4% 8.8% 28% 2%;
+    grid-template-rows: 11.875% 47.325% 9.2% 27% 4.6%;
     overflow: hidden;
     border: 0;
     border-radius: 4.6cqw;
@@ -257,7 +257,16 @@
   }
 
   .runic-card[data-kind='equipment'] {
-    grid-template-rows: 8.8% 55.2% 34% 2%;
+    grid-template-rows: 11.875% 50.025% 33.5% 4.6%;
+  }
+
+  .runic-card[data-kind='spell'] {
+    grid-template-rows: 6.875% 56.925% 4.6% 27% 4.6%;
+  }
+
+  .runic-card[data-kind='spell'] .runic-card__header {
+    margin-top: 1.2cqw;
+    padding-block: 0.35cqw;
   }
 
   .runic-card__full-art {
@@ -285,7 +294,6 @@
     border: 0.55cqw solid #111318;
     border-radius: 2.2cqw 2.2cqw 1.1cqw 1.1cqw;
     background: linear-gradient(100deg, rgb(20 21 25 / 0.84), color-mix(in srgb, var(--runic-element) 34%, rgb(18 19 23 / 0.84)));
-    backdrop-filter: blur(0.8cqw);
     box-shadow: 0 0 0 0.34cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74), 0 0.65cqw 1.2cqw rgb(0 0 0 / 0.36);
     color: #fffdf4;
   }
@@ -294,7 +302,7 @@
     overflow: hidden;
     color: color-mix(in srgb, var(--runic-element) 74%, white);
     font-family: 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
-    font-size: 1.55cqw;
+    font-size: 2.5625cqw;
     font-weight: 400;
     letter-spacing: 0.16em;
     line-height: 1;
@@ -315,7 +323,7 @@
     min-width: 0;
     overflow: hidden;
     font-family: 'Norse Bold', 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
-    font-size: 4.8cqw;
+    font-size: 6cqw;
     font-weight: 700;
     letter-spacing: 0.035em;
     line-height: 1;
@@ -324,15 +332,23 @@
     white-space: nowrap;
   }
 
+  .runic-card__title-row .runic-card__title--medium {
+    font-size: 5.3125cqw;
+  }
+
+  .runic-card__title-row .runic-card__title--dense {
+    font-size: 4.5625cqw;
+  }
+
   .runic-card__header-meta {
     display: flex;
-    max-width: 33%;
+    max-width: 39%;
     flex: 0 0 auto;
     flex-direction: column;
     align-items: end;
     font-family: 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
     gap: 0.3cqw;
-    font-size: 2.65cqw;
+    font-size: 4.1875cqw;
     font-weight: 400;
     letter-spacing: 0.045em;
     line-height: 1;
@@ -343,7 +359,8 @@
   .runic-card__header-meta strong {
     color: color-mix(in srgb, var(--runic-element) 72%, white);
     font-family: 'Norse', 'Bahnschrift Condensed', sans-serif;
-    font-size: 1.9cqw;
+    font-size: 3.4375cqw;
+    line-height: 1;
     font-weight: 400;
   }
 
@@ -408,8 +425,11 @@
     border: 0.55cqw solid #111318;
     border-radius: 1.5cqw;
     background: linear-gradient(90deg, rgb(184 55 61 / 0.82) 0 43%, rgb(238 232 215 / 0.82) 48% 52%, color-mix(in srgb, var(--runic-element) 82%, rgb(210 232 247 / 0.86)) 57% 100%);
-    backdrop-filter: blur(0.6cqw);
     box-shadow: 0 0 0 0.34cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74), 0 0.7cqw 1.3cqw rgb(0 0 0 / 0.3);
+  }
+
+  .runic-card__stat-band--spell {
+    background: color-mix(in srgb, var(--runic-element) 82%, rgb(224 231 235 / 0.9));
   }
 
   .runic-card__stat {
@@ -504,14 +524,25 @@
   }
 
   .runic-card__spell-meta {
+    grid-column: 1;
     overflow: hidden;
     padding: 0 10cqw 0 2.5cqw;
+    font-family: 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
     text-overflow: ellipsis;
     text-transform: uppercase;
     white-space: nowrap;
   }
 
+  .runic-card__spell-meta span {
+    font-size: 3.975cqw;
+    font-family: 'Norse Bold', 'Norse', 'Bahnschrift Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+
   .runic-card__spell-meta--right {
+    grid-column: 3;
     padding: 0 2.5cqw 0 10cqw;
     text-align: right;
   }
@@ -522,8 +553,8 @@
     top: 2.2cqw;
     right: 3.2cqw;
     display: grid;
-    width: 10cqw;
-    height: 12.2cqw;
+    width: 20cqw;
+    height: 24.4cqw;
     grid-template-rows: auto auto;
     place-content: center;
     place-items: center;
@@ -531,33 +562,35 @@
     background: linear-gradient(180deg, rgb(20 21 25 / 0.9), color-mix(in srgb, var(--runic-element) 38%, rgb(18 19 23 / 0.9)));
     color: #fffdf4;
     clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
-    backdrop-filter: blur(0.45cqw);
     filter: drop-shadow(0 0 0.28cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74)) drop-shadow(0 0.75cqw 0.55cqw rgb(0 0 0 / 0.38));
   }
 
   .runic-card__damage-badge::after {
     position: absolute;
-    inset: 0.65cqw 0.55cqw 1.45cqw;
-    border: 0.22cqw solid color-mix(in srgb, var(--runic-element) 76%, white);
+    inset: 1.3cqw 1.1cqw 2.9cqw;
+    border: 0.44cqw solid color-mix(in srgb, var(--runic-element) 76%, white);
     clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
     content: '';
   }
 
   .runic-card__damage-badge strong {
     font-family: 'Norse Bold', 'Norse', sans-serif;
-    font-size: 4.3cqw;
+    font-size: 10.7cqw;
     line-height: 1;
   }
 
   .runic-card__damage-badge span {
-    width: 7cqw;
-    margin-top: 0.35cqw;
-    padding-top: 0.35cqw;
-    border-top: 0.28cqw solid color-mix(in srgb, var(--runic-element) 72%, white);
+    width: 14cqw;
+    margin-top: 0.7cqw;
+    padding-top: 0.7cqw;
+    border-top: 0.56cqw solid color-mix(in srgb, var(--runic-element) 72%, white);
     font-family: 'Norse', 'Bahnschrift Condensed', sans-serif;
-    font-size: 1.85cqw;
-    font-weight: 900;
+    display: block;
+    font-size: 5.1cqw;
+    font-weight: 400;
     letter-spacing: 0.06em;
+    line-height: 1;
+    text-align: center;
   }
 
   .runic-card__body {
@@ -569,7 +602,6 @@
     border: 0.55cqw solid #111318;
     border-radius: 1.4cqw 1.4cqw 2.4cqw 2.4cqw;
     background: color-mix(in srgb, var(--runic-element) 14%, rgb(242 240 232 / 0.78));
-    backdrop-filter: blur(0.7cqw);
     box-shadow: 0 0 0 0.34cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74), 0 0.75cqw 1.4cqw rgb(0 0 0 / 0.34);
   }
 
@@ -660,12 +692,12 @@
     justify-content: space-between;
     margin: 0 2.8cqw 1.1cqw;
     padding: 0 2.2cqw;
-    border: 0.28cqw solid #111318;
+    border: 0.56cqw solid #111318;
     border-radius: 0 0 1.6cqw 1.6cqw;
     background: linear-gradient(90deg, rgb(15 16 20 / 0.86), color-mix(in srgb, var(--runic-element) 32%, rgb(16 17 21 / 0.86)));
     color: color-mix(in srgb, var(--runic-element) 58%, white);
     font-family: 'Norse', 'Bahnschrift Condensed', sans-serif;
-    font-size: 1.15cqw;
+    font-size: 3.1cqw;
     font-weight: 400;
     letter-spacing: 0.16em;
     box-shadow: 0 0 0 0.2cqw color-mix(in srgb, var(--runic-element) 78%, #d8be74);

@@ -20,6 +20,8 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
   const [zoom, setZoom] = useState(1)
   const [positionX, setPositionX] = useState(0)
   const [positionY, setPositionY] = useState(0)
+  const [stretchX, setStretchX] = useState(1)
+  const [stretchY, setStretchY] = useState(1)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -33,8 +35,8 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
 
       const baseScale = Math.max(ART_WIDTH / image.naturalWidth, ART_HEIGHT / image.naturalHeight)
       const scale = baseScale * zoom
-      const width = image.naturalWidth * scale
-      const height = image.naturalHeight * scale
+      const width = image.naturalWidth * scale * stretchX
+      const height = image.naturalHeight * scale * stretchY
       const overflowX = Math.max(0, width - ART_WIDTH)
       const overflowY = Math.max(0, height - ART_HEIGHT)
       const x = (ART_WIDTH - width) / 2 + (positionX / 100) * (overflowX / 2)
@@ -46,7 +48,7 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
     }
     image.onerror = () => setError("Não foi possível ler esta imagem.")
     image.src = source
-  }, [positionX, positionY, source, zoom])
+  }, [positionX, positionY, source, stretchX, stretchY, zoom])
 
   function chooseImage(file: File | undefined) {
     if (!file) return
@@ -64,6 +66,8 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
       setZoom(1)
       setPositionX(0)
       setPositionY(0)
+      setStretchX(1)
+      setStretchY(1)
       setError("")
     }
     reader.onerror = () => setError("Não foi possível abrir a imagem.")
@@ -97,6 +101,8 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
           </div>
           <div className="space-y-3">
             <RangeControl label="Zoom" value={zoom} min={1} max={2.5} step={0.01} onChange={setZoom} />
+            <RangeControl label="Esticar largura" value={stretchX} min={0.65} max={2.25} step={0.01} onChange={setStretchX} />
+            <RangeControl label="Esticar altura" value={stretchY} min={0.65} max={2.25} step={0.01} onChange={setStretchY} />
             <RangeControl label="Horizontal" value={positionX} min={-100} max={100} step={1} onChange={setPositionX} />
             <RangeControl label="Vertical" value={positionY} min={-100} max={100} step={1} onChange={setPositionY} />
             <Button type="button" className="w-full" onClick={applyCrop}>

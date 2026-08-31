@@ -4,10 +4,11 @@
       "staticDistDir": "./.lighthouse-dist",
       "numberOfRuns": 3,
       "url": [
-        "http://localhost/runas-tools/",
-        "http://localhost/runas-tools/calculadora-dano/",
-        "http://localhost/runas-tools/calculadora-testes/",
-        "http://localhost/runas-tools/galeria-personagens/"
+        "http://localhost/",
+        "http://localhost/calculadora-dano/",
+        "http://localhost/calculadora-testes/",
+        "http://localhost/galeria-personagens/",
+        "http://localhost/cartas-runicas/"
       ]
     },
     "assert": {

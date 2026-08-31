@@ -1,7 +1,9 @@
 import { characterElements } from "@runas/core/data/elements"
 
 export const RUNIC_CARD_SCHEMA = "runas-tools/runic-card" as const
-export const RUNIC_CARD_VERSION = 1 as const
+export const RUNIC_CARD_VERSION = 2 as const
+export const RUNIC_CARD_GALLERY_SCHEMA = "runas-tools/runic-card-gallery" as const
+export const RUNIC_CARD_GALLERY_LIMIT = 200
 
 export const runicCardKinds = [
   { value: "adventurer", label: "Aventureiro" },
@@ -40,6 +42,14 @@ export interface RunicCard {
   rulesHtml: string
   flavorText: string
   artDataUrl: string
+  edition: string
+}
+
+export interface RunicCardGalleryFile {
+  schema: typeof RUNIC_CARD_GALLERY_SCHEMA
+  version: typeof RUNIC_CARD_VERSION
+  exportedAt: string
+  cards: RunicCard[]
 }
 
 export interface RunicCardFile {
@@ -68,6 +78,7 @@ export function createEmptyRunicCard(kind: RunicCardKind = "troop"): RunicCard {
     rulesHtml: DEFAULT_RULES,
     flavorText: "Uma frase curta que revela algo sobre a história desta carta.",
     artDataUrl: "",
+    edition: "Primeira Edição",
   }
 }
 
@@ -122,7 +133,21 @@ export function normalizeRunicCard(value: unknown): RunicCard {
     rulesHtml: safeText(source.rulesHtml, fallback.rulesHtml, 6000),
     flavorText: safeText(source.flavorText, fallback.flavorText, 500),
     artDataUrl,
+    edition: safeText(source.edition, fallback.edition, 80),
   }
+}
+
+export function createRunicCardGalleryFile(cards: RunicCard[]): RunicCardGalleryFile {
+  return { schema: RUNIC_CARD_GALLERY_SCHEMA, version: RUNIC_CARD_VERSION, exportedAt: new Date().toISOString(), cards }
+}
+
+export function normalizeRunicCardCollection(value: unknown): RunicCard[] {
+  if (value && typeof value === "object" && "cards" in value && Array.isArray((value as { cards?: unknown }).cards)) {
+    return (value as { cards: unknown[] }).cards.slice(0, RUNIC_CARD_GALLERY_LIMIT).flatMap((card) => {
+      try { return [normalizeRunicCard(card)] } catch { return [] }
+    })
+  }
+  return [normalizeRunicCard(value)]
 }
 
 export function createRunicCardFile(card: RunicCard): RunicCardFile {

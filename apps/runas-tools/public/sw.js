@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "runas-tools-"
-const CACHE_NAME = `${CACHE_PREFIX}runtime-v5`
+const CACHE_NAME = `${CACHE_PREFIX}runtime-v6`
 const MAX_CACHE_ENTRIES = 100
 const BASE_URL = new URL("./", self.location.href)
 const OFFLINE_URL = new URL("./", BASE_URL).href
@@ -14,6 +14,7 @@ const APP_SHELL = [
   "./icon-512.png",
   "./Norse.otf",
   "./Norsebold.otf",
+  "./runic-card-back.webp",
 ].map((path) => new URL(path, BASE_URL).href)
 
 async function trimCache(cache) {
@@ -52,7 +53,12 @@ self.addEventListener("fetch", (event) => {
     return
   }
 
-  if (url.pathname.includes("/_next/static/") || ["script", "style", "image", "font"].includes(request.destination)) {
+  if (url.pathname.includes("/_next/static/") || ["script", "style"].includes(request.destination)) {
+    event.respondWith(fetch(request).then((response) => cacheResponse(request, response)).catch(() => caches.match(request)))
+    return
+  }
+
+  if (["image", "font"].includes(request.destination)) {
     event.respondWith(caches.match(request).then((cached) => cached ?? fetch(request).then((response) => cacheResponse(request, response))))
     return
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Braces, CheckSquare, Download, Eye, FileArchive, Plus, Square, Trash2, Upload, UserCheck, X } from "lucide-react"
+import { Braces, CheckSquare, Download, Eye, FileArchive, Plus, Search, Square, Trash2, Upload, UserCheck, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCharacter } from "@/components/character/character-provider"
 import { useCharacterPanel } from "@/components/character/character-panel"
@@ -39,13 +39,20 @@ export function CharacterGallery() {
   const [zipIgnoredFiles, setZipIgnoredFiles] = useState(0)
   const [readingZip, setReadingZip] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  const [searchQuery, setSearchQuery] = useState("")
   const previewEntry = useMemo(() => galleryEntries.find((entry) => entry.id === previewId) ?? null, [galleryEntries, previewId])
+  const filteredEntries = useMemo(() => {
+    const query = searchQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
+    if (!query) return galleryEntries
+    return galleryEntries.filter((entry) => entry.character.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").includes(query))
+  }, [galleryEntries, searchQuery])
   const isFull = galleryEntries.length >= GALLERY_MAX_CHARACTERS
-  const pageCount = Math.max(1, Math.min(GALLERY_MAX_PAGES, Math.ceil(galleryEntries.length / GALLERY_PAGE_SIZE)))
-  const visibleEntries = galleryEntries.slice((currentPage - 1) * GALLERY_PAGE_SIZE, currentPage * GALLERY_PAGE_SIZE)
+  const pageCount = Math.max(1, Math.min(GALLERY_MAX_PAGES, Math.ceil(filteredEntries.length / GALLERY_PAGE_SIZE)))
+  const visibleEntries = filteredEntries.slice((currentPage - 1) * GALLERY_PAGE_SIZE, currentPage * GALLERY_PAGE_SIZE)
   const currentIsSaved = Boolean(activeGalleryId && galleryEntries.some((entry) => entry.id === activeGalleryId))
 
   useEffect(() => { if (currentPage > pageCount) setCurrentPage(pageCount) }, [currentPage, pageCount])
+  useEffect(() => { setCurrentPage(1) }, [searchQuery])
 
   function createCharacter() {
     if (!createGalleryCharacter()) {
@@ -145,20 +152,24 @@ export function CharacterGallery() {
           <Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={isFull}><Upload /> Importar ficha</Button>
           <Button type="button" variant="outline" onClick={() => zipInputRef.current?.click()} disabled={isFull || readingZip}><FileArchive /> {readingZip ? "Lendo ZIP…" : "Importar ZIP (JSON)"}</Button>
           <Button type="button" onClick={createCharacter} disabled={isFull}><Plus /> Criar nova ficha</Button>
-          <input ref={inputRef} type="file" accept="application/json,.json" onChange={importCharacter} className="hidden" />
-          <input ref={zipInputRef} type="file" accept="application/zip,.zip" onChange={inspectZip} className="hidden" />
+          <input ref={inputRef} type="file" accept="application/json,.json" aria-label="Selecionar ficha JSON" onChange={importCharacter} className="hidden" />
+          <input ref={zipInputRef} type="file" accept="application/zip,.zip" aria-label="Selecionar galeria ZIP" onChange={inspectZip} className="hidden" />
         </div>
       </div>
       {message && <p role="status" className="mt-3 rounded-xl border border-border bg-muted/40 p-3 text-sm text-foreground">{message}</p>}
       {galleryEntries.length > 0 && <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => exportGalleryZip(galleryEntries, "json")}><FileArchive /> Exportar ZIP (JSON)</Button><Button type="button" variant="outline" onClick={() => exportGalleryZip(galleryEntries, "md")}><Download /> Exportar ZIP (MD)</Button></div>}
     </section>
 
+    <label className="relative mt-5 block"><span className="sr-only">Buscar personagem pelo nome</span><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Buscar personagem pelo nome" className="h-12 w-full rounded-2xl border border-input bg-card pl-11 pr-4 text-sm shadow-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/25" /></label>
+    {searchQuery && <p className="mt-2 text-xs font-medium text-muted-foreground">{filteredEntries.length} {filteredEntries.length === 1 ? "personagem encontrado" : "personagens encontrados"}</p>}
+
     <div className="mt-5 grid min-w-0 max-w-full gap-4 lg:grid-cols-2">
       {galleryEntries.length === 0 && <div className="rounded-[24px] border border-dashed border-border bg-card/70 p-10 text-center lg:col-span-2"><h2 className="font-bold text-foreground">Sua galeria está vazia</h2><p className="mt-2 text-sm text-muted-foreground">Salve a ficha atual, importe um arquivo JSON ou crie um novo personagem.</p></div>}
+      {galleryEntries.length > 0 && filteredEntries.length === 0 && <div className="rounded-[24px] border border-dashed border-border bg-card/70 p-10 text-center lg:col-span-2"><h2 className="font-bold text-foreground">Nenhum personagem encontrado</h2><p className="mt-2 text-sm text-muted-foreground">Tente outro nome ou limpe a busca.</p></div>}
       {visibleEntries.map((entry) => <CharacterCard key={entry.id} entry={entry} active={entry.id === activeGalleryId} onPreview={() => setPreviewId(entry.id)} onUse={() => { activateGalleryCharacter(entry.id); setMessage(`“${entry.character.name || "Personagem sem nome"}” agora é a ficha ativa.`) }} onExport={() => exportCharacterJSON(entry.character)} onDelete={() => removeEntry(entry)} />)}
     </div>
 
-    {galleryEntries.length > GALLERY_PAGE_SIZE && <nav aria-label="Páginas da galeria" className="mt-5 flex flex-wrap items-center justify-center gap-2">{Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => <Button key={page} type="button" size="sm" variant={page === currentPage ? "default" : "outline"} aria-current={page === currentPage ? "page" : undefined} onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{page}</Button>)}</nav>}
+    {filteredEntries.length > GALLERY_PAGE_SIZE && <nav aria-label="Páginas da galeria" className="mt-5 flex flex-wrap items-center justify-center gap-2">{Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => <Button key={page} type="button" size="sm" variant={page === currentPage ? "default" : "outline"} aria-current={page === currentPage ? "page" : undefined} onClick={() => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{page}</Button>)}</nav>}
 
     {previewEntry && typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setPreviewId(null) }}><div role="dialog" aria-modal="true" aria-labelledby="gallery-preview-title" className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden rounded-[26px] border border-border bg-card shadow-2xl"><div className="flex items-start justify-between gap-3 border-b border-border p-4 sm:p-6"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ficha em modo leitura</p><h2 id="gallery-preview-title" className="mt-1 text-xl font-bold text-foreground">{previewEntry.character.name || "Personagem sem nome"}</h2></div><button type="button" onClick={() => setPreviewId(null)} aria-label="Fechar visualização da ficha" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div><div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"><CharacterReadonlySheet character={previewEntry.character} /></div><div className="flex flex-col gap-2 border-t border-border p-4 sm:flex-row sm:items-center sm:justify-end">{previewEntry.id === activeGalleryId ? <span className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-bold text-primary">Ativa</span> : <Button type="button" onClick={() => { activateGalleryCharacter(previewEntry.id); setMessage(`“${previewEntry.character.name || "Personagem sem nome"}” agora é a ficha ativa.`) }}><UserCheck /> Usar Ficha</Button>}</div></div></div>, document.body)}
 

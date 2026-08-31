@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { characterElements } from "@runas/core/data/elements"
-import { Download, FileJson, ImageDown, Images, RotateCcw, Save, Trash2, Upload } from "lucide-react"
+import { Download, FileJson, ImageDown, Images, RotateCcw, Save, Search, Trash2, Upload } from "lucide-react"
 import { ImageCropper } from "@/components/runic-cards/image-cropper"
 import { RunicCardPreview } from "@/components/runic-cards/runic-card-preview"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils"
 const DRAFT_KEY = "runas-tools:runic-card-draft:v1"
 const GALLERY_PAGE_SIZE = 20
 
-export function RunicCardEditor() {
+export function RunicCardEditor({ view = "create", onOpenCreate }: { view?: "create" | "gallery" | "rules"; onOpenCreate?: () => void }) {
   const [card, setCard] = useState<RunicCard>(() => createEmptyRunicCard())
   const [ready, setReady] = useState(false)
   const [message, setMessage] = useState("")
@@ -25,9 +25,26 @@ export function RunicCardEditor() {
   const [gallery, setGallery] = useState<RunicCard[]>([])
   const [galleryReady, setGalleryReady] = useState(false)
   const [galleryPage, setGalleryPage] = useState(1)
+  const [gallerySearch, setGallerySearch] = useState("")
+  const [kindFilter, setKindFilter] = useState<RunicCardKind | "all">("all")
+  const [elementFilter, setElementFilter] = useState("all")
+  const [rarityFilter, setRarityFilter] = useState<RunicCard["rarity"] | "all">("all")
+  const [editionFilter, setEditionFilter] = useState("all")
   const previewRef = useRef<HTMLDivElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
   const galleryImportRef = useRef<HTMLInputElement>(null)
+  const editionOptions = useMemo(() => [...new Set(gallery.map((entry) => entry.edition.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR")), [gallery])
+  const filteredGallery = useMemo(() => {
+    const query = gallerySearch.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
+    return gallery.filter((entry) => {
+      const name = entry.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR")
+      return (!query || name.includes(query))
+        && (kindFilter === "all" || entry.kind === kindFilter)
+        && (elementFilter === "all" || entry.elementId === elementFilter)
+        && (rarityFilter === "all" || entry.rarity === rarityFilter)
+        && (editionFilter === "all" || entry.edition === editionFilter)
+    })
+  }, [editionFilter, elementFilter, gallery, gallerySearch, kindFilter, rarityFilter])
 
   useEffect(() => {
     try {
@@ -53,9 +70,11 @@ export function RunicCardEditor() {
     return () => window.clearTimeout(timeout)
   }, [gallery, galleryReady])
 
+  useEffect(() => { setGalleryPage(1) }, [editionFilter, elementFilter, gallerySearch, kindFilter, rarityFilter])
+
   useEffect(() => {
-    setGalleryPage((page) => Math.min(page, Math.max(1, Math.ceil(gallery.length / GALLERY_PAGE_SIZE))))
-  }, [gallery.length])
+    setGalleryPage((page) => Math.min(page, Math.max(1, Math.ceil(filteredGallery.length / GALLERY_PAGE_SIZE))))
+  }, [filteredGallery.length])
 
   useEffect(() => {
     if (!ready) return
@@ -173,11 +192,12 @@ export function RunicCardEditor() {
 
   const isCombatCard = card.kind === "adventurer" || card.kind === "troop"
   const hasCost = card.kind === "troop" || card.kind === "spell"
-  const galleryPageCount = Math.max(1, Math.ceil(gallery.length / GALLERY_PAGE_SIZE))
-  const visibleGallery = gallery.slice((galleryPage - 1) * GALLERY_PAGE_SIZE, galleryPage * GALLERY_PAGE_SIZE)
+  const galleryPageCount = Math.max(1, Math.ceil(filteredGallery.length / GALLERY_PAGE_SIZE))
+  const visibleGallery = filteredGallery.slice((galleryPage - 1) * GALLERY_PAGE_SIZE, galleryPage * GALLERY_PAGE_SIZE)
 
   return (
     <div className="space-y-6">
+      {view === "create" && <>
       <section className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_36px_rgba(30,36,55,0.07)] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/80 pb-5">
           <div>
@@ -257,8 +277,9 @@ export function RunicCardEditor() {
           </div>
         </aside>
       </div>
+      </>}
 
-      <section className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_36px_rgba(30,36,55,0.07)] sm:p-6" aria-labelledby="runic-gallery-title">
+      {view === "gallery" && <section className="rounded-3xl border border-border bg-card p-4 shadow-[0_12px_36px_rgba(30,36,55,0.07)] sm:p-6" aria-labelledby="runic-gallery-title">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 id="runic-gallery-title" className="flex items-center gap-2 text-lg font-bold"><Images className="size-5" />Galeria de cartas</h2><p className="mt-1 text-sm text-muted-foreground">{gallery.length} de {RUNIC_CARD_GALLERY_LIMIT} cartas salvas neste navegador.</p></div>
           <div className="flex flex-wrap gap-2">
@@ -267,17 +288,26 @@ export function RunicCardEditor() {
             <Button type="button" variant="outline" disabled={!gallery.length} onClick={() => void exportGallery()}><Download />Exportar todas</Button>
           </div>
         </div>
-        {gallery.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid gap-3 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="relative block sm:col-span-2 lg:col-span-1"><span className="sr-only">Buscar carta pelo nome</span><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input type="search" value={gallerySearch} onChange={(event) => setGallerySearch(event.target.value)} placeholder="Buscar pelo nome" className="h-11 w-full rounded-xl border border-input bg-background pl-9 pr-3 text-sm outline-none focus:border-ring focus:ring-3 focus:ring-ring/25" /></label>
+          <label><span className="sr-only">Filtrar por categoria</span><select value={kindFilter} onChange={(event) => setKindFilter(event.target.value as RunicCardKind | "all")} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"><option value="all">Todas as categorias</option>{runicCardKinds.map((kind) => <option key={kind.value} value={kind.value}>{kind.label}</option>)}</select></label>
+          <label><span className="sr-only">Filtrar por elemento</span><select value={elementFilter} onChange={(event) => setElementFilter(event.target.value)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"><option value="all">Todos os elementos</option>{characterElements.map((element) => <option key={element.id} value={element.id}>{element.name}</option>)}</select></label>
+          <label><span className="sr-only">Filtrar por raridade</span><select value={rarityFilter} onChange={(event) => setRarityFilter(event.target.value as RunicCard["rarity"] | "all")} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"><option value="all">Todas as raridades</option>{runicCardRarities.map((rarity) => <option key={rarity.value} value={rarity.value}>{rarity.label}</option>)}</select></label>
+          <label><span className="sr-only">Filtrar por edição</span><select value={editionFilter} onChange={(event) => setEditionFilter(event.target.value)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"><option value="all">Todas as edições</option>{editionOptions.map((edition) => <option key={edition} value={edition}>{edition}</option>)}</select></label>
+        </div>
+        <p className="mt-3 text-xs font-medium text-muted-foreground">{filteredGallery.length} {filteredGallery.length === 1 ? "carta encontrada" : "cartas encontradas"}</p>
+        {filteredGallery.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {visibleGallery.map((entry) => <article key={entry.id} className="overflow-hidden rounded-2xl border border-border bg-background">
-            <button type="button" className="block w-full text-left" onClick={() => { setCard(entry); setMessage(`Editando “${entry.name}”.`); window.scrollTo({ top: 0, behavior: "smooth" }) }}>
+            <button type="button" className="block w-full text-left" onClick={() => { setCard(entry); setMessage(`Editando “${entry.name}”.`); onOpenCreate?.(); window.scrollTo({ top: 0, behavior: "smooth" }) }}>
               <div className="aspect-[63/32] bg-muted bg-cover bg-center" style={entry.artDataUrl ? { backgroundImage: `linear-gradient(0deg, rgb(0 0 0 / .48), transparent), url(${entry.artDataUrl})` } : undefined} />
               <div className="p-3"><strong className="block truncate text-sm">{entry.name || "Carta sem nome"}</strong><span className="text-xs text-muted-foreground">{entry.edition || "Sem edição"}</span></div>
             </button>
             <button type="button" className="mx-3 mb-3 inline-flex items-center gap-1 text-xs font-semibold text-destructive" onClick={() => setGallery((current) => current.filter((candidate) => candidate.id !== entry.id))}><Trash2 className="size-3.5" />Excluir</button>
           </article>)}
-        </div> : <p className="mt-5 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">Salve a primeira carta para iniciar sua coleção.</p>}
+        </div> : <p className="mt-5 rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">{gallery.length ? "Nenhuma carta corresponde aos filtros escolhidos." : "Salve a primeira carta para iniciar sua coleção."}</p>}
         {galleryPageCount > 1 && <nav aria-label="Páginas da galeria de cartas" className="mt-5 flex flex-wrap justify-center gap-2">{Array.from({ length: galleryPageCount }, (_, index) => index + 1).map((page) => <Button key={page} type="button" size="sm" variant={page === galleryPage ? "default" : "outline"} aria-current={page === galleryPage ? "page" : undefined} onClick={() => setGalleryPage(page)}>{page}</Button>)}</nav>}
-      </section>
+        {message && <p role="status" className="mt-3 rounded-xl bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">{message}</p>}
+      </section>}
     </div>
   )
 }

@@ -129,6 +129,8 @@ export interface CharacterInventoryItem {
   damage: string
   rdf: number
   rdm: number
+  /** Define o único item equipado cujo RDF/RDM protege o personagem. */
+  equippedAsArmor: boolean
   prCurrent: number | null
   prMaximum: number | null
   enchantmentSpellId: string
@@ -217,4 +219,4 @@ export interface CharacterSaveFile {
   character: Character
 }
 
-export const CHARACTER_VERSION = 19
+export const CHARACTER_VERSION = 20

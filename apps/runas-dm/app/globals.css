@@ -246,7 +246,14 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 .rich-text-toolbar button { display: grid; width: 31px; height: 31px; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
 .rich-text-toolbar button:hover { background: var(--panel); color: var(--text); }
 .rich-text-content { min-height: 210px; padding: 12px; color: var(--text); font-size: 13px; line-height: 1.55; outline: none; }
-.rich-text-content p { margin: 0 0 9px; }.rich-text-content ul, .rich-text-content ol { padding-left: 22px; }
+.rich-text-content p { margin: 0 0 9px; }
+.rich-text-content ul, .rich-text-content ol { margin: 0 0 9px; padding-left: 28px; }
+.rich-text-content ul { list-style: disc outside; }
+.rich-text-content ol { list-style: decimal outside; }
+.rich-text-content ul ul { list-style-type: circle; }
+.rich-text-content ul ul ul { list-style-type: square; }
+.rich-text-content li { display: list-item; padding-left: 2px; }
+.rich-text-content li + li { margin-top: 3px; }
 .encounter-notes-editor .rich-text-content { min-height: 360px; }
 .notes-file-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
 .initiative-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px; }
@@ -256,7 +263,8 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 .initiative-list { display: grid; gap: 7px; margin-top: 16px; }
 .initiative-list article { display: grid; grid-template-columns: 24px minmax(80px, 1fr) auto 64px auto; align-items: center; gap: 7px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
 .initiative-list article > b { color: var(--cyan); font-family: var(--font-mono); font-size: 16px; line-height: 1; text-align: center; }.initiative-list article > div { display: grid; min-width: 0; gap: 2px; }.initiative-list article strong, .initiative-list article small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.initiative-list article strong { font-size: 11px; line-height: 1.25; }.initiative-list article small { color: var(--muted); font-size: 9px; line-height: 1.25; }
-.initiative-list input { width: 64px; text-align: center; }
+.initiative-list input { width: 64px; grid-column: 4; text-align: center; }
+.initiative-list article > .linked-remove { grid-column: 5; }
 .massive-damage { position: relative; margin: 0 20px 20px; padding: 13px; border: 1px solid color-mix(in srgb, var(--red) 28%, var(--line)); border-radius: 12px; background: color-mix(in srgb, var(--red) 4%, var(--panel)); }
 .massive-toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--red); font-size: 11px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }.massive-toggle input { accent-color: var(--red); }
 .massive-defaults { display: grid; gap: 9px; margin-top: 9px; }.massive-defaults > p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.45; }.massive-defaults .modifier-input { display: grid; gap: 5px; }.massive-defaults input, .massive-expression input { width: 100%; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); }
@@ -268,7 +276,7 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 
 @media (max-width: 480px) {
   .dock-screen-tabs button { flex-direction: column; font-size: 8px; }
-  .initiative-list article { grid-template-columns: 22px minmax(70px, 1fr) 58px auto; }.initiative-list .roll-reflex { grid-column: 2 / 4; grid-row: 2; min-height: 32px; }
+  .initiative-list article { grid-template-columns: 22px minmax(70px, 1fr) auto 72px 22px; gap: 5px; }.initiative-list input { width: 72px; grid-column: 4; }.initiative-list article > .linked-remove { grid-column: 5; }.initiative-list .roll-reflex { grid-column: 3; grid-row: 1; min-height: 30px; }
 }
 
 @media (max-width: 1100px) and (min-width: 761px) {
@@ -474,7 +482,7 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 .info-metric { display: grid; min-height: 70px; align-content: center; gap: 8px; padding: 12px; border-radius: 13px; background: var(--panel-2); }
 .info-metric span { color: var(--muted); font-size: 11px; }.info-metric strong { font-size: 16px; }
 .armor-overview { display: grid; grid-template-columns: minmax(220px, 1fr) 160px 160px; gap: 12px; align-items: center; margin-top: 12px; padding: 14px; }
-.armor-overview > header { display: flex; align-items: center; gap: 10px; }.armor-overview > header svg { color: var(--cyan); }.armor-overview h4, .armor-overview p { margin: 0; }.armor-overview h4 { font-size: 14px; }.armor-overview p { margin-top: 4px; color: var(--muted); font-size: 12px; }
+.armor-overview > header { display: flex; align-items: flex-start; gap: 10px; }.armor-overview > header svg { flex: 0 0 auto; margin-top: 3px; color: var(--cyan); }.armor-overview > header > div { display: grid; min-width: 0; gap: 6px; }.armor-overview h4 { margin: 0; font-size: 14px; }.armor-overview label { display: grid; gap: 4px; }.armor-overview label span { color: var(--muted); font-size: 9px; font-weight: 750; text-transform: uppercase; }.armor-overview select { width: 100%; min-height: 36px; padding: 0 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 11px; }
 .inventory-list-title { margin: 22px 0 10px; font-size: 14px; }
 .inventory-table .tools-table-header, .inventory-row { grid-template-columns: 115px minmax(150px, 1.2fr) 100px minmax(210px, 1.8fr) 58px 86px 46px; }
 .inventory-row { min-height: 62px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; font-size: 12px; }
@@ -605,6 +613,7 @@ input[readonly], textarea[readonly], input:disabled:not([type="checkbox"]), sele
 .empty-linked-actions:empty { display: none; }
 .empty-linked-actions button, .resource-actions button { display: inline-flex; min-height: 32px; align-items: center; gap: 5px; padding: 0 9px; border: 1px dashed color-mix(in srgb, var(--cyan) 45%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--cyan) 5%, var(--panel)); color: var(--cyan); cursor: pointer; font-size: 11px; font-weight: 700; }
 .resource-actions { justify-content: flex-end; margin-bottom: 8px; }.resource-actions button { border-style: solid; border-color: color-mix(in srgb, var(--green) 38%, var(--line)); color: var(--green); }
+.simple-armor-selector { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; margin-bottom: 8px; padding: 10px; border: 1px solid color-mix(in srgb, var(--cyan) 32%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--cyan) 5%, var(--panel)); }.simple-armor-selector > span { display: inline-flex; align-items: center; gap: 6px; color: var(--cyan); font-size: 9px; font-weight: 800; text-transform: uppercase; }.simple-armor-selector select { grid-column: 1; min-width: 0; height: 34px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--text); font-size: 10px; }.simple-armor-selector small { grid-column: 2; grid-row: 1 / 3; color: var(--muted); font-family: var(--font-mono); font-size: 10px; white-space: nowrap; }
 .simple-linked-grid.single { grid-template-columns: 1fr; }
 .simple-sheet-editor .linked-panel { border-radius: 10px; }
 .simple-sheet-editor .linked-panel > header { min-height: 42px; padding: 7px 9px; }

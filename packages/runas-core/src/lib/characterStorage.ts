@@ -293,7 +293,7 @@ const inventoryItemTypes = new Set<InventoryItemType>([
   "innate", "weapon", "armor", "shield", "artifact", "material", "consumable", "tool", "utility", "accessory", "currency", "other",
 ])
 
-function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined): CharacterInventoryItem[] {
+function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined, sourceVersion: number): CharacterInventoryItem[] {
   const source = Array.isArray(partialItems) ? partialItems : []
   const usedIds = new Set<string>()
   let equippedArmorFound = false
@@ -306,11 +306,12 @@ function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined):
     while (usedIds.has(id)) id = `${id}-${index + 1}`
     usedIds.add(id)
     const type = inventoryItemTypes.has(item.type as InventoryItemType) ? item.type as InventoryItemType : "other"
-    let usage = normalizeInventoryUsage(type, inventoryUsages.has(item.usage as InventoryUsage) ? item.usage as InventoryUsage : "stored")
-    if (type === "armor" && usage === "equipped") {
-      if (equippedArmorFound) usage = "stored"
-      equippedArmorFound = true
-    }
+    const usage = normalizeInventoryUsage(type, inventoryUsages.has(item.usage as InventoryUsage) ? item.usage as InventoryUsage : "stored")
+    const requestedAsArmor = sourceVersion < 20
+      ? type === "armor" && usage === "equipped"
+      : Boolean(item.equippedAsArmor) && usage === "equipped"
+    const equippedAsArmor = requestedAsArmor && !equippedArmorFound
+    if (equippedAsArmor) equippedArmorFound = true
     const affinity = Math.max(0, Math.min(4, integer(item.affinity))) as CharacterInventoryItem["affinity"]
     return [{
       id,
@@ -325,6 +326,7 @@ function normalizeInventory(partialItems: CharacterInventoryItem[] | undefined):
       damage: typeof item.damage === "string" ? item.damage.trim().slice(0, 160) : "",
       rdf: Math.max(0, integer(item.rdf)),
       rdm: Math.max(0, integer(item.rdm)),
+      equippedAsArmor,
       prMaximum: item.prMaximum === null || item.prMaximum === undefined ? null : Math.max(0, integer(item.prMaximum)),
       prCurrent: item.prCurrent === null || item.prCurrent === undefined
         ? null
@@ -437,7 +439,7 @@ export function normalizeCharacter(partial: Partial<Character> | undefined): Cha
   const bonds = normalizeBonds(partial.bonds)
   const abilities = normalizeAbilities(partial.abilities)
   const spells = normalizeSpells(partial.spells)
-  const inventory = normalizeInventory(partial.inventory)
+  const inventory = normalizeInventory(partial.inventory, partial.version ?? 1)
   const notes = normalizeNotes(partial.notes)
   const equippedDefense = calculateEquippedArmorDefense(inventory)
   stats.currentLoad = calculateInventoryLoad(inventory, info.scaleMultiplier)

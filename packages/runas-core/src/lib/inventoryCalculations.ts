@@ -63,7 +63,7 @@ export function calculateInventoryLoad(items: CharacterInventoryItem[], scaleMul
 }
 
 export function calculateEquippedArmorDefense(items: CharacterInventoryItem[]): { rdf: number; rdm: number } {
-  const armor = items.find((item) => item.usage === "equipped" && item.type === "armor")
+  const armor = items.find((item) => item.usage === "equipped" && item.equippedAsArmor)
   return armor
     ? { rdf: Math.max(0, Math.trunc(armor.rdf)), rdm: Math.max(0, Math.trunc(armor.rdm)) }
     : { rdf: 0, rdm: 0 }

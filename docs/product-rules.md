@@ -23,6 +23,7 @@ O Runas DM reduz o tempo gasto pelo mestre procurando fichas, calculando testes 
 - Essências geradas usam `essências totais / 10`, arredondadas para baixo.
 - Características listam apenas habilidades `Racial`.
 - Ações agregam itens equipados, habilidades não raciais e magias no formato `nome categoria`.
+- O uso `Equipado` não escolhe automaticamente uma armadura. Vários itens, inclusive várias armaduras, podem permanecer equipados; o usuário seleciona separadamente um único item equipado como armadura ativa, e somente o RDF/RDM desse item entra nas calculadoras de dano.
 
 ## Mesa de encontro
 

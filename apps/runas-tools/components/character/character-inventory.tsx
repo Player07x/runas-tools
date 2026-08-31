@@ -61,13 +61,6 @@ type ReferencePreview =
   | { type: "ability"; value: CharacterAbility }
   | { type: "skill"; value: CharacterSkill }
 
-interface ArmorConfirmation {
-  previousName: string
-  nextName: string
-  nextItems: CharacterInventoryItem[]
-  closeEditor: boolean
-}
-
 function createInventoryItem(): CharacterInventoryItem {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -85,6 +78,7 @@ function createInventoryItem(): CharacterInventoryItem {
     damage: "",
     rdf: 0,
     rdm: 0,
+    equippedAsArmor: false,
     prCurrent: null,
     prMaximum: null,
     enchantmentSpellId: "",
@@ -131,6 +125,7 @@ function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond
     damage: item.damage.trim().slice(0, 160),
     rdf: Math.max(0, Math.trunc(item.rdf)),
     rdm: Math.max(0, Math.trunc(item.rdm)),
+    equippedAsArmor: item.usage === "equipped" && Boolean(item.equippedAsArmor),
     prCurrent,
     prMaximum,
     enchantmentSpellId: enchantmentSpells.some((spell) => spell.id === item.enchantmentSpellId) ? item.enchantmentSpellId : "",
@@ -146,7 +141,6 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
   const [draftIsNew, setDraftIsNew] = useState(false)
   const [dialogMode, setDialogMode] = useState<"view" | "edit">("view")
   const [referencePreview, setReferencePreview] = useState<ReferencePreview | null>(null)
-  const [armorConfirmation, setArmorConfirmation] = useState<ArmorConfirmation | null>(null)
   const importFileRef = useRef<HTMLInputElement>(null)
   const [showImport, setShowImport] = useState(false)
   const [importedItems, setImportedItems] = useState<ImportedInventoryItem[]>([])
@@ -157,7 +151,8 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
   const currentLoad = calculateInventoryLoad(items, info.scaleMultiplier)
   const statSnapshot = useMemo(() => calculateCharacterStatSnapshot(attributes, info, { ...stats, currentLoad }, skills, abilities), [abilities, attributes, currentLoad, info, skills, stats])
   const defense = calculateEquippedArmorDefense(items)
-  const equippedArmor = items.find((item) => item.type === "armor" && item.usage === "equipped")
+  const equippedArmor = items.find((item) => item.usage === "equipped" && item.equippedAsArmor)
+  const armorCandidates = items.filter((item) => item.usage === "equipped")
   const equippedCombatItems = items.filter((item) => item.usage === "equipped" && ["weapon", "armor", "shield"].includes(item.type))
   const bondAbilities = abilities.filter((ability) => isBondAbilityCategory(ability.category))
   const enchantmentSpells = useMemo(() => spells.filter((spell) => spell.magicType === "enchantment"), [spells])
@@ -222,16 +217,7 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
   }
 
   function commitItemSet(nextItem: CharacterInventoryItem, baseItems: CharacterInventoryItem[], closeEditor: boolean) {
-    const existingArmor = items.find((item) => item.type === "armor" && item.usage === "equipped" && item.id !== nextItem.id)
-    if (nextItem.type === "armor" && nextItem.usage === "equipped" && existingArmor) {
-      setArmorConfirmation({
-        previousName: existingArmor.name,
-        nextName: nextItem.name,
-        nextItems: baseItems.map((item) => item.id === existingArmor.id ? { ...item, usage: "stored" } : item),
-        closeEditor,
-      })
-      return
-    }
+    if (nextItem.usage !== "equipped") nextItem.equippedAsArmor = false
     onItemsChange(baseItems)
     if (closeEditor) {
       setDraft(null)
@@ -258,6 +244,10 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
   function changeQuantity(item: CharacterInventoryItem, quantity: number) {
     const nextQuantity = Math.max(1, Number.isFinite(quantity) ? Math.trunc(quantity) : 1)
     onItemsChange(items.map((candidate) => candidate.id === item.id ? { ...candidate, quantity: nextQuantity } : candidate))
+  }
+
+  function selectArmor(itemId: string) {
+    onItemsChange(items.map((item) => ({ ...item, equippedAsArmor: item.usage === "equipped" && item.id === itemId })))
   }
 
   function removeItem(item: CharacterInventoryItem) {
@@ -314,9 +304,9 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
 
         <article className="rounded-[20px] border border-primary/25 bg-primary/5 p-4">
           <div className="flex items-center gap-2 text-primary"><Shield className="size-5" /><h3 className="font-bold">Armadura</h3></div>
-          <p className="mt-3 text-sm text-foreground"><span className="text-muted-foreground">Equipada:</span> <strong>{equippedArmor?.name ?? "Nenhuma"}</strong></p>
+          <label className="mt-3 block"><span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Item usado como armadura</span><select value={equippedArmor?.id ?? ""} onChange={(event) => selectArmor(event.target.value)} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-semibold text-foreground outline-none focus:border-ring"><option value="">Nenhum</option>{armorCandidates.map((item) => <option key={item.id} value={item.id}>{item.name || "Item sem nome"}</option>)}</select></label>
           <div className="mt-3 grid grid-cols-2 gap-3"><div className="rounded-xl bg-background/70 p-3"><span className="text-xs text-muted-foreground">RDF</span><strong className="block text-xl">{defense.rdf}</strong></div><div className="rounded-xl bg-background/70 p-3"><span className="text-xs text-muted-foreground">RDM</span><strong className="block text-xl">{defense.rdm}</strong></div></div>
-          <p className="mt-2 text-xs text-muted-foreground">RDF e RDM exclusivos da armadura equipada, usados pela aplicação de dano.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Somente o RDF e RDM deste item são usados pela aplicação de dano. Outros itens podem continuar equipados.</p>
         </article>
       </div>
 
@@ -425,7 +415,6 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
 
       {referencePreview && typeof document !== "undefined" && createPortal(<ReferenceDialog preview={referencePreview} attributes={attributes} stats={stats} onClose={() => setReferencePreview(null)} onRollSkill={rollSkill} onRollBond={rollBond} />, document.body)}
 
-      {armorConfirmation && typeof document !== "undefined" && createPortal(<div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/65 p-3"><div role="alertdialog" aria-modal="true" className="w-full max-w-md rounded-[22px] border border-border bg-card p-5 shadow-2xl"><h2 className="font-bold text-foreground">Trocar armadura equipada?</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Ao equipar <strong className="text-foreground">{armorConfirmation.nextName}</strong>, a armadura <strong className="text-foreground">{armorConfirmation.previousName}</strong> será desmarcada e passará para “Armazenado”.</p><div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" onClick={() => setArmorConfirmation(null)}>Cancelar</Button><Button type="button" onClick={() => { onItemsChange(armorConfirmation.nextItems); if (armorConfirmation.closeEditor) { setDraft(null); setDraftIsNew(false) } setArmorConfirmation(null) }}>Confirmar troca</Button></div></div></div>, document.body)}
     </section>
   )
 }

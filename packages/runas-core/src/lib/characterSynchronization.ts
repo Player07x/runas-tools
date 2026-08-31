@@ -18,7 +18,13 @@ function finite(value: number): number {
  */
 export function synchronizeCharacterDerivedValues(previous: Character, changed: Character): Character {
   const attributes = { ...changed.attributes }
-  const inventory = changed.inventory.map((item) => ({ ...item, usage: normalizeInventoryUsage(item.type, item.usage) }))
+  let equippedArmorFound = false
+  const inventory = changed.inventory.map((item) => {
+    const usage = normalizeInventoryUsage(item.type, item.usage)
+    const equippedAsArmor = usage === "equipped" && item.equippedAsArmor && !equippedArmorFound
+    if (equippedAsArmor) equippedArmorFound = true
+    return { ...item, usage, equippedAsArmor }
+  })
 
   for (const group of attributeGroups) {
     const primaryKey = group.primary.key

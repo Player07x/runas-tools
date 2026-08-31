@@ -11,7 +11,7 @@ import { parseImportedSpell, type ImportedSpell } from "@/lib/spellTransfer"
 import { saveExportedJson } from "@/lib/fileExport"
 
 const INVENTORY_LIST_KIND = "runas-tools-inventory-list"
-const INVENTORY_LIST_VERSION = 1
+const INVENTORY_LIST_VERSION = 2
 
 export type ImportedInventoryItem = Omit<CharacterInventoryItem, "id" | "enchantmentSpellId" | "bondId" | "bondAbilityId" | "skillId"> & {
   enchantment: ImportedSpell | null
@@ -93,7 +93,7 @@ export function parseInventoryListFile(text: string): ImportedInventoryItem[] {
   } catch {
     throw new Error("O arquivo não contém um JSON válido.")
   }
-  if (!isRecord(parsed) || parsed.kind !== INVENTORY_LIST_KIND || parsed.version !== INVENTORY_LIST_VERSION || !Array.isArray(parsed.items)) {
+  if (!isRecord(parsed) || parsed.kind !== INVENTORY_LIST_KIND || (parsed.version !== 1 && parsed.version !== INVENTORY_LIST_VERSION) || !Array.isArray(parsed.items)) {
     throw new Error("Este não é um arquivo de inventário exportado pelo Runas Tools.")
   }
   if (parsed.items.length === 0) throw new Error("A lista importada não contém itens.")
@@ -128,6 +128,7 @@ export function parseInventoryListFile(text: string): ImportedInventoryItem[] {
       damage: textField(value.damage, 160, "dano", position).trim(),
       rdf: Math.trunc(nonNegativeNumber(value.rdf, "RDF", name)),
       rdm: Math.trunc(nonNegativeNumber(value.rdm, "RDM", name)),
+      equippedAsArmor: value.usage === "equipped" && value.equippedAsArmor === true,
       prCurrent,
       prMaximum,
       enchantment,

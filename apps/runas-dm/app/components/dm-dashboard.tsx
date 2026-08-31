@@ -13,7 +13,7 @@ import { calculateDamageSequence, convertDamageBonusesToDice, rollDice } from "@
 import { parseDamageExpressions } from "@runas/core/lib/damageParser"
 import { simulateDamageApplications } from "@runas/core/lib/damageApplication"
 import { calculateMasteryImprovementPoints, calculateSpentMasteryImprovementPoints, clampMasteryImprovementQuantity, masteryImprovementOptions } from "@runas/core/lib/masteryImprovements"
-import { inventoryTypeOptions, inventoryUsageOptions } from "@runas/core/lib/inventoryCalculations"
+import { calculateEquippedArmorDefense, inventoryTypeOptions, inventoryUsageOptions } from "@runas/core/lib/inventoryCalculations"
 import { synchronizeCharacterDerivedValues } from "@runas/core/lib/characterSynchronization"
 import { applyQuickModifier } from "@runas/core/lib/quickModifier"
 import { applyDeterminationToRoll, applyDeterminationUsesToRoll, calculateAttributeTest, calculateSkillLevel, compareSkillRolls, findExactSystemSkill, normalizeSkillName, rollSkillTest } from "@runas/core/lib/skillCalculations"
@@ -506,7 +506,7 @@ function MassiveDamagePanel({ attacker, targets, onUpdateTarget }: { attacker: E
     setEnabled(next)
     setPreviews([])
     if (!next) return
-    setSettings(Object.fromEntries(targets.map((target) => [target.id, { selected: true, modifier: defaultModifier, modifierOpen: false, advancedOpen: defaultAdvancedOpen, rdf: defaultRdf, rdm: defaultRdm, mtEnabled: defaultMtEnabled, mtValue: defaultMtValue }])))
+    setSettings(Object.fromEntries(targets.map((target) => [target.id, { selected: true, modifier: defaultModifier, modifierOpen: false, advancedOpen: defaultAdvancedOpen, rdf: defaultRdf || target.character.stats.armorRdf + target.character.stats.naturalRdf, rdm: defaultRdm || target.character.stats.armorRdm + target.character.stats.naturalRdm, mtEnabled: defaultMtEnabled, mtValue: defaultMtValue || target.character.stats.mt }])))
   }
 
   function updateSetting(actorId: string, patch: Partial<MassiveTargetSettings>) {
@@ -939,7 +939,10 @@ function SimpleActions({ character, mutate }: { character: Character; mutate: Ch
 
 function SimpleInventory({ character, mutate }: { character: Character; mutate: CharacterMutator }) {
   const resources = character.inventory.filter((item) => item.type !== "innate")
-  return <><div className="resource-actions"><button onClick={() => mutate((draft) => { draft.inventory.push(createQuickItem("Novo item", "stored", "other")) })}><Plus size={13} /> Adicionar Item</button><button onClick={() => mutate((draft) => { draft.inventory.push(createQuickItem("Novo recurso", "absent", "other")) })}><Plus size={13} /> Adicionar Recurso</button></div><div className="essence-yield"><Sparkles size={16} aria-hidden="true" /><strong>Essências: {essenceYield(character)}</strong></div><div className="resource-inventory-list">{resources.length > 0 ? resources.map((item) => <SimpleInventoryItem key={item.id} item={item} character={character} mutate={mutate} />) : <p className="simple-empty-state">Nenhum item ou recurso cadastrado.</p>}</div></>
+  const armor = character.inventory.find((item) => item.usage === "equipped" && item.equippedAsArmor)
+  const defense = calculateEquippedArmorDefense(character.inventory)
+  const armorCandidates = character.inventory.filter((item) => item.usage === "equipped")
+  return <><div className="resource-actions"><button onClick={() => mutate((draft) => { draft.inventory.push(createQuickItem("Novo item", "stored", "other")) })}><Plus size={13} /> Adicionar Item</button><button onClick={() => mutate((draft) => { draft.inventory.push(createQuickItem("Novo recurso", "absent", "other")) })}><Plus size={13} /> Adicionar Recurso</button></div><label className="simple-armor-selector"><span><Shield size={14} /> Item usado como armadura</span><select value={armor?.id ?? ""} onChange={(event) => mutate((draft) => { draft.inventory.forEach((item) => { item.equippedAsArmor = item.usage === "equipped" && item.id === event.target.value }) })}><option value="">Nenhum</option>{armorCandidates.map((item) => <option key={item.id} value={item.id}>{item.name || "Item sem nome"}</option>)}</select><small>RDF {defense.rdf} · RDM {defense.rdm}</small></label><div className="essence-yield"><Sparkles size={16} aria-hidden="true" /><strong>Essências: {essenceYield(character)}</strong></div><div className="resource-inventory-list">{resources.length > 0 ? resources.map((item) => <SimpleInventoryItem key={item.id} item={item} character={character} mutate={mutate} />) : <p className="simple-empty-state">Nenhum item ou recurso cadastrado.</p>}</div></>
 }
 
 function SimpleInventoryItem({ item, character, mutate }: { item: Character["inventory"][number]; character: Character; mutate: CharacterMutator }) {
@@ -984,7 +987,7 @@ function LinkedPanel({ title, count, actions, children, className = "", listClas
 function assignById<T extends { id: string }>(items: T[], itemId: string, updates: Partial<T>) { const item = items.find((candidate) => candidate.id === itemId); if (item) Object.assign(item, updates) }
 function createQuickAbility(name: string, category: string): Character["abilities"][number] { return { id: id("ability"), category, name, description: "", permanentModifiers: "", costType: "none", costMode: "fixed", costValue: 0, costText: "" } }
 function createQuickSpell(): CharacterSpell { return { id: id("spell"), category: "Elemental", name: "Nova magia", description: "", costType: "none", costMode: "fixed", costValue: 0, costText: "", magicType: "spell", rangeType: "personal", rangeText: "", area: "", duration: "", castingSkill: "" } }
-function createQuickItem(name: string, usage: Character["inventory"][number]["usage"], type: Character["inventory"][number]["type"]): Character["inventory"][number] { return { id: id("item"), usage, name, type, affinity: 0, bondPoints: 0, baseWeight: 0, quantity: 1, applyScaleWeight: false, damage: "", rdf: 0, rdm: 0, prCurrent: null, prMaximum: null, enchantmentSpellId: "", bondId: "", bondAbilityId: "", skillId: "", description: "" } }
+function createQuickItem(name: string, usage: Character["inventory"][number]["usage"], type: Character["inventory"][number]["type"]): Character["inventory"][number] { return { id: id("item"), usage, name, type, affinity: 0, bondPoints: 0, baseWeight: 0, quantity: 1, applyScaleWeight: false, damage: "", rdf: 0, rdm: 0, equippedAsArmor: false, prCurrent: null, prMaximum: null, enchantmentSpellId: "", bondId: "", bondAbilityId: "", skillId: "", description: "" } }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="field"><span>{label}</span><input value={value} onChange={(event) => onChange(event.target.value)} /></label> }
 function PercentField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="field percent-field"><span>{label}</span><span className="percent-input"><input inputMode="decimal" value={value} onChange={(event) => onChange(event.target.value.replace(/%/g, ""))} /><b>%</b></span></label> }

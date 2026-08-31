@@ -405,11 +405,12 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
 
   function importInventoryItems(importedItems: ImportedInventoryItem[]) {
     updateCharacter((prev) => {
-      let equippedArmorExists = prev.inventory.some((item) => item.type === "armor" && item.usage === "equipped")
+      let equippedArmorExists = prev.inventory.some((item) => item.usage === "equipped" && item.equippedAsArmor)
       const spells = [...prev.spells]
       const imported = importedItems.map((item, index): CharacterInventoryItem => {
-        const usage = item.type === "armor" && item.usage === "equipped" && equippedArmorExists ? "stored" : item.usage
-        if (item.type === "armor" && usage === "equipped") equippedArmorExists = true
+        const usage = item.usage
+        const equippedAsArmor = usage === "equipped" && item.equippedAsArmor && !equippedArmorExists
+        if (equippedAsArmor) equippedArmorExists = true
         const findByName = <T extends { id: string; name: string }>(values: T[], name: string): string => (
           values.find((value) => normalizeSkillName(value.name) === normalizeSkillName(name))?.id ?? ""
         )
@@ -435,6 +436,7 @@ export function CharacterSheet({ activeTab, onActiveTabChange }: CharacterSheetP
           damage: item.damage,
           rdf: item.rdf,
           rdm: item.rdm,
+          equippedAsArmor,
           prCurrent: item.prCurrent,
           prMaximum: item.prMaximum,
           enchantmentSpellId,

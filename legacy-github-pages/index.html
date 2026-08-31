@@ -16,7 +16,11 @@
       nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 30px; }
       a { min-width: 210px; padding: 14px 20px; border-radius: 12px; background: #f5c451; color: #111827; font-weight: 800; text-decoration: none; }
       a:last-child { background: #91a7ff; }
+      .rescue { margin-top: 34px; padding-top: 28px; border-top: 1px solid #6478a8; }
+      .rescue strong { color: #fff; }
+      button { padding: 14px 20px; border: 0; border-radius: 12px; background: #67e8b5; color: #111827; font: inherit; font-weight: 800; cursor: pointer; }
       a:hover, a:focus-visible { transform: translateY(-2px); outline: 3px solid #fff; outline-offset: 3px; }
+      button:hover, button:focus-visible { transform: translateY(-2px); outline: 3px solid #fff; outline-offset: 3px; }
     </style>
   </head>
   <body>
@@ -28,6 +32,21 @@
         <a href="https://runas-tools.pages.dev/">Acessar Runas Tools</a>
         <a href="https://runas-dm.pages.dev/">Acessar Runas DM</a>
       </nav>
+      <section class="rescue" aria-labelledby="rescue-title">
+        <p id="rescue-title"><strong>Sua ficha ficou presa aqui? NÃO TEM PROBLEMA, EXPORTE SUAS FICHAS AGORA, POR AQUI:</strong></p>
+        <button id="export-gallery" type="button">Exportar todas as fichas da galeria</button>
+        <p id="export-status" role="status" aria-live="polite"></p>
+      </section>
     </main>
+    <script>
+      const status = document.querySelector('#export-status');
+      const encoder = new TextEncoder();
+      const crc32 = data => { let crc=0xffffffff; for(const byte of data){crc^=byte; for(let bit=0;bit<8;bit++) crc=(crc>>>1)^((crc&1)?0xedb88320:0)} return (crc^0xffffffff)>>>0 };
+      const header = size => { const bytes=new Uint8Array(size); return {bytes,view:new DataView(bytes.buffer)} };
+      const join = chunks => { const result=new Uint8Array(chunks.reduce((n,c)=>n+c.length,0)); let offset=0; for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length} return result };
+      function createZip(files){const local=[],central=[];let offset=0;for(const file of files){const name=encoder.encode(file.name),data=encoder.encode(file.content),crc=crc32(data),lh=header(30);lh.view.setUint32(0,0x04034b50,true);lh.view.setUint16(4,20,true);lh.view.setUint32(14,crc,true);lh.view.setUint32(18,data.length,true);lh.view.setUint32(22,data.length,true);lh.view.setUint16(26,name.length,true);local.push(lh.bytes,name,data);const ch=header(46);ch.view.setUint32(0,0x02014b50,true);ch.view.setUint16(4,20,true);ch.view.setUint16(6,20,true);ch.view.setUint32(16,crc,true);ch.view.setUint32(20,data.length,true);ch.view.setUint32(24,data.length,true);ch.view.setUint16(28,name.length,true);ch.view.setUint32(42,offset,true);central.push(ch.bytes,name);offset+=lh.bytes.length+name.length+data.length}const cd=join(central),end=header(22);end.view.setUint32(0,0x06054b50,true);end.view.setUint16(8,files.length,true);end.view.setUint16(10,files.length,true);end.view.setUint32(12,cd.length,true);end.view.setUint32(16,offset,true);return join([...local,cd,end.bytes])}
+      function readGallery(){return new Promise((resolve,reject)=>{const request=indexedDB.open('runas-tools',1);request.onerror=()=>reject(request.error);request.onsuccess=()=>{const db=request.result;const tx=db.transaction('character-sections','readonly');const get=tx.objectStore('character-sections').get('character-gallery');get.onerror=()=>reject(get.error);get.onsuccess=()=>{db.close();resolve(get.result?.value?.entries||[])}}})}
+      document.querySelector('#export-gallery').addEventListener('click',async()=>{try{let entries=await readGallery();if(!entries.length){const legacy=localStorage.getItem('runas.character.v1');if(legacy) entries=[{character:JSON.parse(legacy).character}]}if(!entries.length) throw new Error('Nenhuma ficha foi encontrada neste navegador.');const safe=(value,index)=>(value||`personagem_${index+1}`).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9_-]+/g,'_');const files=entries.map((entry,index)=>({name:`${String(index+1).padStart(2,'0')}_${safe(entry.character?.name,index)}.json`,content:JSON.stringify({version:3,character:entry.character},null,2)}));const blob=new Blob([createZip(files)],{type:'application/zip'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='galeria_personagens_json.zip';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent=`${entries.length} ficha(s) exportada(s) com sucesso.`}catch(error){status.textContent=error.message||'Não foi possível exportar as fichas.'}});
+    </script>
   </body>
 </html>

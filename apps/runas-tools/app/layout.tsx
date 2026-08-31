@@ -1,4 +1,3 @@
-import { Analytics } from "@vercel/analytics/next"
 import type { Metadata, Viewport } from "next"
 import { Geist } from "next/font/google"
 import { Suspense } from "react"
@@ -48,7 +47,6 @@ export default function RootLayout({
           </CharacterProvider>
         </ThemeProvider>
         <ServiceWorkerRegistration />
-        {process.env.VERCEL === "1" && <Analytics />}
       </body>
     </html>
   )

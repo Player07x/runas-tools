@@ -1,4 +1,4 @@
-import { Dices, Home, Images, Swords, type LucideIcon } from "lucide-react"
+import { Dices, Home, Images, Layers3, Swords, type LucideIcon } from "lucide-react"
 
 export interface NavItem {
   href: string
@@ -12,4 +12,5 @@ export const navItems: NavItem[] = [
   { href: "/calculadora-dano", label: "Calculadora de Dano", shortLabel: "Dano", icon: Swords },
   { href: "/calculadora-testes", label: "Calculadora de Testes", shortLabel: "Testes", icon: Dices },
   { href: "/galeria-personagens", label: "Galeria de Personagens", shortLabel: "Galeria", icon: Images },
+  { href: "/cartas-runicas", label: "Cartas Rúnicas", shortLabel: "Cartas", icon: Layers3 },
 ]

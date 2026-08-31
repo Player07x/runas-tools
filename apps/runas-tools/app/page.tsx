@@ -1,6 +1,6 @@
 "use client"
 
-import { Dices, FlaskConical, Images, ListChecks, Swords } from "lucide-react"
+import { Dices, FlaskConical, Images, Layers3, ListChecks, Swords } from "lucide-react"
 import { PageContainer } from "@/components/layout/page-container"
 import { ToolCard } from "@/components/home/tool-card"
 import { FichaToolCard } from "@/components/home/ficha-tool-card"
@@ -54,6 +54,14 @@ export default function HomePage() {
             icon={Images}
             href="/galeria-personagens"
             actionLabel="Abrir galeria"
+          />
+          <ToolCard
+            title="Cartas Rúnicas"
+            description="Crie cartas para ORDEM × CAOS: RÚNICA, recorte a arte e exporte em JSON ou PNG."
+            icon={Layers3}
+            accent="yellow"
+            href="/cartas-runicas"
+            actionLabel="Criar uma carta"
           />
         </div>
       </section>

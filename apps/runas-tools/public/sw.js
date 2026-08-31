@@ -1,5 +1,6 @@
-const CACHE_NAME = "runas-tools-runtime-v4"
-const MAX_CACHE_ENTRIES = 80
+const CACHE_PREFIX = "runas-tools-"
+const CACHE_NAME = `${CACHE_PREFIX}runtime-v5`
+const MAX_CACHE_ENTRIES = 100
 const BASE_URL = new URL("./", self.location.href)
 const OFFLINE_URL = new URL("./", BASE_URL).href
 const APP_SHELL = [
@@ -7,9 +8,12 @@ const APP_SHELL = [
   "./calculadora-dano/",
   "./calculadora-testes/",
   "./galeria-personagens/",
+  "./cartas-runicas/",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",
+  "./Norse.otf",
+  "./Norsebold.otf",
 ].map((path) => new URL(path, BASE_URL).href)
 
 async function trimCache(cache) {
@@ -31,7 +35,7 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(caches.keys()
-    .then((names) => Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))))
+    .then((names) => Promise.all(names.filter((name) => name.startsWith(CACHE_PREFIX) && name !== CACHE_NAME).map((name) => caches.delete(name))))
     .then(() => self.clients.claim()))
 })
 

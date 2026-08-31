@@ -4,7 +4,7 @@
 
 ```text
 GitHub: Player07x/runas-tools (monorepo)
-├── apps/runas-tools → GitHub Pages
+├── apps/runas-tools → Cloudflare Pages (`runas-tools.pages.dev`)
 ├── apps/runas-dm    → Cloudflare Pages privado + D1
 └── packages/runas-core → incorporado nos dois builds
 ```
@@ -13,7 +13,7 @@ Os dois aplicativos devem ser construídos a partir do mesmo commit. `@runas/cor
 
 ## Runas Tools
 
-`.github/workflows/deploy-pages.yml` instala a raiz do workspace, valida a suíte e publica somente `apps/runas-tools/out`. O repositório deve manter GitHub Pages com Source = GitHub Actions.
+`.github/workflows/deploy-pages.yml` instala a raiz do workspace, valida a suíte e publica somente `apps/runas-tools/out` no projeto Cloudflare Pages `runas-tools`. O workflow usa o segredo de repositório `CLOUDFLARE_API_TOKEN` e o mesmo Account ID da suíte.
 
 ## Runas DM
 
@@ -34,7 +34,7 @@ O Cloudflare Access deve proteger `runas-dm.pages.dev`, com o proprietário e so
 1. `npm ci` na raiz.
 2. Testes e typecheck de `@runas/core`.
 3. Lint e build dos dois consumidores.
-4. Publicar Runas Tools no GitHub Pages.
+4. Publicar Runas Tools no Cloudflare Pages.
 5. Gerar/aplicar migrações D1 antes de publicar código que dependa delas.
 6. Publicar Runas DM no Cloudflare Pages com segredo e política de acesso já configurados.
 7. Verificar as duas URLs e o modo offline.

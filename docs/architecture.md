@@ -22,7 +22,7 @@ O núcleo não importa React, navegador, IndexedDB, Next.js, Cloudflare ou compo
 - Next.js com `output: "export"`.
 - Independente de backend e com PWA.
 - Consome e transpila o núcleo pelo workspace.
-- O GitHub Pages publica somente `apps/runas-tools/out`.
+- O Cloudflare Pages publica somente `apps/runas-tools/out` em `runas-tools.pages.dev`.
 
 ## Runas DM
 

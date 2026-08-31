@@ -2,6 +2,22 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
+@font-face {
+  font-family: 'Norse';
+  src: url('/Norse.otf') format('opentype');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Norse Bold';
+  src: url('/Norsebold.otf') format('opentype');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -217,5 +233,469 @@
   .virtualized-list-item {
     content-visibility: auto;
     contain-intrinsic-size: auto 8rem;
+  }
+
+  .runic-card-shell {
+    container-type: inline-size;
+    width: 100%;
+  }
+
+  .runic-card {
+    --runic-ink: #111318;
+    position: relative;
+    display: grid;
+    aspect-ratio: 63 / 88;
+    width: 100%;
+    grid-template-rows: 8.8% 52.4% 8.8% 28% 2%;
+    overflow: hidden;
+    border: 0;
+    border-radius: 4.6cqw;
+    background: color-mix(in srgb, var(--runic-element) 45%, #16181e);
+    color: var(--runic-ink);
+    box-shadow: 0 2.8cqw 7cqw rgb(17 19 24 / 0.34);
+    isolation: isolate;
+  }
+
+  .runic-card[data-kind='equipment'] {
+    grid-template-rows: 8.8% 55.2% 34% 2%;
+  }
+
+  .runic-card__full-art {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    background-position: center;
+    background-size: cover;
+    filter: saturate(1.08) contrast(1.03);
+  }
+
+  .runic-card__full-art::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.05), transparent 52%, color-mix(in srgb, var(--runic-element) 18%, rgb(0 0 0 / 0.12)));
+    content: '';
+  }
+
+  .runic-card__header {
+    z-index: 2;
+    grid-row: 1;
+    min-width: 0;
+    margin: 2.4cqw 2.8cqw 0;
+    padding: 0.7cqw 2.2cqw 0.55cqw;
+    border: 0.55cqw solid #111318;
+    border-radius: 2.2cqw 2.2cqw 1.1cqw 1.1cqw;
+    background: linear-gradient(100deg, rgb(20 21 25 / 0.84), color-mix(in srgb, var(--runic-element) 34%, rgb(18 19 23 / 0.84)));
+    backdrop-filter: blur(0.8cqw);
+    box-shadow: 0 0 0 0.34cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74), 0 0.65cqw 1.2cqw rgb(0 0 0 / 0.36);
+    color: #fffdf4;
+  }
+
+  .runic-card__element {
+    overflow: hidden;
+    color: color-mix(in srgb, var(--runic-element) 74%, white);
+    font-family: 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
+    font-size: 1.55cqw;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .runic-card__title-row {
+    display: flex;
+    min-width: 0;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2cqw;
+  }
+
+  .runic-card__title-row h2 {
+    min-width: 0;
+    overflow: hidden;
+    font-family: 'Norse Bold', 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
+    font-size: 4.8cqw;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .runic-card__header-meta {
+    display: flex;
+    max-width: 33%;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: end;
+    font-family: 'Norse', 'Bahnschrift Condensed', 'Arial Narrow', sans-serif;
+    gap: 0.3cqw;
+    font-size: 2.65cqw;
+    font-weight: 400;
+    letter-spacing: 0.045em;
+    line-height: 1;
+    text-align: right;
+    text-transform: uppercase;
+  }
+
+  .runic-card__header-meta strong {
+    color: color-mix(in srgb, var(--runic-element) 72%, white);
+    font-family: 'Norse', 'Bahnschrift Condensed', sans-serif;
+    font-size: 1.9cqw;
+    font-weight: 400;
+  }
+
+  .runic-card__art {
+    position: relative;
+    z-index: 1;
+    grid-row: 2;
+    margin: 0;
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+  }
+
+  .runic-card__art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .runic-card__art-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(0 0 0 / 0.02) 45%, color-mix(in srgb, var(--runic-element) 25%, rgb(5 6 8 / 0.4)) 112%);
+    pointer-events: none;
+  }
+
+  .runic-card__art-placeholder {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(circle, color-mix(in srgb, var(--runic-element) 42%, transparent), transparent 58%),
+      repeating-linear-gradient(135deg, rgb(255 255 255 / 0.04) 0 2px, transparent 2px 16px);
+    color: rgb(255 255 255 / 0.78);
+    text-align: center;
+  }
+
+  .runic-card__art-placeholder span {
+    font-family: Georgia, serif;
+    font-size: 18cqw;
+    line-height: 1;
+  }
+
+  .runic-card__art-placeholder p {
+    margin-top: 2cqw;
+    font-size: 2.4cqw;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .runic-card__stat-band {
+    position: relative;
+    z-index: 4;
+    display: grid;
+    grid-row: 3;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    margin: 0 2.8cqw;
+    border: 0.55cqw solid #111318;
+    border-radius: 1.5cqw;
+    background: linear-gradient(90deg, rgb(184 55 61 / 0.82) 0 43%, rgb(238 232 215 / 0.82) 48% 52%, color-mix(in srgb, var(--runic-element) 82%, rgb(210 232 247 / 0.86)) 57% 100%);
+    backdrop-filter: blur(0.6cqw);
+    box-shadow: 0 0 0 0.34cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74), 0 0.7cqw 1.3cqw rgb(0 0 0 / 0.3);
+  }
+
+  .runic-card__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 1.2cqw;
+    padding: 0 2.2cqw;
+    color: #17191e;
+  }
+
+  .runic-card__stat--aura {
+    justify-content: end;
+  }
+
+  .runic-card__stat span,
+  .runic-card__spell-meta span {
+    font-size: 1.75cqw;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .runic-card__stat-gem {
+    display: block;
+    width: 4.2cqw;
+    aspect-ratio: 1;
+    transform: rotate(45deg);
+    border: 0.5cqw double #111318;
+    background: rgb(255 255 255 / 0.22);
+    box-shadow: inset 0 0 0 0.35cqw rgb(255 255 255 / 0.3);
+  }
+
+  .runic-card__stat--life .runic-card__stat-gem {
+    display: grid;
+    width: 5.4cqw;
+    transform: none;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .runic-card__stat--life .runic-card__stat-gem svg {
+    width: 100%;
+    overflow: visible;
+    fill: #bc3441;
+    stroke: #111318;
+    stroke-linejoin: bevel;
+    stroke-width: 8;
+    filter: drop-shadow(0 0.45cqw 0.2cqw rgb(70 0 0 / 0.36));
+  }
+
+  .runic-card__stat--aura .runic-card__stat-gem {
+    background: color-mix(in srgb, var(--runic-element) 86%, white);
+  }
+
+  .runic-card__stat strong {
+    font-family: Georgia, serif;
+    font-size: 4.8cqw;
+    line-height: 1;
+  }
+
+  .runic-card__resource {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    display: flex;
+    aspect-ratio: 1;
+    width: 15cqw;
+    transform: translate(-50%, -50%);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 0.9cqw double var(--runic-ink);
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 28%, color-mix(in srgb, var(--runic-element) 24%, #fff8df), color-mix(in srgb, var(--runic-element) 58%, #6f6554));
+    color: white;
+    box-shadow: 0 0 0 0.42cqw rgb(255 255 255 / 0.62), 0 1cqw 2cqw rgb(0 0 0 / 0.32);
+    text-shadow: 0 0.3cqw 0.6cqw rgb(0 0 0 / 0.8);
+  }
+
+  .runic-card__resource strong {
+    font-family: Georgia, serif;
+    font-size: 5.6cqw;
+    line-height: 0.9;
+  }
+
+  .runic-card__resource span {
+    margin-top: 0.8cqw;
+    font-size: 1.25cqw;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+  }
+
+  .runic-card__spell-meta {
+    overflow: hidden;
+    padding: 0 10cqw 0 2.5cqw;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .runic-card__spell-meta--right {
+    padding: 0 2.5cqw 0 10cqw;
+    text-align: right;
+  }
+
+  .runic-card__damage-badge {
+    position: absolute;
+    z-index: 5;
+    top: 2.2cqw;
+    right: 3.2cqw;
+    display: grid;
+    width: 10cqw;
+    height: 12.2cqw;
+    grid-template-rows: auto auto;
+    place-content: center;
+    place-items: center;
+    border: 0.48cqw solid #0d0f13;
+    background: linear-gradient(180deg, rgb(20 21 25 / 0.9), color-mix(in srgb, var(--runic-element) 38%, rgb(18 19 23 / 0.9)));
+    color: #fffdf4;
+    clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+    backdrop-filter: blur(0.45cqw);
+    filter: drop-shadow(0 0 0.28cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74)) drop-shadow(0 0.75cqw 0.55cqw rgb(0 0 0 / 0.38));
+  }
+
+  .runic-card__damage-badge::after {
+    position: absolute;
+    inset: 0.65cqw 0.55cqw 1.45cqw;
+    border: 0.22cqw solid color-mix(in srgb, var(--runic-element) 76%, white);
+    clip-path: polygon(0 0, 100% 0, 100% 72%, 50% 100%, 0 72%);
+    content: '';
+  }
+
+  .runic-card__damage-badge strong {
+    font-family: 'Norse Bold', 'Norse', sans-serif;
+    font-size: 4.3cqw;
+    line-height: 1;
+  }
+
+  .runic-card__damage-badge span {
+    width: 7cqw;
+    margin-top: 0.35cqw;
+    padding-top: 0.35cqw;
+    border-top: 0.28cqw solid color-mix(in srgb, var(--runic-element) 72%, white);
+    font-family: 'Norse', 'Bahnschrift Condensed', sans-serif;
+    font-size: 1.85cqw;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+  }
+
+  .runic-card__body {
+    position: relative;
+    z-index: 1;
+    grid-row: 4;
+    margin: 0 2.8cqw 2.2cqw;
+    overflow: hidden;
+    border: 0.55cqw solid #111318;
+    border-radius: 1.4cqw 1.4cqw 2.4cqw 2.4cqw;
+    background: color-mix(in srgb, var(--runic-element) 14%, rgb(242 240 232 / 0.78));
+    backdrop-filter: blur(0.7cqw);
+    box-shadow: 0 0 0 0.34cqw color-mix(in srgb, var(--runic-element) 82%, #d8be74), 0 0.75cqw 1.4cqw rgb(0 0 0 / 0.34);
+  }
+
+  .runic-card[data-kind='equipment'] .runic-card__body {
+    grid-row: 3;
+    border-top: 0.55cqw solid var(--runic-ink);
+  }
+
+  .runic-card__body-art {
+    position: absolute;
+    inset: 0;
+    background-position: center 70%;
+    background-size: cover;
+    filter: grayscale(0.35);
+    opacity: 0.11;
+  }
+
+  .runic-card__body-content {
+    position: relative;
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    padding: 2.2cqw 2.7cqw 1.6cqw;
+  }
+
+  .runic-card__rules {
+    overflow: hidden;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 3.25cqw;
+    line-height: 1.2;
+  }
+
+  .runic-card__rules--medium {
+    font-size: 2.75cqw;
+  }
+
+  .runic-card__rules--dense {
+    font-size: 2.25cqw;
+    line-height: 1.16;
+  }
+
+  .runic-card__rules p + p,
+  .runic-card__rules ul + p,
+  .runic-card__rules ol + p {
+    margin-top: 1.1cqw;
+  }
+
+  .runic-card__rules ul,
+  .runic-card__rules ol {
+    margin: 0.8cqw 0;
+    padding-left: 4cqw;
+  }
+
+  .runic-card__rules ul {
+    list-style: disc;
+  }
+
+  .runic-card__rules ol {
+    list-style: decimal;
+  }
+
+  .runic-card__flavor {
+    margin-top: auto;
+    padding: 1.1cqw 1.3cqw;
+    border: 0.25cqw solid rgb(17 19 24 / 0.28);
+    background: color-mix(in srgb, var(--runic-element) 12%, rgb(255 255 255 / 0.36));
+    opacity: 0.78;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 2.6cqw;
+    font-style: italic;
+    line-height: 1.2;
+  }
+
+  .runic-card__flavor--medium {
+    font-size: 2.2cqw;
+  }
+
+  .runic-card__flavor--dense {
+    font-size: 1.85cqw;
+    line-height: 1.15;
+  }
+
+  .runic-card__footer {
+    z-index: 2;
+    display: flex;
+    grid-row: 5;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0 2.8cqw 1.1cqw;
+    padding: 0 2.2cqw;
+    border: 0.28cqw solid #111318;
+    border-radius: 0 0 1.6cqw 1.6cqw;
+    background: linear-gradient(90deg, rgb(15 16 20 / 0.86), color-mix(in srgb, var(--runic-element) 32%, rgb(16 17 21 / 0.86)));
+    color: color-mix(in srgb, var(--runic-element) 58%, white);
+    font-family: 'Norse', 'Bahnschrift Condensed', sans-serif;
+    font-size: 1.15cqw;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    box-shadow: 0 0 0 0.2cqw color-mix(in srgb, var(--runic-element) 78%, #d8be74);
+  }
+
+  .runic-card[data-kind='equipment'] .runic-card__footer {
+    grid-row: 4;
+  }
+
+  .runic-rules-copy p + p,
+  .runic-rules-copy ul + p,
+  .runic-rules-copy ol + p {
+    margin-top: 0.8rem;
+  }
+
+  .runic-rules-copy ul,
+  .runic-rules-copy ol {
+    margin: 0.65rem 0;
+    padding-left: 1.25rem;
+  }
+
+  .runic-rules-copy ul {
+    list-style: disc;
+  }
+
+  .runic-rules-copy ol {
+    list-style: decimal;
+  }
+
+  .runic-rules-copy li + li {
+    margin-top: 0.35rem;
   }
 }

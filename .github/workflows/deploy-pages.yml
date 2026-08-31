@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: runas-tools-pages
@@ -70,3 +72,21 @@ jobs:
             --commit-hash ${{ github.sha }} \
             --commit-message "Automated Runas Tools deployment" \
             --commit-dirty=false
+
+  legacy-github-pages:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload migration notice
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: legacy-github-pages
+      - name: Deploy migration notice
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -58,11 +58,7 @@ export function SkillIntegerInput({
         if (event.key === "Enter") event.currentTarget.blur()
       }}
       onChange={onChange ? (event) => {
-        const nextDraft = event.target.value
-        setDraft(nextDraft)
-        if (!nextDraft.trim() || nextDraft === "-") return
-        const parsed = Number(nextDraft)
-        if (Number.isFinite(parsed)) onChange(normalize(nextDraft))
+        setDraft(event.target.value)
       } : undefined}
       className={cn(
         "h-10 min-w-0 rounded-xl border border-input bg-background/65 px-2 text-center text-sm tabular-nums text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25 read-only:cursor-default read-only:text-muted-foreground",

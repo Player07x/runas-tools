@@ -33,8 +33,8 @@ export function DamageForm({
   showReduction = true,
 }: Props) {
   const category = getDamageType(config.damageTypeId)?.category
-  const usesRdf = category === "physical"
-  const usesRdm = category === "magical"
+  const usesRdf = category === "physical" || category === "hybrid"
+  const usesRdm = category === "magical" || category === "hybrid"
   const isSpecial = category === "special"
   const ignoresDamageMultipliers = config.damageTypeId === "psiquica" || config.damageTypeId === "temporal"
   const bonusConversion = convertDamageBonusesToDice(config.numDice, [attributeValue, config.otherModifier])
@@ -133,6 +133,7 @@ export function DamageForm({
         {isSpecial && (
           <p className="mt-2 text-xs font-medium text-primary">Dano especial ignora RDF e RDM.</p>
         )}
+        {category === "hybrid" && <p className="mt-2 text-xs font-medium text-primary">Dano físico/mágico usa a menor redução entre RDF e RDM.</p>}
       </div>}
     </SectionCard>
   )

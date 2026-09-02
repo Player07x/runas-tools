@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { createEmptyCharacter, normalizeCharacter } from "../src/lib/characterStorage"
-import { calculateEquippedArmorDefense } from "../src/lib/inventoryCalculations"
+import { calculateEquippedArmorDefense, calculateItemRealWeight } from "../src/lib/inventoryCalculations"
 import type { CharacterInventoryItem } from "../src/types/character"
 
 function item(id: string, rdf: number, rdm: number, equippedAsArmor = false): CharacterInventoryItem {
@@ -8,6 +8,10 @@ function item(id: string, rdf: number, rdm: number, equippedAsArmor = false): Ch
 }
 
 describe("armadura ativa", () => {
+  it("aplica MT ao cubo no peso verdadeiro do item", () => {
+    expect(calculateItemRealWeight({ baseWeight: 2, quantity: 3, applyScaleWeight: true }, "2.0x")).toBe(48)
+  })
+
   it("usa somente o RDF e RDM do item escolhido como armadura", () => {
     expect(calculateEquippedArmorDefense([item("leve", 2, 1), item("pesada", 8, 5, true)]))
       .toEqual({ rdf: 8, rdm: 5 })

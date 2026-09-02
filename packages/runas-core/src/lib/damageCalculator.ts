@@ -92,7 +92,8 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
   const damageType = getDamageType(config.damageTypeId)
   const category = damageType?.category
   const isPhysical = category === "physical"
-  const reduction = category === "special" ? 0 : isPhysical ? config.rdf : config.rdm
+  const isHybrid = category === "hybrid"
+  const reduction = category === "special" ? 0 : isPhysical ? config.rdf : isHybrid ? Math.min(config.rdf, config.rdm) : config.rdm
 
   const ignoresDamageMultipliers = damageType?.id === "psiquica" || damageType?.id === "temporal"
   const mtMultiplier = config.mtEnabled && !ignoresDamageMultipliers ? getMtDamageMultiplier(config.mtValue) : 1
@@ -130,7 +131,7 @@ export function calculateDamage({ config, diceRolls, attributeValue }: Calculate
   }
   if ((reduction || 0) !== 0) {
     breakdown.push({
-      label: isPhysical ? "RDF" : "RDM",
+      label: isPhysical ? "RDF" : isHybrid ? "RDF/RDM (menor)" : "RDM",
       operator: "-",
       value: reduction,
     })
@@ -161,10 +162,13 @@ export function calculateDamageSequence(parts: DamageSequencePart[], rdf: number
 
   for (const part of parts) {
     const damageType = getDamageType(part.config.damageTypeId)
+    const hybridUsesRdf = damageType?.category === "hybrid" && remainingRdf <= remainingRdm
     const available = damageType?.category === "physical"
       ? remainingRdf
       : damageType?.category === "magical"
         ? remainingRdm
+        : damageType?.category === "hybrid"
+          ? Math.min(remainingRdf, remainingRdm)
         : 0
     const withoutReduction = calculateDamage({
       ...part,
@@ -175,13 +179,17 @@ export function calculateDamageSequence(parts: DamageSequencePart[], rdf: number
       ...part,
       config: {
         ...part.config,
-        rdf: damageType?.category === "physical" ? reductionApplied : 0,
-        rdm: damageType?.category === "magical" ? reductionApplied : 0,
+        rdf: damageType?.category === "physical" || damageType?.category === "hybrid" ? reductionApplied : 0,
+        rdm: damageType?.category === "magical" || damageType?.category === "hybrid" ? reductionApplied : 0,
       },
     })
     results.push({ ...result, reductionApplied })
     if (damageType?.category === "physical") remainingRdf -= reductionApplied
     if (damageType?.category === "magical") remainingRdm -= reductionApplied
+    if (damageType?.category === "hybrid") {
+      if (hybridUsesRdf) remainingRdf -= reductionApplied
+      else remainingRdm -= reductionApplied
+    }
   }
 
   return {

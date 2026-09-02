@@ -1,4 +1,5 @@
 import { cronosAttributeMaximumsForCharacter } from "./normalization"
+import { calculateSynchronization, deriveCronosScaleInfo } from "./calculations"
 import { CRONOS_ATTRIBUTE_KEYS, CRONOS_CHARACTER_VERSION, type CronosAttributeKey, type CronosCharacter, type CronosCharacterSaveFile, type CronosSkill } from "../types/character"
 
 function createCoreSkills(): CronosSkill[] {
@@ -23,9 +24,9 @@ export function createEmptyCronosCharacter(): CronosCharacter {
       archetype: "",
       synchronization: 1,
       synchronizationPoints: 0,
+      attributePointMaximum: 35,
       deity: "",
       magicLevel: 1,
-      memory: "",
       evolution: false,
       sizeBase: "2.00",
       sizeReal: "2.00",
@@ -74,9 +75,12 @@ function number(value: unknown, fallback = 0): number {
 export function normalizeCronosCharacter(partial: Partial<CronosCharacter> | undefined): CronosCharacter {
   const base = createEmptyCronosCharacter()
   if (!partial) return base
-  const info = { ...base.info, ...(partial.info ?? {}) }
-  info.synchronization = Math.max(1, Math.min(5, Math.trunc(number(info.synchronization, 1)))) as typeof info.synchronization
+  const legacyInfo = (partial.info ?? {}) as Partial<CronosCharacter["info"]> & { memory?: unknown }
+  const { memory: _removedMemory, ...persistedInfo } = legacyInfo
+  let info = { ...base.info, ...persistedInfo }
   info.synchronizationPoints = Math.max(0, Math.trunc(number(info.synchronizationPoints)))
+  info.synchronization = calculateSynchronization(info.synchronizationPoints)
+  info.attributePointMaximum = Math.max(0, Math.trunc(number(info.attributePointMaximum, 35)))
   info.magicLevel = Math.max(0, Math.trunc(number(info.magicLevel, 1)))
   info.evolution = Boolean(info.evolution)
   const synchronizationFiveAttribute = partial.synchronizationFiveAttribute ?? null
@@ -85,6 +89,7 @@ export function normalizeCronosCharacter(partial: Partial<CronosCharacter> | und
   for (const key of Object.keys(attributes) as (keyof typeof attributes)[]) {
     attributes[key] = Math.max(0, Math.min(maximums[key], Math.trunc(number(attributes[key], 7))))
   }
+  info = deriveCronosScaleInfo(info, attributes.strength)
   const stats = { ...base.stats, ...(partial.stats ?? {}) }
   stats.auraEnabled = Boolean(stats.auraEnabled)
   stats.auraMaximum = Math.max(0, Math.trunc(number(stats.auraMaximum)))
@@ -122,7 +127,7 @@ export function normalizeCronosCharacter(partial: Partial<CronosCharacter> | und
       const legacy = spell as unknown as Record<string, unknown>
       return {
       ...spell,
-      costType: spell.costType ?? "none",
+      costType: spell.costType === "paExtra" ? "pa" : spell.costType === "peTemporary" ? "pe" : (spell.costType ?? "none"),
       costMode: spell.costMode ?? "fixed",
       costValue: spell.costValue ?? 0,
       costText: spell.costText ?? (legacy.cost == null ? "" : String(legacy.cost)),

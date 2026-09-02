@@ -1,6 +1,7 @@
 import { synchronizationAttributeMaximums } from "../data/attributes"
 import { cronosFameScopeMinimums, cronosFameThresholds } from "../data/fame"
-import type { CronosAttributeKey, CronosAttributes, CronosFameLevel, CronosFameScope, CronosSynchronization } from "../types/character"
+import { calculateLoadBase, calculateRealWeight, calculateScaleMultiplier, calculateSizeModifier } from "@runas/core/lib/characterCalculations"
+import type { CronosAttributeKey, CronosAttributes, CronosCharacterInfo, CronosFameLevel, CronosFameScope, CronosSynchronization } from "../types/character"
 
 export interface CronosStatSnapshot {
   lifeMaximum: number
@@ -14,6 +15,26 @@ export interface CronosStatSnapshot {
 
 export function calculateAttributeBonus(attribute: number): number {
   return Math.trunc(attribute) - 10
+}
+
+export function calculateSynchronization(points: number): CronosSynchronization {
+  const safePoints = Math.max(0, Math.trunc(Number.isFinite(points) ? points : 0))
+  if (safePoints >= 70_080) return 5
+  if (safePoints >= 17_520) return 4
+  if (safePoints >= 4_380) return 3
+  if (safePoints >= 1_095) return 2
+  return 1
+}
+
+export function deriveCronosScaleInfo(info: CronosCharacterInfo, strength: number): CronosCharacterInfo {
+  const scaleMultiplier = calculateScaleMultiplier(info.sizeReal, info.sizeBase)
+  return {
+    ...info,
+    sizeModifier: calculateSizeModifier(info.sizeReal, info.sizeModifierBonus),
+    scaleMultiplier,
+    weightReal: calculateRealWeight(info.weightBase, scaleMultiplier, info.weightBonus),
+    loadBase: calculateLoadBase(strength, strength, scaleMultiplier),
+  }
 }
 
 export function calculateAttributeMaximum(
@@ -41,7 +62,7 @@ export function calculateCronosStats(
     manaMaximum: Math.max(0, attributes.spirit + evolutionGain(attributes.spirit, synchronization, evolution) + (bonuses.mana ?? 0)),
     sanityMaximum: Math.max(0, attributes.mind + (bonuses.sanity ?? 0)),
     mentalResistance: attributes.mind - 3,
-    movement: Math.max(0, (attributes.dexterity + attributes.strength) / 4 + (bonuses.movement ?? 0)),
+    movement: Math.max(0, Math.ceil((attributes.dexterity + attributes.strength) / 4 + (bonuses.movement ?? 0))),
     perception: attributes.mind,
     reflexes: attributes.dexterity - 3,
   }

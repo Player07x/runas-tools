@@ -1,4 +1,4 @@
-export const CRONOS_CHARACTER_VERSION = 1
+export const CRONOS_CHARACTER_VERSION = 2
 
 export const CRONOS_ATTRIBUTE_KEYS = ["strength", "dexterity", "mind", "will", "spirit"] as const
 export type CronosAttributeKey = (typeof CRONOS_ATTRIBUTE_KEYS)[number]
@@ -16,9 +16,9 @@ export interface CronosCharacterInfo {
   archetype: string
   synchronization: CronosSynchronization
   synchronizationPoints: number
+  attributePointMaximum: number
   deity: string
   magicLevel: number
-  memory: string
   evolution: boolean
   sizeBase: string
   sizeReal: string

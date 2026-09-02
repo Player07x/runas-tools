@@ -22,11 +22,12 @@ function lettersOnly(text: string): string {
  */
 function matchDamageType(word: string): string | null {
   const w = lettersOnly(word)
-  if (w.length < 3) return null
+  if (w.length < 2) return null
 
   for (const dt of damageTypes) {
     const name = lettersOnly(dt.name)
-    if (name === w || name.startsWith(w)) return dt.id
+    if (name === w) return dt.id
+    if (w.length >= 3 && name.startsWith(w)) return dt.id
     for (const abbr of dt.abbreviations) {
       const a = lettersOnly(abbr)
       if (a.length >= 3 && (a === w || a.startsWith(w) || w.startsWith(a))) {

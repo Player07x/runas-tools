@@ -1,11 +1,35 @@
 "use client"
 
 import type React from "react"
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { isRulesetId, type RulesetId } from "@runas/ruleset-contracts"
 import { getRulesetDefinition } from "@/data/rulesets"
 
 const ACTIVE_RULESET_STORAGE_KEY = "runas-tools:active-ruleset"
+const ACTIVE_RULESET_CHANGE_EVENT = "runas-tools:active-ruleset-change"
+let sessionRuleset: RulesetId = "runas-blue"
+
+function readStoredRuleset(): RulesetId {
+  try {
+    const stored = window.localStorage.getItem(ACTIVE_RULESET_STORAGE_KEY)
+    return isRulesetId(stored) ? stored : sessionRuleset
+  } catch {
+    return sessionRuleset
+  }
+}
+
+function subscribeToStoredRuleset(onStoreChange: () => void): () => void {
+  function handleStorage(event: StorageEvent) {
+    if (event.key === ACTIVE_RULESET_STORAGE_KEY) onStoreChange()
+  }
+
+  window.addEventListener("storage", handleStorage)
+  window.addEventListener(ACTIVE_RULESET_CHANGE_EVENT, onStoreChange)
+  return () => {
+    window.removeEventListener("storage", handleStorage)
+    window.removeEventListener(ACTIVE_RULESET_CHANGE_EVENT, onStoreChange)
+  }
+}
 
 interface RulesetContextValue {
   activeRulesetId: RulesetId
@@ -17,33 +41,26 @@ interface RulesetContextValue {
 const RulesetContext = createContext<RulesetContextValue | null>(null)
 
 export function RulesetProvider({ children }: { children: React.ReactNode }) {
-  const [activeRulesetId, setActiveRulesetId] = useState<RulesetId>("runas-blue")
+  const activeRulesetId = useSyncExternalStore(subscribeToStoredRuleset, readStoredRuleset, (): RulesetId => "runas-blue")
   const [isReady, setIsReady] = useState(false)
 
-  const applyRuleset = useCallback((id: RulesetId) => {
-    setActiveRulesetId(id)
-    document.documentElement.dataset.ruleset = id
-  }, [])
+  useEffect(() => {
+    document.documentElement.dataset.ruleset = activeRulesetId
+  }, [activeRulesetId])
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(ACTIVE_RULESET_STORAGE_KEY)
-      applyRuleset(isRulesetId(stored) ? stored : "runas-blue")
-    } catch {
-      applyRuleset("runas-blue")
-    } finally {
-      setIsReady(true)
-    }
-  }, [applyRuleset])
+    setIsReady(true)
+  }, [])
 
   const selectRuleset = useCallback((id: RulesetId) => {
-    applyRuleset(id)
+    sessionRuleset = id
     try {
       window.localStorage.setItem(ACTIVE_RULESET_STORAGE_KEY, id)
     } catch {
       // A seleção continua válida durante a sessão.
     }
-  }, [applyRuleset])
+    window.dispatchEvent(new Event(ACTIVE_RULESET_CHANGE_EVENT))
+  }, [])
 
   const value = useMemo(() => ({
     activeRulesetId,

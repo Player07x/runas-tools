@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react"
 import { Brain, BrainCircuit, Check, Dices, Download, Dumbbell, Eye, Footprints, Gauge, HeartPulse, Loader2, Plus, RotateCcw, Search, Shield, ShieldCheck, Sparkles, Trash2, Upload, WandSparkles, Zap } from "lucide-react"
 import type { RulesetCharacterEnvelope } from "@runas/ruleset-contracts"
 import { cronosAttributes } from "@runas/cronos-core/data/attributes"
-import { cronosElementOptions } from "@runas/cronos-core/data/elements"
+import { cronosElementOptions, getCronosElement } from "@runas/cronos-core/data/elements"
 import { cronosFameScopes } from "@runas/cronos-core/data/fame"
 import { cronosRaceOptions } from "@runas/cronos-core/data/races"
 import { calculateAttributeMaximum, calculateCronosStats, calculateFameProgress } from "@runas/cronos-core/lib/calculations"
@@ -142,7 +142,7 @@ function ResourceCard({ label, icon: Icon, tone, current, maximum, bonus, onCurr
       <div className="flex items-center gap-2.5 px-3 py-3"><span className="grid size-9 place-items-center rounded-xl bg-background/75 shadow-sm"><Icon className="size-5" /></span><h3 className="text-sm font-black text-foreground">{label}</h3><strong className="ml-auto text-xl tabular-nums text-foreground">{current}/{maximum}</strong></div>
       <div className="grid grid-cols-3 gap-px border-t border-border bg-border">
         <div className="bg-card p-2"><NumberInput label="Atual" value={current} min={0} max={maximum} onChange={onCurrentChange} /></div>
-        <div className="bg-muted/40 p-2"><NumberInput label="Máximo" value={maximum} onChange={() => undefined} inputClassName="text-muted-foreground" /></div>
+        <div className="bg-muted/40 p-2"><NumberInput label="Máximo" value={maximum} readOnly onChange={() => undefined} /></div>
         <div className="bg-card p-2"><NumberInput label="Bônus" value={bonus} onChange={onBonusChange} /></div>
       </div>
     </article>
@@ -161,6 +161,7 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
     { life: character.stats.lifeBonus, mana: character.stats.manaBonus, sanity: character.stats.sanityBonus, movement: character.stats.movementBonus },
   ), [character.attributes, character.info.evolution, character.info.synchronization, character.stats.lifeBonus, character.stats.manaBonus, character.stats.movementBonus, character.stats.sanityBonus])
   const blueContext = useMemo(() => adaptCronosToBlue(character), [character])
+  const attributePointsSpent = useMemo(() => Object.values(character.attributes).reduce((sum, value) => sum + value, 0), [character.attributes])
 
   function applyCost(costType: Exclude<AbilityCostType, "none" | "other">, amount: number) {
     updateCharacter((previous) => {
@@ -300,7 +301,7 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
             <CharacterPortraitEditor value={character.portraitDataUrl} onChange={(portraitDataUrl) => updateCharacter((previous) => ({ ...previous, portraitDataUrl }))} />
             <div className="grid min-w-0 gap-4 lg:grid-cols-2">
               <NumberInput label="Ano atual (A.L.)" value={Number(character.info.currentYear) || 7840} min={0} onChange={(value) => changeInfo("currentYear", String(Math.trunc(value)))} />
-              <SelectField label="Calendário" value="al" onChange={() => undefined} options={[{ value: "al", label: "Após o Grande Luto (A.L.)" }]} />
+              <SelectField label="Calendário" value="al" onChange={() => undefined} disabled options={[{ value: "al", label: "Após o Grande Luto (A.L.)" }]} />
               <SelectField label="Raça" value={character.info.race} onChange={(value) => changeInfo("race", value)} options={cronosRaceOptions} />
               <TextField label="Espécie" value={character.info.species} onChange={(value) => changeInfo("species", value)} />
               <TextField label="Nascimento" value={character.info.birthDate} onChange={(value) => changeInfo("birthDate", value)} placeholder="Formato do calendário de Cronos" />
@@ -310,22 +311,28 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
             </div>
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <NumberInput label="Sincronia" value={character.info.synchronization} min={1} max={5} onChange={(value) => changeInfo("synchronization", Math.max(1, Math.min(5, Math.trunc(value))) as CronosCharacter["info"]["synchronization"])} />
+            <NumberInput label="Sincronia (calculada pelos PS)" value={character.info.synchronization} min={1} max={5} readOnly onChange={() => undefined} />
             <NumberInput label="Pts. de Sinc. (PS)" value={character.info.synchronizationPoints} min={0} onChange={(value) => changeInfo("synchronizationPoints", Math.trunc(value))} />
             <NumberInput label="Nível Mágico" value={character.info.magicLevel} min={0} onChange={(value) => changeInfo("magicLevel", Math.trunc(value))} />
             <TextField label="Divindade" value={character.info.deity} onChange={(value) => changeInfo("deity", value)} />
-            <label className="flex min-h-11 items-center gap-3 self-end rounded-xl border border-input bg-background/70 px-3.5 text-sm font-semibold text-foreground"><input type="checkbox" checked={character.info.evolution} onChange={(event) => changeInfo("evolution", event.target.checked)} className="size-4 accent-primary" /> Evolução?</label>
-            <TextField label="Memória" value={character.info.memory} onChange={(value) => changeInfo("memory", value)} type="textarea" className="sm:col-span-2 lg:col-span-3" />
+            <label className="flex min-h-11 items-center gap-3 self-end px-1 text-sm font-semibold text-foreground"><input type="checkbox" checked={character.info.evolution} onChange={(event) => changeInfo("evolution", event.target.checked)} className="size-4 accent-primary" /> Evolução?</label>
           </div>
           <h3 className="mt-7 border-t border-border pt-5 text-sm font-bold text-foreground">Escala, dimensões e peso</h3>
           <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {(["sizeBase", "sizeReal", "sizeModifier", "sizeModifierBonus", "weightBase", "weightBonus", "weightReal", "scaleMultiplier"] as const).map((key) => <TextField key={key} label={({ sizeBase: "Altura base", sizeReal: "Altura real", sizeModifier: "Mod. tamanho", sizeModifierBonus: "Bônus de tamanho", weightBase: "Peso base", weightBonus: "Bônus de peso", weightReal: "Peso real", scaleMultiplier: "Multiplicador de escala" } as const)[key]} value={character.info[key]} onChange={(value) => changeInfo(key, value)} />)}
+            {(["sizeBase", "sizeReal", "sizeModifier", "sizeModifierBonus", "weightBase", "weightBonus", "weightReal", "scaleMultiplier", "loadBase"] as const).map((key) => {
+              const derived = key === "sizeModifier" || key === "weightReal" || key === "scaleMultiplier" || key === "loadBase"
+              return <TextField key={key} label={({ sizeBase: "Altura base", sizeReal: "Altura real", sizeModifier: "Mod. tamanho", sizeModifierBonus: "Bônus de tamanho", weightBase: "Peso base", weightBonus: "Bônus de peso", weightReal: "Peso real", scaleMultiplier: "Multiplicador de escala (MT)", loadBase: "Carga base" } as const)[key]} value={character.info[key]} readOnly={derived} onChange={(value) => changeInfo(key, value)} />
+            })}
           </div>
         </Section>
       )}
 
       {activeTab === "statistics" && (
         <Section label="Estatísticas de Cronos">
+          <div className="mb-4 grid gap-3 rounded-[20px] border border-border bg-muted/25 p-4 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-end">
+            <div><span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pontos de atributos gastos</span><strong className="mt-1 block text-2xl tabular-nums text-foreground">{attributePointsSpent} / {character.info.attributePointMaximum}</strong><p className="mt-1 text-xs text-muted-foreground">Soma de Força, Destreza, Mente, Vontade e Espírito.</p></div>
+            <NumberInput label="Máximo de pontos" value={character.info.attributePointMaximum} min={0} onChange={(value) => changeInfo("attributePointMaximum", Math.trunc(value))} />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {cronosAttributes.map((attribute) => {
               const maximum = calculateAttributeMaximum(character.info.synchronization, attribute.key, character.synchronizationFiveAttribute)
@@ -346,7 +353,7 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
           </div>
           <div className="mt-6 rounded-[22px] border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-muted/30 to-fuchsia-500/10 p-4">
             <label className="flex items-center gap-3 text-sm font-bold text-foreground"><span className="grid size-10 place-items-center rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-300"><Shield className="size-5" /></span><input type="checkbox" checked={character.stats.auraEnabled} onChange={(event) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, auraEnabled: event.target.checked } }))} className="size-4 accent-primary" /> Possui Aura?</label>
-            {character.stats.auraEnabled && <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><NumberInput label="PA atual" value={character.stats.auraCurrent} min={0} max={character.stats.auraMaximum} onChange={(auraCurrent) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, auraCurrent } }))} /><NumberInput label="PA máximo" value={character.stats.auraMaximum} min={0} onChange={(auraMaximum) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, auraMaximum } }))} /><SelectField label="Elemento da Aura" value={character.stats.auraElementId} onChange={(auraElementId) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, auraElementId } }))} options={cronosElementOptions} /><TextField label="Resistências" value={character.stats.resistances.join(", ")} onChange={(value) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, resistances: value.split(",").map((item) => item.trim()).filter(Boolean) } }))} /><TextField label="Fraquezas" value={character.stats.weaknesses.join(", ")} onChange={(value) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, weaknesses: value.split(",").map((item) => item.trim()).filter(Boolean) } }))} /><TextField label="Efeitos" value={character.stats.effects} onChange={(effects) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, effects } }))} type="textarea" /></div>}
+            {character.stats.auraEnabled && <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><NumberInput label="PA atual" value={character.stats.auraCurrent} min={0} max={character.stats.auraMaximum} onChange={(auraCurrent) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, auraCurrent } }))} /><NumberInput label="PA máximo" value={character.stats.auraMaximum} min={0} onChange={(auraMaximum) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, auraMaximum } }))} /><SelectField label="Elemento da Aura" value={character.stats.auraElementId} onChange={(auraElementId) => updateCharacter((previous) => { const element = getCronosElement(auraElementId); return { ...previous, stats: { ...previous.stats, auraElementId, resistances: [...(element?.resistances ?? [])], weaknesses: [...(element?.weaknesses ?? [])] } } })} options={cronosElementOptions} /><TextField label="Resistências" value={character.stats.resistances.join(", ")} onChange={(value) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, resistances: value.split(",").map((item) => item.trim()).filter(Boolean) } }))} /><TextField label="Fraquezas" value={character.stats.weaknesses.join(", ")} onChange={(value) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, weaknesses: value.split(",").map((item) => item.trim()).filter(Boolean) } }))} /><TextField label="Efeitos" value={character.stats.effects} onChange={(effects) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, effects } }))} type="textarea" /></div>}
           </div>
         </Section>
       )}
@@ -355,7 +362,7 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
       {activeTab === "bonds" && <CronosFameSection character={character} updateCharacter={updateCharacter} />}
       {activeTab === "abilities" && <CharacterAbilities characterName={character.name} abilities={character.abilities as CharacterAbility[]} stats={blueContext.stats} onAddAbility={(ability) => updateCharacter((previous) => ({ ...previous, abilities: [...previous.abilities, ability] }))} onImportAbilities={importAbilities} onAbilityChange={(id, updates) => updateCharacter((previous) => ({ ...previous, abilities: previous.abilities.map((ability) => ability.id === id ? { ...ability, ...updates } : ability) }))} onRemoveAbility={(id) => updateCharacter((previous) => ({ ...previous, abilities: previous.abilities.filter((ability) => ability.id !== id) }))} onApplyCost={applyCost} />}
       {activeTab === "inventory" && <CharacterInventory variant="cronos" characterName={character.name} items={character.inventory as CharacterInventoryItem[]} info={blueContext.info} attributes={blueContext.attributes} stats={blueContext.stats} skills={blueContext.skills} bonds={[]} abilities={character.abilities as CharacterAbility[]} spells={character.spells as CharacterSpell[]} onItemsChange={(items) => updateCharacter((previous) => ({ ...previous, inventory: items, stats: { ...previous.stats, currentLoad: calculateInventoryLoad(items, previous.info.scaleMultiplier) } }))} onImportItems={importInventoryItems} onLoadBonusChange={(loadBonus) => updateCharacter((previous) => ({ ...previous, stats: { ...previous.stats, loadBonus } }))} />}
-      {activeTab === "spells" && <CharacterSpells characterName={character.name} spells={character.spells as CharacterSpell[]} skills={blueContext.skills} stats={blueContext.stats} onAddSpell={(spell) => updateCharacter((previous) => ({ ...previous, spells: [...previous.spells, spell] }))} onImportSpells={importSpells} onSpellChange={(id, updates) => updateCharacter((previous) => ({ ...previous, spells: previous.spells.map((spell) => spell.id === id ? { ...spell, ...updates } : spell) }))} onRemoveSpell={(id) => updateCharacter((previous) => ({ ...previous, spells: previous.spells.filter((spell) => spell.id !== id) }))} onApplyCost={applyCost} />}
+      {activeTab === "spells" && <CharacterSpells variant="cronos" characterName={character.name} spells={character.spells as CharacterSpell[]} skills={blueContext.skills} stats={blueContext.stats} onAddSpell={(spell) => updateCharacter((previous) => ({ ...previous, spells: [...previous.spells, spell] }))} onImportSpells={importSpells} onSpellChange={(id, updates) => updateCharacter((previous) => ({ ...previous, spells: previous.spells.map((spell) => spell.id === id ? { ...spell, ...updates } : spell) }))} onRemoveSpell={(id) => updateCharacter((previous) => ({ ...previous, spells: previous.spells.filter((spell) => spell.id !== id) }))} onApplyCost={applyCost} />}
       {activeTab === "notes" && <CharacterNotes notes={character.notes as CharacterNote[]} onAddNote={(note) => updateCharacter((previous) => ({ ...previous, notes: [...previous.notes, note] }))} onNoteChange={(id, updates) => updateCharacter((previous) => ({ ...previous, notes: previous.notes.map((note) => note.id === id ? { ...note, ...updates } : note) }))} onRemoveNote={(id) => updateCharacter((previous) => ({ ...previous, notes: previous.notes.filter((note) => note.id !== id) }))} />}
     </div>
   )

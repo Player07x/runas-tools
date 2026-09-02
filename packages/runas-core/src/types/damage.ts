@@ -1,6 +1,6 @@
 import type { AttributeKey } from "./character"
 
-export type DamageCategory = "physical" | "magical" | "special"
+export type DamageCategory = "physical" | "magical" | "hybrid" | "special"
 
 export interface DamageType {
   id: string

@@ -16,6 +16,7 @@ const RichTextEditor = dynamic(
 )
 
 interface Props {
+  variant?: "runas-blue" | "cronos"
   characterName: string
   spells: CharacterSpell[]
   skills: CharacterSkill[]
@@ -44,6 +45,13 @@ const costOptions: { value: AbilityCostType; label: string }[] = [
   { value: "pe", label: "PE Atual" },
   { value: "paExtra", label: "PA Extra" },
   { value: "peTemporary", label: "PE Temporário" },
+]
+const cronosCostOptions: { value: AbilityCostType; label: string }[] = [
+  { value: "none", label: "Nenhum" },
+  { value: "other", label: "Outro" },
+  { value: "pv", label: "Vida" },
+  { value: "pa", label: "Aura" },
+  { value: "pe", label: "Mana" },
 ]
 const magicTypeOptions: { value: SpellMagicType; label: string }[] = [
   { value: "aura", label: "Aura" },
@@ -95,16 +103,16 @@ function currentResource(stats: CharacterStats, costType: AbilityCostType): numb
   return 0
 }
 
-function costLabel(type: AbilityCostType): string {
-  return costOptions.find((option) => option.value === type)?.label ?? "Custo"
+function costLabel(type: AbilityCostType, options = costOptions): string {
+  return options.find((option) => option.value === type)?.label ?? "Custo"
 }
 
-function costSummary(spell: CharacterSpell): string {
+function costSummary(spell: CharacterSpell, options = costOptions): string {
   if (spell.costType === "none") return "Nenhum"
   if (spell.costType === "other") return spell.costText || "Outro"
   return spell.costMode === "relative"
-    ? `${costLabel(spell.costType)} · Relativo`
-    : `${spell.costValue} ${costLabel(spell.costType)}`
+    ? `${costLabel(spell.costType, options)} · Relativo`
+    : `${spell.costValue} ${costLabel(spell.costType, options)}`
 }
 
 function magicTypeLabel(type: SpellMagicType): string {
@@ -127,7 +135,7 @@ function loadFilters(): { hiddenCategories: Set<string>; showFilters: boolean } 
   }
 }
 
-export function CharacterSpells({ characterName, spells, skills, stats, onAddSpell, onImportSpells, onSpellChange, onRemoveSpell, onApplyCost }: Props) {
+export function CharacterSpells({ variant = "runas-blue", characterName, spells, skills, stats, onAddSpell, onImportSpells, onSpellChange, onRemoveSpell, onApplyCost }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
   const [initialFilters] = useState(loadFilters)
@@ -143,6 +151,7 @@ export function CharacterSpells({ characterName, spells, skills, stats, onAddSpe
   const [importError, setImportError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const availableCostOptions = variant === "cronos" ? cronosCostOptions : costOptions
 
   useEffect(() => {
     try {
@@ -322,7 +331,7 @@ export function CharacterSpells({ characterName, spells, skills, stats, onAddSpe
             <span className="col-start-1 row-start-2 min-w-0 truncate text-xs font-semibold text-muted-foreground md:col-start-auto md:row-start-auto md:text-center"><span className="md:hidden">Tipo: </span>{magicTypeLabel(spell.magicType)}</span>
             <span className="col-span-2 col-start-1 row-start-3 min-w-0 truncate text-xs text-muted-foreground md:col-span-1 md:col-start-auto md:row-start-auto md:text-center"><span className="md:hidden">Alcance: </span>{rangeLabel(spell)}</span>
             <span className="col-start-1 row-start-4 min-w-0 truncate text-xs text-muted-foreground md:col-start-auto md:row-start-auto md:text-center"><span className="md:hidden">Duração: </span>{spell.duration || "—"}</span>
-            <span className="col-start-2 row-start-4 min-w-0 truncate text-right text-xs text-muted-foreground md:col-start-auto md:row-start-auto md:text-center"><span className="md:hidden">Custo: </span>{costSummary(spell)}</span>
+            <span className="col-start-2 row-start-4 min-w-0 truncate text-right text-xs text-muted-foreground md:col-start-auto md:row-start-auto md:text-center"><span className="md:hidden">Custo: </span>{costSummary(spell, availableCostOptions)}</span>
             {(canCast || canApplyCost) ? <button type="button" onClick={() => beginAction(spell)} title={canCast ? `Conjurar com ${spell.castingSkill}` : `Aplicar custo: ${costLabel(spell.costType)}`} className="col-span-2 col-start-1 row-start-5 inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground transition hover:brightness-110 md:col-span-1 md:col-start-auto md:row-start-auto">{canCast ? <><Sparkles className="size-4" /> Conjurar</> : <><Bolt className="size-4" /><span className="sr-only">Aplicar custo</span></>}</button> : <span className="hidden md:block" />}
             <button type="button" onClick={() => onRemoveSpell(spell.id)} aria-label={`Remover ${spell.name}`} className="col-start-2 row-start-1 inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive md:col-start-auto md:row-start-auto"><Trash2 className="size-4" /></button>
           </article>
@@ -344,7 +353,7 @@ export function CharacterSpells({ characterName, spells, skills, stats, onAddSpe
           </div>
           <RichTextEditor label="Descrição" value={editingSpell.description} onChange={(description) => setEditingSpell((current) => current ? { ...current, description } : current)} maxLength={5000} className="mt-4" />
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <label className="relative"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Custo</span><select value={editingSpell.costType} onChange={(event) => setEditingSpell({ ...editingSpell, costType: event.target.value as AbilityCostType })} className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-3 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25">{costOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 size-4 text-muted-foreground" /></label>
+            <label className="relative"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Custo</span><select value={editingSpell.costType} onChange={(event) => setEditingSpell({ ...editingSpell, costType: event.target.value as AbilityCostType })} className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-3 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25">{availableCostOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 size-4 text-muted-foreground" /></label>
             {editingSpell.costType === "other" && <label className="sm:col-span-2"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Descrição do custo</span><input value={editingSpell.costText} maxLength={50} onChange={(event) => setEditingSpell({ ...editingSpell, costText: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>}
             {editingSpell.costType !== "none" && editingSpell.costType !== "other" && <><label className="relative"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Aplicação</span><select value={editingSpell.costMode} onChange={(event) => setEditingSpell({ ...editingSpell, costMode: event.target.value as "fixed" | "relative" })} className="h-11 w-full appearance-none rounded-xl border border-input bg-background px-3 pr-9 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25"><option value="fixed">Fixo</option><option value="relative">Relativo</option></select><ChevronDown className="pointer-events-none absolute bottom-3.5 right-3 size-4 text-muted-foreground" /></label>{editingSpell.costMode === "fixed" && <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Valor fixo</span><input type="number" min={0} step={1} value={editingSpell.costValue} onChange={(event) => setEditingSpell({ ...editingSpell, costValue: Math.max(0, Math.trunc(Number(event.target.value) || 0)) })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>}</>}
           </div>

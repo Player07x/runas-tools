@@ -52,7 +52,7 @@ export function calculateItemRealWeight(item: Pick<CharacterInventoryItem, "base
   const baseWeight = Math.max(0, Number.isFinite(item.baseWeight) ? item.baseWeight : 0)
   const quantity = Math.max(1, Number.isFinite(item.quantity) ? Math.trunc(item.quantity) : 1)
   const multiplier = item.applyScaleWeight ? parseScaleMultiplier(scaleMultiplier) : 1
-  return Number((baseWeight * multiplier * quantity).toFixed(3))
+  return Number((baseWeight * multiplier ** 3 * quantity).toFixed(3))
 }
 
 export function calculateInventoryLoad(items: CharacterInventoryItem[], scaleMultiplier: string): number {

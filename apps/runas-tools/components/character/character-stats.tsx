@@ -116,11 +116,7 @@ function NumericInput({
         if (event.key === "Enter") event.currentTarget.blur()
       }}
       onChange={onChange ? (event) => {
-        const nextDraft = event.target.value
-        setDraft(nextDraft)
-        if (nextDraft.trim() === "") return
-        const parsed = Number(nextDraft)
-        if (Number.isFinite(parsed)) onChange(parsed)
+        setDraft(event.target.value)
       } : undefined}
       className={cn(
         "min-w-0 bg-transparent text-center text-base tabular-nums text-foreground outline-none read-only:cursor-default",

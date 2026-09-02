@@ -14,6 +14,7 @@ interface NumberInputProps {
   allowNegative?: boolean
   className?: string
   inputClassName?: string
+  readOnly?: boolean
 }
 
 export function NumberInput({
@@ -26,6 +27,7 @@ export function NumberInput({
   allowNegative = true,
   className,
   inputClassName,
+  readOnly = false,
 }: NumberInputProps) {
   const id = useId()
   const effectiveMin = min ?? (allowNegative ? undefined : 0)
@@ -67,20 +69,18 @@ export function NumberInput({
         min={effectiveMin}
         max={max}
         step={step}
-        onFocus={() => { editing.current = true }}
+        readOnly={readOnly}
+        onFocus={() => { if (!readOnly) editing.current = true }}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === "Enter") event.currentTarget.blur()
         }}
         onChange={(event) => {
-          const nextDraft = event.target.value
-          setDraft(nextDraft)
-          if (!nextDraft.trim() || nextDraft === "-") return
-          const parsed = Number(nextDraft)
-          if (Number.isFinite(parsed)) onChange(normalize(nextDraft))
+          setDraft(event.target.value)
         }}
         className={cn(
           "h-11 w-full rounded-xl border border-input bg-background/70 px-3.5 text-sm text-foreground outline-none transition-all focus-visible:border-ring focus-visible:bg-background focus-visible:ring-3 focus-visible:ring-ring/25",
+          readOnly && "cursor-not-allowed border-border/70 bg-muted/75 text-muted-foreground focus-visible:border-border focus-visible:bg-muted/75 focus-visible:ring-0",
           inputClassName,
         )}
       />

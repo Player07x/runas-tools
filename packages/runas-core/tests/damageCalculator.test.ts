@@ -36,6 +36,16 @@ describe("damage attribute bonuses", () => {
 })
 
 describe("dano adicional", () => {
+  it("usa a menor defesa para danos físicos/mágicos de Cronos", () => {
+    const result = calculateDamage({
+      config: { numDice: 0, damageTypeId: "natureza", attributeKey: "none", otherModifier: 20, mtEnabled: false, mtValue: 0, otherMultiplier: "1", rdf: 9, rdm: 4 },
+      diceRolls: [],
+      attributeValue: 0,
+    })
+    expect(result.total).toBe(16)
+    expect(result.breakdown).toContainEqual({ label: "RDF/RDM (menor)", operator: "-", value: 4 })
+  })
+
   it("interpreta danos consecutivos com separadores opcionais e atributos independentes", () => {
     const parsed = parseDamageExpressions("2D cortante (+força), 3D congelante adicional e 1D espectral (+sorte) adicional")
     expect(parsed.map(({ numDice, damageTypeId, attributeKey, additional }) => ({ numDice, damageTypeId, attributeKey, additional }))).toEqual([

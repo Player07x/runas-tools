@@ -1,9 +1,10 @@
-import { calculateCronosStats } from "./calculations"
+import { calculateCronosStats, deriveCronosScaleInfo } from "./calculations"
 import { normalizeCronosCharacter } from "./characterStorage"
 import type { CronosCharacter } from "../types/character"
 
 export function synchronizeCronosCharacter(character: CronosCharacter): CronosCharacter {
   const normalized = normalizeCronosCharacter(character)
+  const info = deriveCronosScaleInfo(normalized.info, normalized.attributes.strength)
   const snapshot = calculateCronosStats(
     normalized.attributes,
     normalized.info.synchronization,
@@ -17,6 +18,7 @@ export function synchronizeCronosCharacter(character: CronosCharacter): CronosCh
   )
   return {
     ...normalized,
+    info,
     stats: {
       ...normalized.stats,
       lifeCurrent: Math.min(snapshot.lifeMaximum, Math.max(0, normalized.stats.lifeCurrent)),

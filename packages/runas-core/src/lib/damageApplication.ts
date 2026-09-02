@@ -1,6 +1,6 @@
 import { damageTypes, getDamageType } from "../data/damageTypes"
 import { getTargetMtDamageMultiplier } from "./damageMt"
-import type { AppliedDamageChange, DamageResourceKey, SpecialDamageTest } from "../types/damage"
+import type { AppliedDamageChange, DamageCategory, DamageResourceKey, SpecialDamageTest } from "../types/damage"
 
 export interface FixedDamage {
   amount: number
@@ -58,7 +58,7 @@ function normalize(value: string): string {
 
 function findDamageType(value: string) {
   const candidate = normalize(value).replace(/\s+/g, "")
-  if (candidate.length < 3) return undefined
+  if (candidate.length < 2) return undefined
   return damageTypes.find((type) => {
     const names = [type.name, type.id, ...type.abbreviations].map((item) => normalize(item).replace(/\s+/g, ""))
     return names.some((name) => candidate === name || (candidate.length >= 3 && name.startsWith(candidate)))
@@ -128,7 +128,7 @@ function parseMultiplier(value: string): number | null {
   return result > 0 && Number.isFinite(result) ? result : null
 }
 
-function tokenMatches(token: string, damageName: string, category: "physical" | "magical" | "special"): boolean {
+function tokenMatches(token: string, damageName: string, category: DamageCategory): boolean {
   const value = normalize(token)
   const name = normalize(damageName)
   const matchesAllDamage = value.includes("todos os danos") &&
@@ -136,18 +136,18 @@ function tokenMatches(token: string, damageName: string, category: "physical" | 
     !value.includes("magicos")
   return value.includes(name) ||
     matchesAllDamage ||
-    (category === "physical" && (value.includes("todos os fisicos") || value.includes("todos os danos fisicos"))) ||
-    (category === "magical" && (value.includes("todos os magicos") || value.includes("todos os danos magicos")))
+    ((category === "physical" || category === "hybrid") && (value.includes("todos os fisicos") || value.includes("todos os danos fisicos"))) ||
+    ((category === "magical" || category === "hybrid") && (value.includes("todos os magicos") || value.includes("todos os danos magicos")))
 }
 
-function resistanceMultiplier(tokens: string[], damageName: string, category: "physical" | "magical" | "special"): number {
+function resistanceMultiplier(tokens: string[], damageName: string, category: DamageCategory): number {
   const match = tokens.find((token) => tokenMatches(token, damageName, category))
   if (!match) return 1
   if (/¼|1\s*\/\s*4/.test(match)) return 0.25
   return 0.5
 }
 
-function layerMultiplier(layer: DamageLayer, damageName: string, category: "physical" | "magical" | "special"): number | null {
+function layerMultiplier(layer: DamageLayer, damageName: string, category: DamageCategory): number | null {
   const custom = parseMultiplier(layer.multiplier)
   if (custom === null) return null
   const resistance = resistanceMultiplier(layer.resistances, damageName, category)
@@ -176,7 +176,8 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
 
   if (damageType.category === "special") return simulateSpecialDamage(config)
 
-  const reduction = Math.max(0, damageType.category === "physical" ? config.rdf : config.rdm)
+  const reduction = Math.max(0, damageType.category === "physical" ? config.rdf : damageType.category === "hybrid" ? Math.min(config.rdf, config.rdm) : config.rdm)
+  const reductionLabel = damageType.category === "physical" ? "RDF" : damageType.category === "hybrid" ? "RDF/RDM (menor)" : "RDM"
   const mtMultiplier = config.mtEnabled ? getTargetMtDamageMultiplier(config.mtValue) : 1
   const damageAfterMt = config.damage.amount * mtMultiplier
   let remaining = Math.max(0, damageAfterMt - reduction)
@@ -185,9 +186,9 @@ export function simulateDamageApplication(config: DamageApplicationConfig): { va
   const steps = config.mtEnabled
     ? [
         `${config.damage.amount} ${damageType.name} × MT ${mtMultiplier} = ${formattedAfterMt}`,
-        `${formattedAfterMt} − ${reduction} ${damageType.category === "physical" ? "RDF" : "RDM"} = ${formattedRemaining}`,
+        `${formattedAfterMt} − ${reduction} ${reductionLabel} = ${formattedRemaining}`,
       ]
-    : [`${config.damage.amount} ${damageType.name} − ${reduction} ${damageType.category === "physical" ? "RDF" : "RDM"} = ${formattedRemaining}`]
+    : [`${config.damage.amount} ${damageType.name} − ${reduction} ${reductionLabel} = ${formattedRemaining}`]
   const changes: AppliedDamageChange[] = []
 
   for (let layerIndex = 0; layerIndex < config.layers.length; layerIndex += 1) {
@@ -257,19 +258,24 @@ export function simulateDamageApplications(config: DamageSequenceApplicationConf
     const damage = config.damages[index]
     const damageType = getDamageType(damage.damageTypeId)
     if (!damageType) return { value: null, error: "Tipo de dano inválido." }
-    const pool = damageType.category === "physical" ? remainingRdf : damageType.category === "magical" ? remainingRdm : 0
+    const hybridUsesRdf = damageType.category === "hybrid" && remainingRdf <= remainingRdm
+    const pool = damageType.category === "physical" ? remainingRdf : damageType.category === "magical" ? remainingRdm : damageType.category === "hybrid" ? Math.min(remainingRdf, remainingRdm) : 0
     const mtMultiplier = config.mtEnabled ? getTargetMtDamageMultiplier(config.mtValue) : 1
     const consumed = Math.min(pool, Math.max(0, damage.amount * mtMultiplier))
     const simulation = simulateDamageApplication({
       ...config,
       damage,
-      rdf: damageType.category === "physical" ? consumed : 0,
-      rdm: damageType.category === "magical" ? consumed : 0,
+      rdf: damageType.category === "physical" || damageType.category === "hybrid" ? consumed : 0,
+      rdm: damageType.category === "magical" || damageType.category === "hybrid" ? consumed : 0,
       layers,
     })
     if (!simulation.value) return simulation
     if (damageType.category === "physical") remainingRdf -= consumed
     if (damageType.category === "magical") remainingRdm -= consumed
+    if (damageType.category === "hybrid") {
+      if (hybridUsesRdf) remainingRdf -= consumed
+      else remainingRdm -= consumed
+    }
     steps.push(`Dano ${index + 1} — ${damage.amount} ${damageType.name}`)
     steps.push(...simulation.value.steps)
     notices.push(...simulation.value.notices)

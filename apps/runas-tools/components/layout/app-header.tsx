@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { navItems } from "@/data/navigation"
 import { ThemeToggle } from "./theme-toggle"
 import { useCharacterPanel } from "@/components/character/character-panel"
+import { useRuleset } from "@/components/rulesets/ruleset-provider"
 
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/"
@@ -17,6 +18,7 @@ function isActive(pathname: string, href: string) {
 export function AppHeader() {
   const pathname = usePathname()
   const { open } = useCharacterPanel()
+  const { activeRuleset } = useRuleset()
   return (
     <>
       {/* Top bar */}
@@ -26,7 +28,10 @@ export function AppHeader() {
             <span className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-black shadow-[0_6px_18px_color-mix(in_srgb,var(--primary)_30%,transparent)] transition-transform group-hover:-rotate-3">
               <Image src="/icon-192.png" alt="Logo Runas Tools" width={192} height={192} className="size-full object-cover" />
             </span>
-            <span className="text-sm font-bold tracking-tight text-foreground sm:text-base">Runas Tools</span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold tracking-tight text-foreground sm:text-base">Runas Tools</span>
+              <span className="hidden truncate text-[0.62rem] font-semibold text-muted-foreground lg:block">{activeRuleset.shortName}</span>
+            </span>
           </Link>
 
           {/* Desktop nav */}

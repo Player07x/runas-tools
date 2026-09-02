@@ -171,6 +171,60 @@
   --highlight-foreground: #514829;
 }
 
+html[data-ruleset='cronos'] {
+  --background: #eef3f3;
+  --foreground: #28384a;
+  --card: #fffaf0;
+  --card-foreground: #273749;
+  --popover: #fffaf0;
+  --popover-foreground: #273749;
+  --primary: #a96855;
+  --primary-foreground: #fffaf1;
+  --secondary: #dde9ec;
+  --secondary-foreground: #344e62;
+  --muted: #e8e1d7;
+  --muted-foreground: #6e5b5d;
+  --accent: #f1d7a8;
+  --accent-foreground: #6b4537;
+  --border: #cfcbc1;
+  --input: #c1cbd0;
+  --ring: #bf8062;
+  --panel: #3e5974;
+  --panel-elevated: #b56f59;
+  --panel-input: #2e4359;
+  --panel-muted: #d5e2e8;
+  --panel-border: #82a0b5;
+  --highlight: #f0c977;
+  --highlight-foreground: #4d372d;
+}
+
+html[data-ruleset='cronos'].dark {
+  --background: #090916;
+  --foreground: #f1edff;
+  --card: #151326;
+  --card-foreground: #f4f0ff;
+  --popover: #18142d;
+  --popover-foreground: #f4f0ff;
+  --primary: #a783ff;
+  --primary-foreground: #100b1d;
+  --secondary: #251d42;
+  --secondary-foreground: #eee8ff;
+  --muted: #1d1831;
+  --muted-foreground: #b7add0;
+  --accent: #36255b;
+  --accent-foreground: #f2eaff;
+  --border: #37304e;
+  --input: #4b4167;
+  --ring: #a783ff;
+  --panel: #100c20;
+  --panel-elevated: #33205c;
+  --panel-input: #0a0814;
+  --panel-muted: #bdb0dc;
+  --panel-border: #5f4b86;
+  --highlight: #b89aff;
+  --highlight-foreground: #150d25;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -181,6 +235,22 @@
       radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--primary) 10%, transparent) 0, transparent 30rem),
       linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, white) 0, var(--background) 22rem);
     background-attachment: fixed;
+  }
+  html[data-ruleset='cronos'] body {
+    background-image:
+      radial-gradient(circle at 68% 4%, rgb(255 244 205 / 0.92) 0 1.2rem, rgb(33 43 50 / 0.96) 1.35rem 2rem, rgb(242 203 138 / 0.6) 2.1rem 2.8rem, transparent 4.5rem),
+      linear-gradient(180deg, rgb(94 139 179 / 0.23), transparent 22rem),
+      repeating-linear-gradient(76deg, transparent 0 2.7rem, rgb(169 104 85 / 0.035) 2.75rem 2.9rem),
+      linear-gradient(180deg, var(--background), color-mix(in srgb, var(--background) 88%, #d6b26f));
+  }
+  html[data-ruleset='cronos'].dark body {
+    background-image:
+      radial-gradient(circle at 68% 5%, #020207 0 2rem, rgb(141 87 244 / 0.65) 2.1rem 2.35rem, rgb(86 42 159 / 0.28) 2.5rem 5.5rem, transparent 8rem),
+      radial-gradient(ellipse at 68% 5%, rgb(121 82 207 / 0.2), transparent 35rem),
+      radial-gradient(circle at 18% 16%, rgb(255 255 255 / 0.5) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 84% 24%, rgb(255 255 255 / 0.42) 0 1px, transparent 1.5px),
+      linear-gradient(180deg, #090916, #100b20 45%, #090916);
+    background-size: auto, auto, 9rem 7rem, 13rem 11rem, auto;
   }
   ::selection {
     background: color-mix(in srgb, var(--primary) 28%, transparent);
@@ -216,6 +286,13 @@
 }
 
 @layer components {
+  .cronos-book-cover {
+    background:
+      radial-gradient(circle at 62% 24%, #020207 0 1.6rem, #a783ff 1.72rem 1.95rem, rgb(117 64 202 / 0.45) 2.1rem 4.8rem, transparent 6rem),
+      radial-gradient(circle at 18% 12%, rgb(255 255 255 / 0.72) 0 1px, transparent 1.5px),
+      linear-gradient(145deg, #100d24, #28164a 58%, #080811);
+    background-size: auto, 7rem 6rem, auto;
+  }
   /*
    * Compartilha a altura do maior rótulo entre os campos da mesma linha.
    * A linha cresce apenas quando o conteúdo quebra, mantendo inputs alinhados.

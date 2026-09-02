@@ -4,16 +4,22 @@ import { useEffect, useId, useRef, useState } from "react"
 import { Crop, ImagePlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-const ART_WIDTH = 1260
-const ART_HEIGHT = 1760
+const DEFAULT_ART_WIDTH = 1260
+const DEFAULT_ART_HEIGHT = 1760
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
 interface ImageCropperProps {
   currentImage: string
   onApply: (dataUrl: string) => void
+  title?: string
+  description?: string
+  chooseLabel?: string
+  applyLabel?: string
+  outputWidth?: number
+  outputHeight?: number
 }
 
-export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
+export function ImageCropper({ currentImage, onApply, title = "Arte da carta", description = "Recorte vertical em 63:88; a arte ocupa o fundo inteiro e fica incorporada ao JSON.", chooseLabel = "Escolher imagem", applyLabel = "Aplicar recorte", outputWidth = DEFAULT_ART_WIDTH, outputHeight = DEFAULT_ART_HEIGHT }: ImageCropperProps) {
   const inputId = useId()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [source, setSource] = useState("")
@@ -33,22 +39,22 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
       const context = canvas.getContext("2d")
       if (!context) return
 
-      const baseScale = Math.max(ART_WIDTH / image.naturalWidth, ART_HEIGHT / image.naturalHeight)
+      const baseScale = Math.max(outputWidth / image.naturalWidth, outputHeight / image.naturalHeight)
       const scale = baseScale * zoom
       const width = image.naturalWidth * scale * stretchX
       const height = image.naturalHeight * scale * stretchY
-      const overflowX = Math.max(0, width - ART_WIDTH)
-      const overflowY = Math.max(0, height - ART_HEIGHT)
-      const x = (ART_WIDTH - width) / 2 + (positionX / 100) * (overflowX / 2)
-      const y = (ART_HEIGHT - height) / 2 + (positionY / 100) * (overflowY / 2)
+      const overflowX = Math.max(0, width - outputWidth)
+      const overflowY = Math.max(0, height - outputHeight)
+      const x = (outputWidth - width) / 2 + (positionX / 100) * (overflowX / 2)
+      const y = (outputHeight - height) / 2 + (positionY / 100) * (overflowY / 2)
 
       context.fillStyle = "#252832"
-      context.fillRect(0, 0, ART_WIDTH, ART_HEIGHT)
+      context.fillRect(0, 0, outputWidth, outputHeight)
       context.drawImage(image, x, y, width, height)
     }
     image.onerror = () => setError("Não foi possível ler esta imagem.")
     image.src = source
-  }, [positionX, positionY, source, stretchX, stretchY, zoom])
+  }, [outputHeight, outputWidth, positionX, positionY, source, stretchX, stretchY, zoom])
 
   function chooseImage(file: File | undefined) {
     if (!file) return
@@ -84,12 +90,12 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
     <div className="rounded-2xl border border-border bg-muted/25 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-sm font-bold text-foreground">Arte da carta</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">Recorte vertical em 63:88; a arte ocupa o fundo inteiro e fica incorporada ao JSON.</p>
+          <h3 className="text-sm font-bold text-foreground">{title}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
         </div>
         <label htmlFor={inputId} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:bg-muted">
           <ImagePlus className="size-4" />
-          Escolher imagem
+          {chooseLabel}
         </label>
         <input id={inputId} className="sr-only" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseImage(event.target.files?.[0])} />
       </div>
@@ -97,7 +103,7 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
       {source ? (
         <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
           <div className="overflow-hidden rounded-xl border-2 border-dashed border-primary/35 bg-panel">
-            <canvas ref={canvasRef} width={ART_WIDTH} height={ART_HEIGHT} className="mx-auto block aspect-[63/88] h-auto max-h-[34rem] w-auto max-w-full" />
+            <canvas ref={canvasRef} width={outputWidth} height={outputHeight} style={{ aspectRatio: `${outputWidth}/${outputHeight}` }} className="mx-auto block h-auto max-h-[34rem] w-auto max-w-full" />
           </div>
           <div className="space-y-3">
             <RangeControl label="Zoom" value={zoom} min={1} max={2.5} step={0.01} onChange={setZoom} />
@@ -107,12 +113,12 @@ export function ImageCropper({ currentImage, onApply }: ImageCropperProps) {
             <RangeControl label="Vertical" value={positionY} min={-100} max={100} step={1} onChange={setPositionY} />
             <Button type="button" className="w-full" onClick={applyCrop}>
               <Crop className="size-4" />
-              Aplicar recorte
+              {applyLabel}
             </Button>
           </div>
         </div>
       ) : currentImage ? (
-        <p className="mt-3 rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-xs text-muted-foreground">A carta já possui uma arte recortada. Escolha outra imagem para substituí-la.</p>
+        <p className="mt-3 rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-xs text-muted-foreground">Já existe uma imagem recortada. Escolha outra para substituí-la.</p>
       ) : null}
       {error && <p role="alert" className="mt-3 text-sm font-medium text-destructive">{error}</p>}
     </div>

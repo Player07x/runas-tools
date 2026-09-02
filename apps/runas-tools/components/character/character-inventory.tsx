@@ -41,6 +41,7 @@ import { calculateCharacterStatSnapshot } from "@runas/core/lib/characterStatCal
 import { exportInventoryList, parseInventoryListFile, type ImportedInventoryItem } from "@/lib/inventoryTransfer"
 
 interface Props {
+  variant?: "runas-blue" | "cronos"
   characterName: string
   items: CharacterInventoryItem[]
   info: CharacterInfo
@@ -134,7 +135,7 @@ function sanitizeItem(item: CharacterInventoryItem, matchingBonds: CharacterBond
   }
 }
 
-export function CharacterInventory({ characterName, items, info, attributes, stats, skills, bonds, abilities, spells, onItemsChange, onImportItems, onLoadBonusChange }: Props) {
+export function CharacterInventory({ variant = "runas-blue", characterName, items, info, attributes, stats, skills, bonds, abilities, spells, onItemsChange, onImportItems, onLoadBonusChange }: Props) {
   const router = useRouter()
   const { close } = useCharacterPanel()
   const [draft, setDraft] = useState<CharacterInventoryItem | null>(null)
@@ -154,7 +155,7 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
   const equippedArmor = items.find((item) => item.usage === "equipped" && item.equippedAsArmor)
   const armorCandidates = items.filter((item) => item.usage === "equipped")
   const equippedCombatItems = items.filter((item) => item.usage === "equipped" && ["weapon", "armor", "shield"].includes(item.type))
-  const bondAbilities = abilities.filter((ability) => isBondAbilityCategory(ability.category))
+  const selectableAbilities = variant === "cronos" ? abilities : abilities.filter((ability) => isBondAbilityCategory(ability.category))
   const enchantmentSpells = useMemo(() => spells.filter((spell) => spell.magicType === "enchantment"), [spells])
   const matchingBonds = useMemo(() => draft
     ? bonds.filter((bond) => normalizeSkillName(bond.name) === normalizeSkillName(draft.name))
@@ -374,15 +375,15 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
       {draft && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 p-3 backdrop-blur-[2px]" onMouseDown={(event) => { if (event.currentTarget === event.target) setDraft(null) }}>
           {dialogMode === "view"
-            ? <ItemView item={draft} info={info} skills={skills} bonds={bonds} abilities={abilities} spells={spells} attributes={attributes} stats={stats} onClose={() => setDraft(null)} onEdit={() => setDialogMode("edit")} onDelete={() => removeItem(draft)} onReference={setReferencePreview} onRollSkill={rollSkill} onRollBond={rollBond} onRollDamage={rollDamage} />
+            ? <ItemView variant={variant} item={draft} info={info} skills={skills} bonds={bonds} abilities={abilities} spells={spells} attributes={attributes} stats={stats} onClose={() => setDraft(null)} onEdit={() => setDialogMode("edit")} onDelete={() => removeItem(draft)} onReference={setReferencePreview} onRollSkill={rollSkill} onRollBond={rollBond} onRollDamage={rollDamage} />
             : <form onSubmit={saveDraft} role="dialog" aria-modal="true" aria-labelledby="inventory-editor-title" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl overflow-y-auto rounded-[24px] border border-border bg-card p-4 shadow-2xl sm:p-6">
                 <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Modo edição</p><h2 id="inventory-editor-title" className="mt-1 text-lg font-bold text-foreground">{draftIsNew ? "Novo item" : draft.name}</h2></div><button type="button" onClick={() => setDraft(null)} aria-label="Fechar item" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div>
                 <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <label className="sm:col-span-2"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Nome</span><input required maxLength={80} value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>
                   <Select label="Uso" value={draft.usage} options={draft.type === "innate" ? inventoryUsageOptions.filter((option) => option.value !== "stored") : inventoryUsageOptions} onChange={(value) => setDraft({ ...draft, usage: value as InventoryUsage })} />
                   <Select label="Tipo" value={draft.type} options={inventoryTypeOptions} onChange={(value) => { const type = value as InventoryItemType; setDraft({ ...draft, type, usage: normalizeInventoryUsage(type, draft.usage) }) }} />
-                  <Select label="Afinidade" value={String(draft.affinity)} options={itemAffinityOptions.map((option) => ({ value: String(option.value), label: option.label }))} onChange={(value) => setDraft({ ...draft, affinity: Number(value) as CharacterInventoryItem["affinity"] })} />
-                  <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Pontos de Vínculo</span><input type="number" min={0} step={1} value={draft.bondPoints} onChange={(event) => setDraft({ ...draft, bondPoints: Math.max(0, Math.trunc(Number(event.target.value) || 0)) })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring" /><span className="mt-1 block text-xs text-muted-foreground">Raridade: {itemRarity(draft.bondPoints)}</span></label>
+                  {variant === "runas-blue" && <Select label="Afinidade" value={String(draft.affinity)} options={itemAffinityOptions.map((option) => ({ value: String(option.value), label: option.label }))} onChange={(value) => setDraft({ ...draft, affinity: Number(value) as CharacterInventoryItem["affinity"] })} />}
+                  {variant === "runas-blue" && <label><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Pontos de Vínculo</span><input type="number" min={0} step={1} value={draft.bondPoints} onChange={(event) => setDraft({ ...draft, bondPoints: Math.max(0, Math.trunc(Number(event.target.value) || 0)) })} className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-ring" /><span className="mt-1 block text-xs text-muted-foreground">Raridade: {itemRarity(draft.bondPoints)}</span></label>}
                   <NumberInput label="Peso Base (kg)" value={draft.baseWeight} min={0} step={0.001} onChange={(baseWeight) => setDraft({ ...draft, baseWeight: Math.max(0, baseWeight) })} />
                   <NumberInput label="Quantidade" value={draft.quantity} min={1} step={1} onChange={(quantity) => setDraft({ ...draft, quantity: Math.max(1, Math.trunc(quantity || 1)) })} />
                   {draft.baseWeight > 0 && <SegmentedToggle label="Aplicar Peso Real?" value={draft.applyScaleWeight ? "yes" : "no"} onChange={(value) => setDraft({ ...draft, applyScaleWeight: value === "yes" })} options={[{ value: "yes", label: "Sim" }, { value: "no", label: "Não" }]} />}
@@ -403,8 +404,8 @@ export function CharacterInventory({ characterName, items, info, attributes, sta
                     </div>
                   </fieldset>
                   <Select label="Encantamento (opcional)" value={draft.enchantmentSpellId} options={[{ value: "", label: enchantmentSpells.length ? "Nenhum" : "Nenhum encantamento cadastrado" }, ...enchantmentSpells.map((spell) => ({ value: spell.id, label: spell.name }))]} onChange={(value) => setDraft({ ...draft, enchantmentSpellId: value })} />
-                  <Select label="Vínculo (opcional)" value={draft.bondId} options={[{ value: "", label: matchingBonds.length ? "Nenhum" : "Nenhum vínculo com este nome" }, ...matchingBonds.map((bond) => ({ value: bond.id, label: bond.name }))]} onChange={(value) => setDraft({ ...draft, bondId: value })} />
-                  <Select label="Habilidade de Vínculo (opcional)" value={draft.bondAbilityId} options={[{ value: "", label: "Nenhuma" }, ...bondAbilities.map((ability) => ({ value: ability.id, label: ability.name }))]} onChange={(value) => setDraft({ ...draft, bondAbilityId: value })} />
+                  {variant === "runas-blue" && <Select label="Vínculo (opcional)" value={draft.bondId} options={[{ value: "", label: matchingBonds.length ? "Nenhum" : "Nenhum vínculo com este nome" }, ...matchingBonds.map((bond) => ({ value: bond.id, label: bond.name }))]} onChange={(value) => setDraft({ ...draft, bondId: value })} />}
+                  <Select label={variant === "cronos" ? "Habilidade (opcional)" : "Habilidade de Vínculo (opcional)"} value={draft.bondAbilityId} options={[{ value: "", label: "Nenhuma" }, ...selectableAbilities.map((ability) => ({ value: ability.id, label: ability.name }))]} onChange={(value) => setDraft({ ...draft, bondAbilityId: value })} />
                   <Select label="Perícia (opcional)" value={draft.skillId} options={[{ value: "", label: "Nenhuma" }, ...skills.map((skill) => ({ value: skill.id, label: skill.name }))]} onChange={(value) => setDraft({ ...draft, skillId: value })} />
                 </div>
                 <label className="mt-4 block"><span className="mb-1.5 block text-sm font-medium text-muted-foreground">Descrição</span><textarea rows={6} maxLength={5000} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} className="w-full resize-y rounded-xl border border-input bg-background p-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/25" /></label>
@@ -428,6 +429,7 @@ function OptionalNumberInput({ label, value, max, onChange }: { label: string; v
 }
 
 interface ItemViewProps {
+  variant: "runas-blue" | "cronos"
   item: CharacterInventoryItem
   info: CharacterInfo
   skills: CharacterSkill[]
@@ -445,7 +447,7 @@ interface ItemViewProps {
   onRollDamage: (item: CharacterInventoryItem) => void
 }
 
-function ItemView({ item, info, skills, bonds, abilities, spells, attributes, stats, onClose, onEdit, onDelete, onReference, onRollSkill, onRollBond, onRollDamage }: ItemViewProps) {
+function ItemView({ variant, item, info, skills, bonds, abilities, spells, attributes, stats, onClose, onEdit, onDelete, onReference, onRollSkill, onRollBond, onRollDamage }: ItemViewProps) {
   const spell = spells.find((candidate) => candidate.id === item.enchantmentSpellId)
   const bond = bonds.find((candidate) => candidate.id === item.bondId)
   const ability = abilities.find((candidate) => candidate.id === item.bondAbilityId)
@@ -453,12 +455,12 @@ function ItemView({ item, info, skills, bonds, abilities, spells, attributes, st
   const skillTest = skill?.attributeKey ? calculateAttributeTest(attributes, skill.attributeKey) + calculateSkillModifier(skill) : null
   return <div role="dialog" aria-modal="true" aria-labelledby="inventory-view-title" className="max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-[24px] border border-border bg-card p-4 shadow-2xl sm:p-6">
     <div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Visualização do item</p><h2 id="inventory-view-title" className="mt-1 text-xl font-bold text-foreground">{item.name}</h2><p className="mt-1 text-sm text-muted-foreground">{inventoryTypeLabel(item.type)} · {inventoryUsageLabel(item.usage)}</p></div><button type="button" onClick={onClose} aria-label="Fechar item" className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"><X className="size-5" /></button></div>
-    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Afinidade" value={itemAffinityOptions[item.affinity]?.label ?? "Ordinário (0)"} /><Info label="Raridade" value={itemRarity(item.bondPoints)} /><Info label="Quantidade" value={String(item.quantity)} /><Info label="Peso Base (unidade)" value={`${formatWeight(item.baseWeight)} kg`} /><Info label="Peso Total" value={`${formatWeight(calculateItemRealWeight(item, info.scaleMultiplier))} kg`} />{item.damage && <Info label="Dano" value={item.damage} />}{(item.rdf > 0 || item.rdm > 0) && <><Info label="RDF" value={String(item.rdf)} /><Info label="RDM" value={String(item.rdm)} /></>}{(item.prCurrent !== null || item.prMaximum !== null) && <Info label="PR atual/máximo" value={`${item.prCurrent ?? "—"} / ${item.prMaximum ?? "—"}`} />}</div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{variant === "runas-blue" && <><Info label="Afinidade" value={itemAffinityOptions[item.affinity]?.label ?? "Ordinário (0)"} /><Info label="Raridade" value={itemRarity(item.bondPoints)} /></>}<Info label="Quantidade" value={String(item.quantity)} /><Info label="Peso Base (unidade)" value={`${formatWeight(item.baseWeight)} kg`} /><Info label="Peso Total" value={`${formatWeight(calculateItemRealWeight(item, info.scaleMultiplier))} kg`} />{item.damage && <Info label="Dano" value={item.damage} />}{(item.rdf > 0 || item.rdm > 0) && <><Info label="RDF" value={String(item.rdf)} /><Info label="RDM" value={String(item.rdm)} /></>}{(item.prCurrent !== null || item.prMaximum !== null) && <Info label="PR atual/máximo" value={`${item.prCurrent ?? "—"} / ${item.prMaximum ?? "—"}`} />}</div>
     {item.description && <div className="mt-4 rounded-xl border border-border bg-background/55 p-4"><span className="text-xs font-medium text-muted-foreground">Descrição</span><p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{item.description}</p></div>}
     <div className="mt-4 grid gap-3 lg:grid-cols-2">
       {spell && <ReferenceCard title="Encantamento" name={spell.name} details={`${spellTypeLabel(spell.magicType)} · ${spellRange(spell)} · ${spell.duration || "Sem duração"} · ${costSummary(spell)} · ${spell.castingSkill || "Sem conjuração"}`} onOpen={() => onReference({ type: "spell", value: spell })} />}
-      {bond && <ReferenceCard title="Vínculo" name={bond.name} details={`Teste ${calculateBondTest(attributes, stats, bond)} · ${calculateBondQuality(bond.points).name}`} onOpen={() => onReference({ type: "bond", value: bond })} action={<Button type="button" size="sm" onClick={() => onRollBond(bond.id)}><Dices /> Rolar Impressão</Button>} />}
-      {ability && <ReferenceCard title="Habilidade de Vínculo" name={ability.name} details={`${plainText(ability.description) || "Sem descrição"} · Custo: ${costSummary(ability)}`} onOpen={() => onReference({ type: "ability", value: ability })} />}
+      {variant === "runas-blue" && bond && <ReferenceCard title="Vínculo" name={bond.name} details={`Teste ${calculateBondTest(attributes, stats, bond)} · ${calculateBondQuality(bond.points).name}`} onOpen={() => onReference({ type: "bond", value: bond })} action={<Button type="button" size="sm" onClick={() => onRollBond(bond.id)}><Dices /> Rolar Impressão</Button>} />}
+      {ability && <ReferenceCard title={variant === "cronos" ? "Habilidade" : "Habilidade de Vínculo"} name={ability.name} details={`${plainText(ability.description) || "Sem descrição"} · Custo: ${costSummary(ability)}`} onOpen={() => onReference({ type: "ability", value: ability })} />}
       {skill && <ReferenceCard title="Perícia" name={skill.name} details={`Teste ${skillTest ?? "—"} · Nível ${calculateSkillLevel(skill.points)} · ${skill.attributeKey ? getAttributeDef(skill.attributeKey)?.name ?? "Sem atributo" : "Sem atributo"} · Mod. ${formatSigned(skill.modifier)}`} onOpen={() => onReference({ type: "skill", value: skill })} action={<Button type="button" size="sm" onClick={() => onRollSkill(skill.id)} disabled={!skill.attributeKey}><Dices /> Rolar teste</Button>} />}
     </div>
     <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between"><Button type="button" variant="destructive" onClick={onDelete}><Trash2 /> Remover</Button><div className="flex flex-col gap-2 sm:flex-row">{(item.type === "weapon" || item.type === "shield") && <Button type="button" variant="secondary" onClick={() => onRollDamage(item)} disabled={!item.damage}><Swords /> Rolar dano</Button>}<Button type="button" onClick={onEdit}><Pencil /> Editar</Button></div></div>

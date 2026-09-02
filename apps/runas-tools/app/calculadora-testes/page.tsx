@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { PageContainer } from "@/components/layout/page-container"
-import { SkillTestCalculator } from "@/components/skill-test/skill-test-calculator"
+import { RulesetSkillTestCalculator } from "@/components/rulesets/ruleset-skill-test-calculator"
 
 export default function SkillTestPage() {
   return (
@@ -9,7 +9,7 @@ export default function SkillTestPage() {
       description="Resolva testes de atributos e perícias, aplique dados especiais e acompanhe o histórico das rolagens."
     >
       <Suspense fallback={<div className="h-72 animate-pulse rounded-[24px] border border-border bg-card" />}>
-        <SkillTestCalculator />
+        <RulesetSkillTestCalculator />
       </Suspense>
     </PageContainer>
   )

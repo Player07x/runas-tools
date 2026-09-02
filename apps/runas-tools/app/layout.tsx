@@ -7,6 +7,8 @@ import { CharacterProvider } from "@/components/character/character-provider"
 import { CharacterPanelProvider } from "@/components/character/character-panel"
 import { AppHeader } from "@/components/layout/app-header"
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration"
+import { RulesetProvider } from "@/components/rulesets/ruleset-provider"
+import { CronosCharacterProvider } from "@/components/cronos/cronos-character-provider"
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 
@@ -37,14 +39,18 @@ export default function RootLayout({
     <html lang="pt-BR" className={`${geistSans.variable} bg-background`} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider>
-          <CharacterProvider>
-            <CharacterPanelProvider>
-              <Suspense fallback={null}>
-                <AppHeader />
-              </Suspense>
-              {children}
-            </CharacterPanelProvider>
-          </CharacterProvider>
+          <RulesetProvider>
+            <CharacterProvider>
+              <CronosCharacterProvider>
+                <CharacterPanelProvider>
+                  <Suspense fallback={null}>
+                    <AppHeader />
+                  </Suspense>
+                  {children}
+                </CharacterPanelProvider>
+              </CronosCharacterProvider>
+            </CharacterProvider>
+          </RulesetProvider>
         </ThemeProvider>
         <ServiceWorkerRegistration />
       </body>

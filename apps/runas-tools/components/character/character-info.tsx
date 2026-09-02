@@ -5,12 +5,15 @@ import { ChevronDown, CircleHelp, Eye, EyeOff, LockKeyhole, TriangleAlert } from
 import type { CharacterInfo as CharacterInfoType } from "@runas/core/types/character"
 import { raceOptions as defaultRaceOptions } from "@runas/core/data/races"
 import { cn } from "@/lib/utils"
+import { CharacterPortraitEditor } from "./character-portrait-editor"
 
 interface Props {
   name: string
   info: CharacterInfoType
   onNameChange: (value: string) => void
   onInfoChange: (key: keyof CharacterInfoType, value: string) => void
+  portraitDataUrl?: string
+  onPortraitChange: (value: string | undefined) => void
 }
 
 interface FieldProps {
@@ -168,7 +171,7 @@ function Select({
   )
 }
 
-export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props) {
+export function CharacterInfo({ name, info, onNameChange, onInfoChange, portraitDataUrl, onPortraitChange }: Props) {
   const [showBaseFields, setShowBaseFields] = useState(false)
   const [showScaleExplanation, setShowScaleExplanation] = useState(false)
   const raceOptions = defaultRaceOptions.some((option) => option.value === info.race)
@@ -202,44 +205,49 @@ export function CharacterInfo({ name, info, onNameChange, onInfoChange }: Props)
           </span>
       </div>
 
-      <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
-        <Field label="Nome" value={name} onChange={onNameChange} maxLength={80} required className="sm:col-span-2" />
+      <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[12.5rem_minmax(0,1fr)]">
+        <CharacterPortraitEditor value={portraitDataUrl} onChange={onPortraitChange} />
+        <div className="grid min-w-0 gap-y-2">
+          <Field label="Nome" value={name} onChange={onNameChange} maxLength={80} required />
 
-        <div className="grid min-w-0 grid-rows-[1.5rem_auto] gap-0.5">
-          <span className="flex items-end px-2 text-sm leading-tight text-muted-foreground">
-            Raça e Espécie <span className="text-primary" aria-label="obrigatório">*</span>
-          </span>
-          <div className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,0.72fr)] overflow-hidden rounded-[18px] border border-input bg-background transition focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
-            <label className="relative min-w-0 border-r border-input">
-              <span className="sr-only">Raça</span>
-              <select
-                value={info.race}
-                onChange={(event) => onInfoChange("race", event.target.value)}
-                required
-                className="h-12 w-full appearance-none bg-transparent px-4 pr-9 text-sm text-foreground outline-none sm:h-11"
-              >
-                {raceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-            </label>
-            <label className="min-w-0">
-              <span className="sr-only">Espécie</span>
-              <input
-                value={info.species}
-                onChange={(event) => onInfoChange("species", event.target.value)}
-                maxLength={20}
-                placeholder="Espécie"
-                className="h-12 w-full min-w-0 bg-transparent px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground sm:h-11"
-              />
-            </label>
+          <div className="grid min-w-0 grid-rows-[1.5rem_auto] gap-0.5">
+            <span className="flex items-end px-2 text-sm leading-tight text-muted-foreground">
+              Raça e Espécie <span className="text-primary" aria-label="obrigatório">*</span>
+            </span>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,0.72fr)] overflow-hidden rounded-[18px] border border-input bg-background transition focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+              <label className="relative min-w-0 border-r border-input">
+                <span className="sr-only">Raça</span>
+                <select
+                  value={info.race}
+                  onChange={(event) => onInfoChange("race", event.target.value)}
+                  required
+                  className="h-12 w-full appearance-none bg-transparent px-4 pr-9 text-sm text-foreground outline-none sm:h-11"
+                >
+                  {raceOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+              </label>
+              <label className="min-w-0">
+                <span className="sr-only">Espécie</span>
+                <input
+                  value={info.species}
+                  onChange={(event) => onInfoChange("species", event.target.value)}
+                  maxLength={20}
+                  placeholder="Espécie"
+                  className="h-12 w-full min-w-0 bg-transparent px-4 text-sm text-foreground outline-none placeholder:text-muted-foreground sm:h-11"
+                />
+              </label>
+            </div>
+          </div>
+          <Field label="Ofício" value={info.profession} onChange={(value) => onInfoChange("profession", value)} maxLength={30} />
+          <div className="aligned-field-grid grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+            <Field label="Nascimento" value={info.birthDate} onChange={(value) => onInfoChange("birthDate", value)} maxLength={20} required placeholder="400/12/01 Logi ou 01/12/-100 C.E." />
+            <Field label="Idade" value={info.age} readOnly />
           </div>
         </div>
-        <Field label="Ofício" value={info.profession} onChange={(value) => onInfoChange("profession", value)} maxLength={30} />
+      </div>
 
-        <div className="aligned-field-grid grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
-          <Field label="Nascimento" value={info.birthDate} onChange={(value) => onInfoChange("birthDate", value)} maxLength={20} required placeholder="400/12/01 Logi ou 01/12/-100 C.E." />
-          <Field label="Idade" value={info.age} readOnly />
-        </div>
+      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
         <Field label="Região" value={info.region} onChange={(value) => onInfoChange("region", value)} maxLength={40} />
 
         <Select

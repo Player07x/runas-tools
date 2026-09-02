@@ -5,10 +5,16 @@ import dynamic from "next/dynamic"
 import { Dices, PanelLeftClose, PanelLeftOpen, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { CharacterTab } from "./character-sheet"
+import { useRuleset } from "@/components/rulesets/ruleset-provider"
 
 const CharacterSheet = dynamic(
   () => import("./character-sheet").then((module) => module.CharacterSheet),
   { ssr: false, loading: () => <p className="px-4 py-8 text-sm text-panel-muted">Carregando ficha…</p> },
+)
+
+const CronosCharacterSheet = dynamic(
+  () => import("@/components/cronos/cronos-character-sheet").then((module) => module.CronosCharacterSheet),
+  { ssr: false, loading: () => <p className="px-4 py-8 text-sm text-panel-muted">Carregando ficha de Cronos…</p> },
 )
 
 interface Props {
@@ -20,6 +26,7 @@ interface Props {
 
 export function CharacterPanelOverlay({ isOpen, close, activeTab, setActiveTab }: Props) {
   const [panelWidth, setPanelWidth] = useState(800)
+  const { activeRulesetId, activeRuleset } = useRuleset()
 
   useEffect(() => {
     if (!isOpen) return
@@ -58,7 +65,7 @@ export function CharacterPanelOverlay({ isOpen, close, activeTab, setActiveTab }
           <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-panel-elevated text-white shadow-lg sm:size-11 sm:rounded-2xl" aria-hidden="true"><Dices className="size-4.5 sm:size-5" /></span>
             <div className="min-w-0">
-              <p className="hidden text-[0.65rem] font-bold uppercase tracking-[0.18em] text-panel-muted min-[360px]:block">Runas · Livro Azul</p>
+              <p className="hidden text-[0.65rem] font-bold uppercase tracking-[0.18em] text-panel-muted min-[360px]:block">{activeRuleset.name}</p>
               <h2 className="truncate text-base font-bold tracking-tight text-white sm:text-lg">Ficha do personagem</h2>
             </div>
           </div>
@@ -69,7 +76,9 @@ export function CharacterPanelOverlay({ isOpen, close, activeTab, setActiveTab }
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-7 sm:py-6">
-          {isOpen && <CharacterSheet activeTab={activeTab} onActiveTabChange={setActiveTab} />}
+          {isOpen && (activeRulesetId === "cronos"
+            ? <CronosCharacterSheet activeTab={activeTab} onActiveTabChange={setActiveTab} />
+            : <CharacterSheet activeTab={activeTab} onActiveTabChange={setActiveTab} />)}
         </div>
       </aside>
     </div>

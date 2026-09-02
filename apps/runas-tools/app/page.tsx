@@ -1,12 +1,19 @@
 "use client"
 
-import { Dices, FlaskConical, Images, Layers3, ListChecks, Swords } from "lucide-react"
+import { useState } from "react"
+import { BookOpen, Dices, FlaskConical, Images, Layers3, ListChecks, Swords } from "lucide-react"
 import { PageContainer } from "@/components/layout/page-container"
 import { ToolCard } from "@/components/home/tool-card"
 import { FichaToolCard } from "@/components/home/ficha-tool-card"
 import { PwaInstallCard } from "@/components/pwa-install-card"
+import { useRuleset } from "@/components/rulesets/ruleset-provider"
+import { BookSelectorDialog } from "@/components/rulesets/book-selector-dialog"
 
 export default function HomePage() {
+  const { activeRuleset, activeRulesetId, selectRuleset } = useRuleset()
+  const [showBookSelector, setShowBookSelector] = useState(false)
+  const isCronos = activeRulesetId === "cronos"
+
   return (
     <PageContainer>
       <section className="relative mb-10 overflow-hidden rounded-3xl border border-panel-border/45 bg-panel px-6 py-9 text-white shadow-[0_22px_60px_rgba(34,40,59,0.2)] sm:px-10 sm:py-12">
@@ -14,14 +21,17 @@ export default function HomePage() {
         <div className="pointer-events-none absolute bottom-[-5rem] right-24 size-40 rounded-full bg-highlight/10 blur-2xl" />
         <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/85">
           <Dices className="size-3.5" />
-          Runas: Livro Azul
+          {activeRuleset.name}
         </span>
         <h1 className="relative mt-5 max-w-2xl text-4xl font-bold tracking-[-0.04em] text-white text-balance sm:text-5xl">
           Runas Tools
         </h1>
         <p className="relative mt-3 max-w-xl text-base leading-relaxed text-panel-muted text-pretty sm:text-lg">
-          Uma coleção de ferramentas para facilitar partidas de Runas: Livro Azul.
+          {isCronos ? "Ferramentas offline para fichas, testes e histórias em Sagas de Cronos." : "Uma coleção de ferramentas para facilitar partidas de Runas: Livro Azul."}
         </p>
+        <button type="button" onClick={() => setShowBookSelector(true)} className="relative mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/16">
+          <BookOpen className="size-4" /> Trocar livro
+        </button>
       </section>
 
       <PwaInstallCard />
@@ -80,6 +90,7 @@ export default function HomePage() {
           />
         </div>
       </div>
+      <BookSelectorDialog open={showBookSelector} activeRulesetId={activeRulesetId} onSelect={selectRuleset} onClose={() => setShowBookSelector(false)} />
     </PageContainer>
   )
 }

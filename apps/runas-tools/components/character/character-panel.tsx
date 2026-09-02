@@ -4,6 +4,7 @@ import type React from "react"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import type { CharacterTab } from "./character-sheet"
+import { useRuleset } from "@/components/rulesets/ruleset-provider"
 
 const CharacterPanelOverlay = dynamic(
   () => import("./character-panel-overlay").then((module) => module.CharacterPanelOverlay),
@@ -13,7 +14,7 @@ const CharacterPanelOverlay = dynamic(
 const ACTIVE_TAB_STORAGE_KEY = "runas-tools:character-active-tab"
 
 function isCharacterTab(value: string | null): value is CharacterTab {
-  return value === "information" || value === "statistics" || value === "skills" || value === "bonds" || value === "abilities" || value === "spells" || value === "notes"
+  return value === "information" || value === "statistics" || value === "skills" || value === "bonds" || value === "abilities" || value === "inventory" || value === "spells" || value === "notes"
 }
 
 interface PanelContextValue {
@@ -28,6 +29,7 @@ interface PanelContextValue {
 const PanelContext = createContext<PanelContextValue | null>(null)
 
 export function CharacterPanelProvider({ children }: { children: React.ReactNode }) {
+  const { activeRulesetId } = useRuleset()
   const [isOpen, setIsOpen] = useState(false)
   const [hasOpened, setHasOpened] = useState(false)
   const [activeTab, setActiveTabState] = useState<CharacterTab>("information")
@@ -44,20 +46,21 @@ export function CharacterPanelProvider({ children }: { children: React.ReactNode
   const setActiveTab = useCallback((tab: CharacterTab) => {
     setActiveTabState(tab)
     try {
-      window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tab)
+      window.localStorage.setItem(`${ACTIVE_TAB_STORAGE_KEY}:${activeRulesetId}`, tab)
     } catch {
       // A ficha continua funcionando mesmo se o armazenamento estiver indisponível.
     }
-  }, [])
+  }, [activeRulesetId])
 
   useEffect(() => {
     try {
-      const storedTab = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY)
+      const storedTab = window.localStorage.getItem(`${ACTIVE_TAB_STORAGE_KEY}:${activeRulesetId}`)
       if (isCharacterTab(storedTab)) setActiveTabState(storedTab)
+      else setActiveTabState("information")
     } catch {
       // Mantém a aba inicial quando o armazenamento estiver indisponível.
     }
-  }, [])
+  }, [activeRulesetId])
 
   return (
     <PanelContext.Provider value={{ isOpen, open, close, toggle, activeTab, setActiveTab }}>

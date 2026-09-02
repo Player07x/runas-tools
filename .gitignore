@@ -18,6 +18,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+~$*.docx
 /.pnpm-store/v11/index.db-shm
 /.pnpm-store/v11/index.db-wal
 

@@ -21,7 +21,7 @@ O endereço canônico é `https://runas-dm.pages.dev`. O Runas DM usa uma Pages 
 
 O build `npm run build:dm:pages` reúne o cliente Vinext e o Worker modular em `apps/runas-dm/dist/pages`. `wrangler.jsonc` contém apenas identificadores públicos e bindings; segredos ficam no Cloudflare ou no GitHub Actions.
 
-`.github/workflows/deploy-runas-dm.yml` publica automaticamente o Runas DM após mudanças em `apps/runas-dm`, `packages/runas-core` ou arquivos de workspace. Ele exige o segredo de repositório `CLOUDFLARE_API_TOKEN`. O Account ID não é secreto e está fixado no workflow para reduzir configuração manual.
+`.github/workflows/deploy-runas-dm.yml` publica automaticamente o Runas DM após mudanças em `apps/runas-dm`, `packages/runas-core` ou arquivos de workspace. Ele exige o segredo de repositório `CLOUDFLARE_API_TOKEN`, limitado à publicação do Pages. Migrações automáticas são habilitadas quando o segredo opcional `CLOUDFLARE_D1_API_TOKEN`, com permissão de escrita no D1 desta conta, está configurado. Sem esse segundo segredo, o deploy continua e as migrações precisam ser aplicadas por uma sessão autorizada antes da publicação. O Account ID não é secreto e está fixado no workflow para reduzir configuração manual.
 
 Variáveis de produção:
 

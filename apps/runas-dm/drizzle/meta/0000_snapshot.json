@@ -1,0 +1,25 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "9b9a8cc1-d07e-408a-b79a-2a81a43a477e",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "backup_snapshots": {
+      "name": "backup_snapshots",
+      "columns": {
+        "id": { "name": "id", "type": "text", "primaryKey": true, "notNull": true, "autoincrement": false },
+        "payload": { "name": "payload", "type": "text", "primaryKey": false, "notNull": true, "autoincrement": false },
+        "updated_at": { "name": "updated_at", "type": "integer", "primaryKey": false, "notNull": true, "autoincrement": false }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": { "schemas": {}, "tables": {}, "columns": {} },
+  "internal": { "indexes": {} }
+}

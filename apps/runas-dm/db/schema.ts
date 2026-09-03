@@ -5,3 +5,9 @@ export const backupSnapshots = sqliteTable("backup_snapshots", {
   payload: text("payload").notNull(),
   updatedAt: integer("updated_at").notNull(),
 })
+
+export const knowledgeSnapshots = sqliteTable("knowledge_snapshots", {
+  id: text("id").primaryKey(),
+  payload: text("payload").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+})

@@ -22,12 +22,20 @@ Consulte `../../docs/offline-pwa.md` para as regras de cache e validação.
 ## Backup D1
 
 1. Use a base Cloudflare D1 `runas-dm-backups` e o binding `DB` de `wrangler.jsonc`.
-2. Aplique `drizzle/0000_backup_snapshots.sql`.
+2. Aplique as migrações em `drizzle/` na ordem registrada pelo Drizzle.
 3. Copie `.dev.vars.example` para `.dev.vars` somente no ambiente local e defina um token forte.
-4. Em produção, cadastre `RUNAS_DM_BACKUP_TOKEN` como secret do Worker.
+4. Em produção, cadastre `RUNAS_DM_BACKUP_TOKEN` e `RUNAS_DM_CAMPAIGN_PASSWORD` como secrets do Worker.
 5. Proteja o site inteiro com Cloudflare Access antes de compartilhar o link.
 
 O navegador pede o token uma vez por sessão por meio de um campo compatível com o gerenciador de senhas. O aplicativo mantém o segredo apenas em `sessionStorage`; quando o usuário aceita salvá-lo, a persistência e o autopreenchimento ficam sob proteção do navegador. `Backup` combina as fichas locais com as já armazenadas e faz a versão local vencer conflitos por nome, raça e elemento. `Sincronizar` faz a versão remota vencer os mesmos conflitos sem apagar fichas que existem somente no navegador. Consulte `../../docs/deployment.md` para publicação, segredo e acesso privado.
+
+## Campanhas, Wiki e Obsidian
+
+`/campaigns` e `/wiki` compartilham um arquivo local-first independente das fichas. O conteúdo é salvo no IndexedDB, sincronizado em um snapshot privado do D1 e protegido por uma sessão HttpOnly que exige o token de backup e a senha de campanha. O preview em `localhost` usa somente o armazenamento local.
+
+Encontros não são páginas de texto: cada encontro salva apenas nome, data, tags, notas breves do mestre e uma composição de fichas do Bestiário com quantidades. A ação de abrir na Mesa cria cópias independentes desse conjunto e leva as notas junto.
+
+A integração com o Obsidian usa o plugin local **Local REST API with MCP**. A URL e a pasta relativa ao vault podem ser lembradas no navegador; a chave da API permanece apenas no `sessionStorage`. A sincronização gera Markdown com frontmatter e links `[[Wiki]]`, e a alternativa ZIP não precisa do plugin.
 
 ## Cloudflare Pages
 

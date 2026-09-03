@@ -50,6 +50,17 @@ jobs:
           test -f apps/runas-dm/dist/pages/icon-192.png
           test -f apps/runas-dm/dist/pages/icon-512.png
 
+      - name: Apply D1 migrations
+        working-directory: apps/runas-dm
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is not configured."
+            exit 1
+          fi
+          npx wrangler d1 migrations apply runas-dm-backups --remote
+
       - name: Deploy Runas DM
         working-directory: apps/runas-dm
         env:

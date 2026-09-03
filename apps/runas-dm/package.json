@@ -13,21 +13,20 @@
     "deploy:pages": "npm run build:pages && wrangler pages deploy dist/pages --project-name runas-dm --branch main",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test": "vitest run --config vitest.config.ts",
+    "test": "vitest run --config vitest.config.ts --configLoader runner",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@runas/core": "*",
+    "drizzle-orm": "0.45.2",
     "lucide-react": "^1.16.0",
     "next": "16.3.2",
     "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "drizzle-orm": "0.45.2"
+    "react-dom": "19.2.6"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260515.1",
     "@openai/sites-vite-plugin": "^0.1.0 || ^0.2.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
@@ -35,6 +34,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.3.2",
     "react-server-dom-webpack": "19.2.6",
@@ -42,8 +42,7 @@
     "typescript": "5.9.3",
     "vinext": "1.0.0-beta.3",
     "vite": "8.0.13",
-    "wrangler": "4.92.0",
-    "drizzle-kit": "0.31.10"
+    "wrangler": "4.92.0"
   },
   "type": "module"
 }

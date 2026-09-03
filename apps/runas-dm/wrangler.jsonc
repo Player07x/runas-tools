@@ -2,8 +2,18 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "runas-dm",
   "pages_build_output_dir": "./dist/pages",
-  "compatibility_date": "2026-08-24",
+  "compatibility_date": "2026-09-02",
   "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  },
   "d1_databases": [
     {
       "binding": "DB",

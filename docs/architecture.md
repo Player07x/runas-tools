@@ -41,7 +41,9 @@ A galeria do Runas Tools usa o limite de produto `GALLERY_MAX_CHARACTERS = 100`,
 - Vinext/React publicado como Pages Function em `runas-dm.pages.dev`.
 - Interface client-side para resposta imediata.
 - IndexedDB salva bestiário, encontro e tabelas customizadas.
-- `/api/backup` guarda snapshot privado no D1.
+- `/api/backup` guarda o snapshot privado de fichas no D1.
+- `/api/campaign-data` guarda o snapshot privado e normalizado de Campanhas e Wiki no D1; o estado primário continua no IndexedDB.
+- A API local do Obsidian recebe Markdown diretamente do navegador, sem encaminhar sua chave para o Worker.
 - O banco remoto não participa dos cálculos nem bloqueia o uso offline.
 
 ## Política para mudanças

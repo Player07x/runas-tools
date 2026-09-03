@@ -46,6 +46,7 @@ function openDatabase(): Promise<IDBDatabase> {
 function characterSections(character: Character): StoredSection[] {
   return [
     { key: "metadata", value: { version: CHARACTER_VERSION, name: character.name } },
+    { key: "portrait", value: character.portraitDataUrl ?? null },
     { key: "info", value: character.info },
     { key: "attributes", value: character.attributes },
     { key: "stats", value: character.stats },
@@ -67,9 +68,18 @@ async function readIndexedCharacter(): Promise<Character | null> {
     const sections = new Map(records.map((record) => [record.key, record.value]))
     const metadata = sections.get("metadata") as { version?: number; name?: string } | undefined
     if (!metadata) return null
+    const gallery = sections.get(GALLERY_KEY) as Partial<CharacterGallery> | undefined
+    const activeGalleryPortrait = typeof gallery?.activeId === "string" && Array.isArray(gallery.entries)
+      ? gallery.entries.find((entry) => entry?.id === gallery.activeId)?.character?.portraitDataUrl
+      : undefined
+    const legacyPortrait = loadCharacter()?.portraitDataUrl
+    const portraitDataUrl = sections.has("portrait")
+      ? sections.get("portrait")
+      : activeGalleryPortrait ?? legacyPortrait
     return normalizeCharacter({
       version: metadata.version,
       name: metadata.name,
+      portraitDataUrl: portraitDataUrl as Character["portraitDataUrl"],
       info: sections.get("info") as Character["info"],
       attributes: sections.get("attributes") as Character["attributes"],
       stats: sections.get("stats") as Character["stats"],

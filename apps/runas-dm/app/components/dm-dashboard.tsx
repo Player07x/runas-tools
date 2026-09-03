@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  Archive, ArrowUpDown, Bolt, BookOpenText, ChevronDown, Copy, Database, Download, Edit3, FileArchive, Filter, ListOrdered, Moon, Plus, RefreshCw,
+  Archive, ArrowUpDown, Bolt, BookMarked, BookOpenText, ChevronDown, Copy, Database, Download, Edit3, FileArchive, Filter, LibraryBig, ListOrdered, Moon, Plus, RefreshCw,
   Search, Shield, Sparkles, Sun, Swords, Trash2, Upload, X,
 } from "lucide-react"
 import { attributeGroups } from "@runas/core/data/attributes"
@@ -77,6 +77,13 @@ export function DmDashboard() {
   const [batchExportOpen, setBatchExportOpen] = useState(false)
   const [pendingCloudAction, setPendingCloudAction] = useState<CloudAction | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (new URLSearchParams(window.location.search).get("view") === "encounter") setView("encounter")
+    }, 0)
+    return () => window.clearTimeout(timeout)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -334,6 +341,8 @@ export function DmDashboard() {
         <nav className="view-switch" aria-label="Áreas do Runas DM">
           <button className={view === "gallery" ? "active" : ""} onClick={() => setView("gallery")}><Archive size={17} /> Bestiário</button>
           <button className={view === "encounter" ? "active" : ""} onClick={() => setView("encounter")}><Swords size={17} /> Mesa <span>{state.encounter.length}</span></button>
+          <a href="/campaigns"><BookMarked size={17} /> Campanhas</a>
+          <a href="/wiki"><LibraryBig size={17} /> Wiki</a>
         </nav>
         <div className="top-actions">
           <span className={`save-state ${saveStatus}`}><i />{saveStatus === "saving" ? "Salvando" : saveStatus === "error" ? "Falha local" : "Salvo localmente"}</span>

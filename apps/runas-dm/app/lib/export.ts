@@ -2,11 +2,11 @@ import { CHARACTER_VERSION, type Character } from "@runas/core/types/character"
 
 const encoder = new TextEncoder()
 
-function safeFilename(value: string, fallback = "ficha-runas"): string {
+export function safeFilename(value: string, fallback = "ficha-runas"): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "") || fallback
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
+export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement("a")
   anchor.href = url
@@ -44,7 +44,7 @@ function join(chunks: Uint8Array[]): Uint8Array {
   return result
 }
 
-function createZip(files: Array<{ name: string; content: string }>): Uint8Array {
+export function createTextZip(files: Array<{ name: string; content: string }>): Uint8Array {
   const localChunks: Uint8Array[] = []
   const centralChunks: Uint8Array[] = []
   let localOffset = 0
@@ -97,7 +97,7 @@ export function createCharactersZip(characters: Character[]): Uint8Array {
       content: JSON.stringify({ version: CHARACTER_VERSION, character }, null, 2),
     }
   })
-  return createZip(files)
+  return createTextZip(files)
 }
 
 export function exportCharactersZip(characters: Character[]): void {

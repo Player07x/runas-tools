@@ -1,9 +1,13 @@
 "use client"
 
-import { useEffect, useId, useRef } from "react"
-import { Bold, Eraser, Italic, List, ListOrdered, Underline } from "lucide-react"
+import { useEffect, useId, useRef, useState } from "react"
+import { AlignCenter, AlignLeft, AlignRight, Bold, Eraser, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Quote, Underline, Unlink } from "lucide-react"
 
-const allowedTags = new Set(["P", "BR", "STRONG", "B", "EM", "I", "U", "UL", "OL", "LI"])
+const allowedTags = new Set(["P", "DIV", "BR", "STRONG", "B", "EM", "I", "U", "UL", "OL", "LI", "H1", "H2", "H3", "BLOCKQUOTE", "A", "IMG", "HR", "CODE", "PRE"])
+
+function safeImageSource(value: string): boolean {
+  return value.startsWith("data:image/") || value.startsWith("https://") || value.startsWith("http://127.0.0.1") || value.startsWith("http://localhost")
+}
 
 export function sanitizeRichText(value: string): string {
   if (typeof DOMParser === "undefined") return value
@@ -13,27 +17,105 @@ export function sanitizeRichText(value: string): string {
       element.replaceWith(...element.childNodes)
       continue
     }
-    for (const attribute of [...element.attributes]) element.removeAttribute(attribute.name)
+    for (const attribute of [...element.attributes]) {
+      const keepLink = element.tagName === "A" && attribute.name === "href" && /^(https?:|obsidian:|#)/i.test(attribute.value)
+      const keepImageStyle = attribute.name === "style" && /^width:\s*(?:100|[2-9]\d)%\s*;?$/i.test(attribute.value)
+      const keepImage = element.tagName === "IMG" && ((attribute.name === "src" && safeImageSource(attribute.value)) || attribute.name === "alt" || attribute.name === "data-align" || attribute.name === "data-width" || keepImageStyle)
+      if (!keepLink && !keepImage) element.removeAttribute(attribute.name)
+    }
+    if (element.tagName === "A") {
+      element.setAttribute("target", "_blank")
+      element.setAttribute("rel", "noreferrer")
+    }
   }
+  if (!documentValue.body.textContent?.trim() && !documentValue.body.querySelector("img, hr")) return ""
   return documentValue.body.innerHTML
 }
 
 export function RichTextEditor({ label, value, onChange, className = "" }: { label: string; value: string; onChange: (value: string) => void; className?: string }) {
   const id = useId()
   const editorRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+  const selectedImageRef = useRef<HTMLImageElement | null>(null)
+  const lastEmittedValueRef = useRef("")
+  const [imageSelected, setImageSelected] = useState(false)
+  const [imageWidth, setImageWidth] = useState(75)
+  const [imageAlign, setImageAlign] = useState<"left" | "center" | "right">("center")
 
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
     const safe = sanitizeRichText(value)
+    if (safe === lastEmittedValueRef.current) return
     if (editor.innerHTML !== safe) editor.innerHTML = safe
+    lastEmittedValueRef.current = safe
   }, [value])
+
+  function emitCurrentValue(normalizeDom = false) {
+    const editor = editorRef.current
+    if (!editor) return
+    const safe = sanitizeRichText(editor.innerHTML)
+    lastEmittedValueRef.current = safe
+    if (normalizeDom && editor.innerHTML !== safe) editor.innerHTML = safe
+    onChange(safe)
+  }
 
   function command(name: string, argument?: string) {
     editorRef.current?.focus()
     document.execCommand(name, false, argument)
-    const editor = editorRef.current
-    if (editor) onChange(sanitizeRichText(editor.innerHTML))
+    emitCurrentValue()
+  }
+
+  function createLink() {
+    const href = window.prompt("Endereço do link (https:// ou obsidian://)")?.trim()
+    if (!href || !/^(https?:|obsidian:|#)/i.test(href)) return
+    command("createLink", href)
+  }
+
+  async function insertImage(file: File | undefined) {
+    if (!file || !file.type.startsWith("image/")) return
+    const source = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Imagem inválida"))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsDataURL(file)
+    })
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image()
+      element.onload = () => resolve(element)
+      element.onerror = () => reject(new Error("Imagem inválida"))
+      element.src = source
+    })
+    const scale = Math.min(1, 1280 / Math.max(image.naturalWidth, image.naturalHeight))
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale))
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale))
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height)
+    editorRef.current?.focus()
+    document.execCommand("insertImage", false, canvas.toDataURL("image/jpeg", .78))
+    const inserted = editorRef.current?.querySelector("img:last-of-type") as HTMLImageElement | null
+    if (inserted) {
+      inserted.alt = file.name.replace(/\.[^.]+$/, "")
+      inserted.dataset.width = "75"
+      inserted.dataset.align = "center"
+      inserted.style.width = "75%"
+      selectedImageRef.current = inserted
+      setImageSelected(true)
+      setImageWidth(75)
+      setImageAlign("center")
+    }
+    emitCurrentValue()
+  }
+
+  function formatImage(width = imageWidth, align = imageAlign) {
+    const selectedImage = selectedImageRef.current
+    if (!selectedImage || !editorRef.current?.contains(selectedImage)) return
+    selectedImage.dataset.width = String(width)
+    selectedImage.dataset.align = align
+    selectedImage.style.width = `${width}%`
+    setImageWidth(width)
+    setImageAlign(align)
+    emitCurrentValue()
   }
 
   const tools = [
@@ -42,8 +124,49 @@ export function RichTextEditor({ label, value, onChange, className = "" }: { lab
     { label: "Sublinhado", icon: Underline, command: "underline" },
     { label: "Lista", icon: List, command: "insertUnorderedList" },
     { label: "Lista numerada", icon: ListOrdered, command: "insertOrderedList" },
+    { label: "Título", icon: Heading2, command: "formatBlock", argument: "H2" },
+    { label: "Citação", icon: Quote, command: "formatBlock", argument: "BLOCKQUOTE" },
     { label: "Limpar formatação", icon: Eraser, command: "removeFormat" },
   ]
 
-  return <label className={`rich-text-field ${className}`}><span id={`${id}-label`}>{label}</span><div className="rich-text-shell"><div className="rich-text-toolbar">{tools.map(({ label: toolLabel, icon: Icon, command: toolCommand }) => <button key={toolLabel} type="button" title={toolLabel} aria-label={toolLabel} onMouseDown={(event) => event.preventDefault()} onClick={() => command(toolCommand)}><Icon size={15} /></button>)}</div><div ref={editorRef} className="rich-text-content" contentEditable role="textbox" aria-multiline="true" aria-labelledby={`${id}-label`} suppressContentEditableWarning onInput={(event) => onChange(sanitizeRichText(event.currentTarget.innerHTML))} /></div></label>
+  return <div className={`rich-text-field ${className}`}>
+    <span id={`${id}-label`}>{label}</span>
+    <div className="rich-text-shell">
+      <div className="rich-text-toolbar">
+        {tools.map(({ label: toolLabel, icon: Icon, command: toolCommand, argument }) => <button key={toolLabel} type="button" title={toolLabel} aria-label={toolLabel} onMouseDown={(event) => event.preventDefault()} onClick={() => command(toolCommand, argument)}><Icon size={15} /></button>)}
+        <i />
+        <button type="button" title="Inserir link" aria-label="Inserir link" onMouseDown={(event) => event.preventDefault()} onClick={createLink}><Link2 size={15} /></button>
+        <button type="button" title="Remover link" aria-label="Remover link" onMouseDown={(event) => event.preventDefault()} onClick={() => command("unlink")}><Unlink size={15} /></button>
+        <button type="button" title="Inserir imagem" aria-label="Inserir imagem" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} /></button>
+        {imageSelected && <div className="rich-text-image-tools" aria-label="Formatação da imagem">
+          <i />
+          <button type="button" aria-pressed={imageAlign === "left"} title="Alinhar à esquerda e envolver com texto" aria-label="Alinhar imagem à esquerda e envolver com texto" onClick={() => formatImage(imageWidth, "left")}><AlignLeft size={15} /></button>
+          <button type="button" aria-pressed={imageAlign === "center"} title="Centralizar imagem" aria-label="Centralizar imagem" onClick={() => formatImage(imageWidth, "center")}><AlignCenter size={15} /></button>
+          <button type="button" aria-pressed={imageAlign === "right"} title="Alinhar à direita e envolver com texto" aria-label="Alinhar imagem à direita e envolver com texto" onClick={() => formatImage(imageWidth, "right")}><AlignRight size={15} /></button>
+          <label className="rich-text-image-size"><span>Tamanho</span><input aria-label="Tamanho da imagem em porcentagem" type="range" min="20" max="100" step="5" value={imageWidth} onChange={(event) => formatImage(Number(event.target.value), imageAlign)} /><output>{imageWidth}%</output></label>
+        </div>}
+        <input ref={imageInputRef} hidden type="file" accept="image/*" onChange={(event) => { void insertImage(event.target.files?.[0]); event.currentTarget.value = "" }} />
+      </div>
+      <div
+        ref={editorRef}
+        className="rich-text-content"
+        contentEditable
+        role="textbox"
+        aria-multiline="true"
+        aria-labelledby={`${id}-label`}
+        suppressContentEditableWarning
+        onClick={(event) => {
+          const selectedImage = event.target instanceof HTMLImageElement ? event.target : null
+          selectedImageRef.current = selectedImage
+          setImageSelected(Boolean(selectedImage))
+          if (selectedImage) {
+            setImageWidth(Number(selectedImage.dataset.width) || 75)
+            setImageAlign(selectedImage.dataset.align === "left" || selectedImage.dataset.align === "right" ? selectedImage.dataset.align : "center")
+          }
+        }}
+        onInput={() => emitCurrentValue()}
+        onBlur={() => emitCurrentValue(true)}
+      />
+    </div>
+  </div>
 }

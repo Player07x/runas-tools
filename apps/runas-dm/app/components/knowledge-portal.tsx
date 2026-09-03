@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Archive, BookMarked, CalendarDays, Check, ChevronRight, CircleAlert, Cloud, Filter, FolderPlus, KeyRound, LibraryBig, LockKeyhole, Network, Plus, RefreshCw, Search, Settings2, ShieldCheck, Swords, Trash2, WifiOff, X } from "lucide-react"
@@ -241,8 +240,8 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
 
 function AccessScreen({ auth, token, password, error, isLocal, onToken, onPassword, onSubmit, onLocal, area }: { auth: AuthState; token: string; password: string; error: string; isLocal: boolean; onToken: (value: string) => void; onPassword: (value: string) => void; onSubmit: () => void; onLocal: () => void; area: PortalArea }) {
   return <main className="knowledge-shell">
-    <header className="topbar">
-      <Link className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></Link>
+    <header className="topbar knowledge-appbar">
+      <a className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></a>
       <KnowledgeNavigation area={area} />
       <span aria-hidden="true" />
     </header>
@@ -272,8 +271,8 @@ function AccessScreen({ auth, token, password, error, isLocal, onToken, onPasswo
 function KnowledgeHeader({ area, syncState, onObsidian }: { area: PortalArea; syncState: SyncState; onObsidian: () => void }) {
   const sync = syncState === "synced" ? { icon: Cloud, label: "Sincronizado" } : syncState === "syncing" || syncState === "loading" ? { icon: RefreshCw, label: "Sincronizando" } : syncState === "error" ? { icon: CircleAlert, label: "Falha ao salvar" } : { icon: WifiOff, label: "Salvo localmente" }
   const Icon = sync.icon
-  return <header className="topbar">
-    <Link className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></Link>
+  return <header className="topbar knowledge-appbar">
+    <a className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></a>
     <KnowledgeNavigation area={area} />
     <div className="top-actions knowledge-header-actions"><span className={`knowledge-sync ${syncState}`}><Icon className={syncState === "syncing" || syncState === "loading" ? "spin" : ""} size={14} /> {sync.label}</span><button className="secondary-button" onClick={onObsidian}><Settings2 size={16} /> Obsidian</button></div>
   </header>
@@ -281,10 +280,10 @@ function KnowledgeHeader({ area, syncState, onObsidian }: { area: PortalArea; sy
 
 function KnowledgeNavigation({ area }: { area: PortalArea }) {
   return <nav className="view-switch" aria-label="Áreas do Runas DM">
-    <Link href="/"><Archive size={17} /> Bestiário</Link>
-    <Link href="/?view=encounter"><Swords size={17} /> Mesa</Link>
-    <Link className={area === "campaigns" ? "active" : ""} href="/campaigns"><BookMarked size={17} /> Campanhas</Link>
-    <Link className={area === "wiki" ? "active" : ""} href="/wiki"><LibraryBig size={17} /> Wiki</Link>
+    <a href="/"><Archive size={17} /> Bestiário</a>
+    <a href="/?view=encounter"><Swords size={17} /> Mesa</a>
+    <a className={area === "campaigns" ? "active" : ""} href="/campaigns"><BookMarked size={17} /> Campanhas</a>
+    <a className={area === "wiki" ? "active" : ""} href="/wiki"><LibraryBig size={17} /> Wiki</a>
   </nav>
 }
 

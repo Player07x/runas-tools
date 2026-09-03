@@ -18,7 +18,8 @@
     {
       "binding": "DB",
       "database_name": "runas-dm-backups",
-      "database_id": "afe0dde7-ffcd-4fe7-8cf1-dee50595e74f"
+      "database_id": "afe0dde7-ffcd-4fe7-8cf1-dee50595e74f",
+      "migrations_dir": "./drizzle"
     }
   ]
 }

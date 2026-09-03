@@ -17,7 +17,7 @@ Os dois aplicativos devem ser construídos a partir do mesmo commit. `@runas/cor
 
 ## Runas DM
 
-O endereço canônico é `https://runas-dm.pages.dev`. O Runas DM usa uma Pages Function compatível com Cloudflare Workers, binding lógico D1 `DB`, banco `runas-dm-backups` e a migração `apps/runas-dm/drizzle/0000_backup_snapshots.sql`.
+O endereço canônico é `https://runas-dm.pages.dev`. O Runas DM usa uma Pages Function compatível com Cloudflare Workers, binding lógico D1 `DB`, banco `runas-dm-backups` e migrações versionadas em `apps/runas-dm/drizzle`. O binding declara `migrations_dir: "./drizzle"` para que o Wrangler use a mesma pasta localmente e no GitHub Actions.
 
 O build `npm run build:dm:pages` reúne o cliente Vinext e o Worker modular em `apps/runas-dm/dist/pages`. `wrangler.jsonc` contém apenas identificadores públicos e bindings; segredos ficam no Cloudflare ou no GitHub Actions.
 

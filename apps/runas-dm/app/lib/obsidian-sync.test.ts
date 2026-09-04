@@ -93,6 +93,36 @@ describe("Obsidian export", () => {
     expect(category?.name).toBe("Assentamentos")
   })
 
+  it("faz a pasta canônica vencer o estado e o frontmatter antigos", () => {
+    const markdown = "---\nrunas_kind: chronology\n---\n# Roberto\n\n![[Imagem Roberto.png]]\n"
+    const local = normalizeKnowledgeWorkspace({
+      pages: [{
+        ...state.pages[1], id: "roberto", title: "Roberto", kind: "chronology",
+        obsidianPath: "Personagens/Runilitas/Roberto.md", obsidianSourceMarkdown: markdown,
+        updatedAt: 100,
+      }],
+    })
+    local.pages[0].obsidianFingerprint = pageObsidianFingerprint(local.pages[0], local)
+    const merged = mergeObsidianNotes(local, [{ path: "Personagens/Runilitas/Roberto.md", markdown, createdAt: 1, modifiedAt: 10 }])
+    const page = merged.state.pages[0]
+    const category = merged.state.categories.find((item) => page.categoryIds.includes(item.id))
+    expect(page.kind).toBe("characters")
+    expect(category?.name).toBe("Runilitas")
+  })
+
+  it("consolida o caminho legado de Cronologia sem duplicar a página", () => {
+    const markdown = "# Primeiro Eclipse\n\nUm acontecimento global.\n"
+    const local = normalizeKnowledgeWorkspace({
+      pages: [
+        { ...state.pages[1], id: "old", title: "Primeiro Eclipse", kind: "chronology", obsidianPath: "Cronologia Geral/Acontecimentos Globais/Primeiro Eclipse.md", updatedAt: 5 },
+        { ...state.pages[1], id: "current", title: "Primeiro Eclipse", kind: "chronology", obsidianPath: "Cronologia/Acontecimentos Globais/Primeiro Eclipse.md", updatedAt: 10 },
+      ],
+    })
+    const merged = mergeObsidianNotes(local, [{ path: "Cronologia/Acontecimentos Globais/Primeiro Eclipse.md", markdown, createdAt: 1, modifiedAt: 20 }])
+    expect(merged.state.pages).toHaveLength(1)
+    expect(merged.state.pages[0].obsidianPath).toBe("Cronologia/Acontecimentos Globais/Primeiro Eclipse.md")
+  })
+
   it("ignora áreas particulares sem confundir categorias da wiki", () => {
     expect(isIgnoredVaultPath("Campanhas/Anotações/Sessão.md")).toBe(true)
     expect(isIgnoredVaultPath("Ordem x Caos/Templates/Modelo.md")).toBe(true)
@@ -111,6 +141,21 @@ describe("Obsidian export", () => {
     expect(files.get("Portoes do Norte.md")).toBe("# Documento pessoal\n\nNão substituir sem cópia.\n")
     expect([...files.keys()]).toContain("Portoes do Norte (page-1).md")
     expect(result.state.pages.some((page) => page.title === "Documento pessoal")).toBe(true)
+  })
+
+  it("não reescreve propriedades desconhecidas de uma nota apenas importada", async () => {
+    const markdown = "---\nTítulo: O Feiticeiro Implacável\nOrganizações:\n  - Exército dos Beladonas\n---\n# Roberto\n"
+    const files = new Map<string, string>([["Personagens/Runilitas/Roberto.md", markdown]])
+    let writes = 0
+    const adapter: VaultAdapter = {
+      listMarkdownFiles: async () => [...files.keys()],
+      readNote: async (path) => ({ path, markdown: files.get(path)!, createdAt: 1, modifiedAt: 2 }),
+      writeText: async (path, content) => { writes += 1; files.set(path, content) },
+      writeBinary: async () => undefined,
+    }
+    await synchronizeWorkspaceWithVault(normalizeKnowledgeWorkspace({}), adapter)
+    expect(writes).toBe(0)
+    expect(files.get("Personagens/Runilitas/Roberto.md")).toBe(markdown)
   })
 
   it("cria backup e cópia de conflito quando site e vault mudaram", async () => {

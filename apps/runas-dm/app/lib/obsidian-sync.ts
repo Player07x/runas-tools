@@ -84,6 +84,10 @@ function normalizedLabel(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR")
 }
 
+function vaultPathIdentity(path: string): string {
+  return normalizePath(path).split("/").map((part) => normalizedLabel(part) === "cronologia geral" ? "cronologia" : normalizedLabel(part)).join("/")
+}
+
 export function isIgnoredVaultPath(path: string): boolean {
   const parts = normalizePath(path).split("/")
   const sectionIndex = parts.findIndex((part) => normalizedLabel(part) === "cronologia geral" || WIKI_SECTIONS.some((section) => normalizedLabel(section.label) === normalizedLabel(part)))
@@ -364,7 +368,9 @@ function noteToPage(note: VaultNote, state: KnowledgeWorkspaceState, fallback?: 
     id: text(frontmatter.runas_id) || fallback?.id || createKnowledgeId("page"),
     scope,
     campaignId: campaign?.id ?? null,
-    kind: kindFromValue(frontmatter.runas_kind ?? frontmatter.tipo, scope, location?.kind),
+    // Dentro das seis pastas canônicas, a localização física é a fonte de verdade.
+    // Isso também corrige frontmatter antigo que tenha sido salvo como `chronology`.
+    kind: location?.kind ?? kindFromValue(frontmatter.runas_kind ?? frontmatter.tipo, scope),
     title,
     summary: summary || content.split(/\n\s*\n/).find((block) => !/^\s*(#|[-*+]\s)/.test(block))?.replace(/\s+/g, " ").slice(0, 280) || "",
     contentHtml: markdownToHtml(content),
@@ -421,13 +427,60 @@ export function mergeObsidianNotes(localState: KnowledgeWorkspaceState, notes: V
       }
       else {
         adoptedRemote = false
-        state.pages[existingIndex] = { ...existing, obsidianPath: remote.obsidianPath, obsidianModifiedAt: note.modifiedAt, obsidianSourceMarkdown: note.markdown }
+        const location = existing.scope === "wiki" ? wikiLocation(note.path) : null
+        const categoryIds = location?.category
+          ? ensureCategories(state.categories, [location.category], "wiki", null)
+          : []
+        const retained = {
+          ...existing,
+          kind: location?.kind ?? existing.kind,
+          categoryIds: [...new Set([...existing.categoryIds, ...categoryIds])],
+          obsidianPath: remote.obsidianPath,
+          obsidianModifiedAt: note.modifiedAt,
+          obsidianSourceMarkdown: note.markdown,
+        }
+        // Uma correção derivada somente da pasta não representa edição local.
+        // Mantemos, porém, a assinatura antiga quando havia conteúdo local alterado.
+        retained.obsidianFingerprint = localChanged ? existing.obsidianFingerprint : pageObsidianFingerprint(retained, state)
+        state.pages[existingIndex] = retained
       }
     } else {
       state.pages.push(remote)
       imported += 1
     }
     if (adoptedRemote) importedPages.push({ pageId: existingIndex >= 0 ? state.pages[existingIndex].id : remote.id, markdown: note.markdown })
+  }
+
+  // `Cronologia Geral` foi o nome legado da pasta. Se o mesmo documento já foi
+  // importado antes e depois da renomeação, conserva o registro do caminho atual
+  // e redireciona vínculos externos, em vez de exibir duas páginas.
+  const currentPathByIdentity = new Map(notes.map((note) => [vaultPathIdentity(note.path), normalizePath(note.path)]))
+  const winnerByIdentity = new Map<string, KnowledgePage>()
+  for (const page of state.pages) {
+    if (!page.obsidianPath) continue
+    const identity = vaultPathIdentity(page.obsidianPath)
+    const currentPath = currentPathByIdentity.get(identity)
+    if (!currentPath) continue
+    const current = winnerByIdentity.get(identity)
+    const pageUsesCurrentPath = normalizedLabel(page.obsidianPath) === normalizedLabel(currentPath)
+    const currentUsesCurrentPath = current ? normalizedLabel(current.obsidianPath) === normalizedLabel(currentPath) : false
+    if (!current || (pageUsesCurrentPath && !currentUsesCurrentPath) || (pageUsesCurrentPath === currentUsesCurrentPath && page.updatedAt > current.updatedAt)) {
+      winnerByIdentity.set(identity, page)
+    }
+  }
+  const duplicateRedirect = new Map<string, string>()
+  for (const page of state.pages) {
+    if (!page.obsidianPath) continue
+    const identity = vaultPathIdentity(page.obsidianPath)
+    const winner = winnerByIdentity.get(identity)
+    if (winner && winner.id !== page.id) duplicateRedirect.set(page.id, winner.id)
+  }
+  if (duplicateRedirect.size) {
+    state.pages = state.pages.filter((page) => !duplicateRedirect.has(page.id)).map((page) => ({
+      ...page,
+      linkedPageIds: [...new Set(page.linkedPageIds.map((id) => duplicateRedirect.get(id) ?? id).filter((id) => id !== page.id))],
+    }))
+    for (const importedPage of importedPages) importedPage.pageId = duplicateRedirect.get(importedPage.pageId) ?? importedPage.pageId
   }
   const pageByTitle = new Map(state.pages.map((page) => [normalizedLabel(page.title), page.id]))
   for (const importedPage of importedPages) {
@@ -608,7 +661,11 @@ export async function synchronizeWorkspaceWithVault(stateValue: KnowledgeWorkspa
       const existingId = text((existing.frontmatter ?? parseMarkdownFrontmatter(existing.markdown).frontmatter).runas_id)
       if (existingId !== page.id) { path = collisionPath(path, page); existing = existingByPath.get(normalizedLabel(path)) }
     }
-    const desired = pageToMarkdown(page, state)
+    // Uma nota apenas importada deve permanecer byte a byte intacta. Assim,
+    // propriedades particulares do Obsidian que o site não conhece não somem.
+    const desired = unchangedSinceLastSync && originalPage.obsidianSourceMarkdown
+      ? originalPage.obsidianSourceMarkdown
+      : pageToMarkdown(page, state)
     if (existing?.markdown !== desired) {
       if (existing) { await adapter.writeText(backupPath(path, rootFolder), existing.markdown); backups += 1 }
       await adapter.writeText(path, desired)

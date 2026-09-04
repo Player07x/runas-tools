@@ -159,7 +159,8 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
     character.info.synchronization,
     character.info.evolution,
     { life: character.stats.lifeBonus, mana: character.stats.manaBonus, sanity: character.stats.sanityBonus, movement: character.stats.movementBonus },
-  ), [character.attributes, character.info.evolution, character.info.synchronization, character.stats.lifeBonus, character.stats.manaBonus, character.stats.movementBonus, character.stats.sanityBonus])
+    character.info.sizeModifier,
+  ), [character.attributes, character.info.evolution, character.info.sizeModifier, character.info.synchronization, character.stats.lifeBonus, character.stats.manaBonus, character.stats.movementBonus, character.stats.sanityBonus])
   const blueContext = useMemo(() => adaptCronosToBlue(character), [character])
   const attributePointsSpent = useMemo(() => Object.values(character.attributes).reduce((sum, value) => sum + value, 0), [character.attributes])
 
@@ -329,6 +330,17 @@ export function CronosCharacterSheet({ activeTab, onActiveTabChange }: Props) {
 
       {activeTab === "statistics" && (
         <Section label="Estatísticas de Cronos">
+          <div className="mb-4 flex justify-end">
+            <Button type="button" variant="secondary" onClick={() => updateCharacter((previous) => ({
+              ...previous,
+              stats: {
+                ...previous.stats,
+                lifeCurrent: snapshot.lifeMaximum,
+                manaCurrent: snapshot.manaMaximum,
+                auraCurrent: previous.stats.auraEnabled ? previous.stats.auraMaximum : previous.stats.auraCurrent,
+              },
+            }))}><RotateCcw /> Restaurar vida, mana e aura</Button>
+          </div>
           <div className="mb-4 grid gap-3 rounded-[20px] border border-border bg-muted/25 p-4 sm:grid-cols-[minmax(0,1fr)_12rem] sm:items-end">
             <div><span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pontos de atributos gastos</span><strong className="mt-1 block text-2xl tabular-nums text-foreground">{attributePointsSpent} / {character.info.attributePointMaximum}</strong><p className="mt-1 text-xs text-muted-foreground">Soma de Força, Destreza, Mente, Vontade e Espírito.</p></div>
             <NumberInput label="Máximo de pontos" value={character.info.attributePointMaximum} min={0} onChange={(value) => changeInfo("attributePointMaximum", Math.trunc(value))} />

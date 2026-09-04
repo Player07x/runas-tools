@@ -68,12 +68,19 @@ export interface KnowledgePage {
   linkedPageIds: string[]
   bestiaryEntryId: string | null
   encounterCreatures: EncounterCreatureReference[]
+  /** Caminho relativo ao vault usado para manter notas existentes no lugar. */
+  obsidianPath: string
+  /** Cópia byte a byte do Markdown recebido no último sincronismo. */
+  obsidianSourceMarkdown: string
+  /** Assinatura dos campos importados, usada para detectar edições concorrentes. */
+  obsidianFingerprint: string
+  obsidianModifiedAt: number
   createdAt: number
   updatedAt: number
 }
 
 export interface KnowledgeWorkspaceState {
-  version: 1
+  version: 2
   campaigns: CampaignRecord[]
   categories: KnowledgeCategory[]
   pages: KnowledgePage[]
@@ -85,7 +92,7 @@ export function createKnowledgeId(prefix: string): string {
 }
 
 export function createEmptyKnowledgeWorkspace(): KnowledgeWorkspaceState {
-  return { version: 1, campaigns: [], categories: [], pages: [], updatedAt: 0 }
+  return { version: 2, campaigns: [], categories: [], pages: [], updatedAt: 0 }
 }
 
 export function createCampaign(title = "Nova campanha"): CampaignRecord {
@@ -99,6 +106,7 @@ export function createKnowledgePage(scope: "wiki" | "campaign", kind: KnowledgeP
     id: createKnowledgeId("page"), scope, campaignId, kind,
     title: kind === "encounter" ? "Novo encontro" : "Nova página", summary: "", contentHtml: "", status: "Sem Status", date: "",
     tags: [], categoryIds: [], linkedPageIds: [], bestiaryEntryId: null, encounterCreatures: [],
+    obsidianPath: "", obsidianSourceMarkdown: "", obsidianFingerprint: "", obsidianModifiedAt: 0,
     createdAt: now, updatedAt: now,
   }
 }
@@ -137,10 +145,14 @@ export function normalizeKnowledgeWorkspace(value: unknown): KnowledgeWorkspaceS
       date: typeof page.date === "string" ? page.date : "", tags: strings(page.tags), categoryIds: strings(page.categoryIds), linkedPageIds: strings(page.linkedPageIds),
       bestiaryEntryId: typeof page.bestiaryEntryId === "string" ? page.bestiaryEntryId : null,
       encounterCreatures: Array.isArray(page.encounterCreatures) ? page.encounterCreatures.flatMap((reference) => reference && typeof reference.entryId === "string" ? [{ entryId: reference.entryId, name: typeof reference.name === "string" ? reference.name : "Criatura", quantity: Math.max(1, Math.min(99, Math.trunc(Number(reference.quantity) || 1))) }] : []) : [],
+      obsidianPath: typeof page.obsidianPath === "string" ? page.obsidianPath : "",
+      obsidianSourceMarkdown: typeof page.obsidianSourceMarkdown === "string" ? page.obsidianSourceMarkdown : "",
+      obsidianFingerprint: typeof page.obsidianFingerprint === "string" ? page.obsidianFingerprint : "",
+      obsidianModifiedAt: Number.isFinite(page.obsidianModifiedAt) ? page.obsidianModifiedAt : 0,
       createdAt: Number.isFinite(page.createdAt) ? page.createdAt : now, updatedAt: Number.isFinite(page.updatedAt) ? page.updatedAt : now,
     }]
   }) : []
-  return { version: 1, campaigns, categories, pages, updatedAt: Number.isFinite(candidate.updatedAt) ? candidate.updatedAt as number : Date.now() }
+  return { version: 2, campaigns, categories, pages, updatedAt: Number.isFinite(candidate.updatedAt) ? candidate.updatedAt as number : Date.now() }
 }
 
 export function parseList(value: string): string[] {
@@ -166,7 +178,7 @@ export function mergeKnowledgeWorkspaces(local: KnowledgeWorkspaceState, remote:
     return [...merged.values()]
   }
   return {
-    version: 1,
+    version: 2,
     campaigns: mergeById(local.campaigns, remote.campaigns),
     categories: mergeById(local.categories, remote.categories),
     pages: mergeById(local.pages, remote.pages),

@@ -2,6 +2,7 @@ import type { CharacterAbility, CharacterAttributes, CharacterInfo, CharacterSki
 import { CORE_SKILL_IDS, createCoreSkills } from "../data/skills"
 import { calculateAttributeTest, calculateSkillModifier } from "./skillCalculations"
 import { sumAbilityModifiers } from "./abilityModifiers"
+import { applySizeModifierToMovement } from "./characterCalculations"
 
 function finite(value: number): number {
   return Number.isFinite(value) ? value : 0
@@ -39,6 +40,9 @@ export interface CharacterStatSnapshot {
   perceptionTest: number
   knowledgeTest: number
   movement: number
+  /** Bônus exibido de Primeiras Impressões, sem o atributo Mental usado no teste. */
+  firstImpressionsBonus: number
+  /** Valor completo usado nos testes: Mental + bônus de Primeiras Impressões. */
   firstImpressions: number
   focusMaximum: number
   restMinutes: number
@@ -118,13 +122,10 @@ export function calculateCharacterStatSnapshot(
     Math.ceil((attributes.physical + attributes.strength + attributes.dexterity + attributes.vitality) / 3) -
       movementPenalty,
   )
-  const movementAfterSize = mt > 0
-    ? movementBeforeSize * (mt === 1 ? 1.5 : mt)
-    : mt < 0
-      ? Math.max(1, movementBeforeSize + mt)
-      : movementBeforeSize
+  const movementAfterSize = applySizeModifierToMovement(movementBeforeSize, mt)
   const movement = Math.ceil(Math.max(mt < 0 ? 1 : 0, movementAfterSize + finite(stats.movementBonus) + abilityModifiers.movement))
-  const firstImpressions = Math.trunc(attributes.mental + attributes.social + finite(stats.firstImpressionsBonus) + abilityModifiers.firstImpressions)
+  const firstImpressionsBonus = Math.trunc(attributes.social + finite(stats.firstImpressionsBonus) + abilityModifiers.firstImpressions)
+  const firstImpressions = Math.trunc(attributes.mental + firstImpressionsBonus)
   const willTest = Math.max(0, willSkillTest + finite(stats.willModifier))
   const chanceTest = Math.max(0, chanceSkillTest + finite(stats.chanceModifier))
   const perceptionTest = Math.max(0, coreSkillTest(CORE_SKILL_IDS.perception, 2) + finite(stats.perceptionModifier))
@@ -150,6 +151,7 @@ export function calculateCharacterStatSnapshot(
     perceptionTest,
     knowledgeTest,
     movement,
+    firstImpressionsBonus,
     firstImpressions,
     focusMaximum,
     restMinutes: Math.max(0, 30 - knowledgeTest),

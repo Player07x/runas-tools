@@ -1,6 +1,6 @@
 import { synchronizationAttributeMaximums } from "../data/attributes"
 import { cronosFameScopeMinimums, cronosFameThresholds } from "../data/fame"
-import { calculateLoadBase, calculateRealWeight, calculateScaleMultiplier, calculateSizeModifier } from "@runas/core/lib/characterCalculations"
+import { applySizeModifierToMovement, calculateLoadBase, calculateRealWeight, calculateScaleMultiplier, calculateSizeModifier } from "@runas/core/lib/characterCalculations"
 import type { CronosAttributeKey, CronosAttributes, CronosCharacterInfo, CronosFameLevel, CronosFameScope, CronosSynchronization } from "../types/character"
 
 export interface CronosStatSnapshot {
@@ -56,13 +56,15 @@ export function calculateCronosStats(
   synchronization: CronosSynchronization,
   evolution: boolean,
   bonuses: { life?: number; mana?: number; sanity?: number; movement?: number } = {},
+  sizeModifier: string | number = 0,
 ): CronosStatSnapshot {
+  const movementBeforeSize = Math.ceil((attributes.dexterity + attributes.strength) / 4)
   return {
     lifeMaximum: Math.max(0, attributes.strength + evolutionGain(attributes.strength, synchronization, evolution) + (bonuses.life ?? 0)),
     manaMaximum: Math.max(0, attributes.spirit + evolutionGain(attributes.spirit, synchronization, evolution) + (bonuses.mana ?? 0)),
     sanityMaximum: Math.max(0, attributes.mind + (bonuses.sanity ?? 0)),
     mentalResistance: attributes.mind - 3,
-    movement: Math.max(0, Math.ceil((attributes.dexterity + attributes.strength) / 4 + (bonuses.movement ?? 0))),
+    movement: Math.ceil(Math.max(0, applySizeModifierToMovement(movementBeforeSize, sizeModifier) + (bonuses.movement ?? 0))),
     perception: attributes.mind,
     reflexes: attributes.dexterity - 3,
   }

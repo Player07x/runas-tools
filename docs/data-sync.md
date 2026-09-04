@@ -32,4 +32,13 @@ Runas Tools e Runas DM possuem manifesto, ícones e service worker. O service wo
 
 ## Obsidian
 
-A sincronização do arquivo de campanhas/wiki acontece diretamente do navegador para a API local do Obsidian. A chave local fica somente no `sessionStorage`; o D1 e o servidor do Runas DM nunca a recebem. O vault aberto no Obsidian define o destino, e a pasta configurada no Runas DM é sempre relativa à raiz desse vault.
+A sincronização do arquivo de campanhas/wiki é bidirecional e acontece diretamente no navegador. Antes de gravar, o Runas DM percorre os arquivos Markdown, importa notas novas ou modificadas e resolve vínculos `[[Página]]`; em seguida, grava as alterações do site. A sincronização automática repete essa leitura ao entrar, ao voltar para a aba, a cada 30 segundos enquanto ela estiver visível e depois de salvar uma página.
+
+Há duas formas de acesso:
+
+1. **Pasta local:** usa a File System Access API para selecionar um vault existente ou criar uma nova pasta pelo seletor do navegador. O acesso funciona mesmo com o Obsidian fechado. O Runas DM cria somente os recursos ausentes: `Assets`, `.obsidian/app.json` configurado para anexos em `Assets` e um arquivo de orientação. Configurações e documentos existentes nunca são substituídos durante essa preparação.
+2. **API do Obsidian:** usa a API REST local do vault aberto. A chave fica somente no `sessionStorage`; o D1 e o servidor do Runas DM nunca a recebem. A pasta opcional é relativa à raiz do vault; vazia significa a própria raiz.
+
+Páginas novas de Wiki e Campanha ficam diretamente na raiz escolhida. Notas já existentes em subpastas são importadas e mantêm seus caminhos para evitar movimentações destrutivas. Anexos gerados pelo editor ficam em `Assets`. Antes de substituir uma nota divergente, a versão anterior é copiada para `Assets/Runas DM Backups`; conflitos simultâneos também geram uma cópia local independente. A integração pode ser completamente desativada nas configurações, impedindo leitura e escrita automáticas.
+
+O estado da autenticação da área privada é reaproveitado entre Wiki e Campanhas. Uma nova validação só acontece após dez minutos sem interação, evitando a tela de login durante a navegação interna.

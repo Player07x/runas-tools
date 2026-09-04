@@ -18,29 +18,55 @@ export function sanitizeRichText(value: string): string {
       continue
     }
     for (const attribute of [...element.attributes]) {
-      const keepLink = element.tagName === "A" && attribute.name === "href" && /^(https?:|obsidian:|#)/i.test(attribute.value)
+      const keepLink = element.tagName === "A" && (
+        (attribute.name === "href" && /^(https?:|obsidian:|#)/i.test(attribute.value))
+        || (attribute.name === "data-wiki-title" && Boolean(attribute.value.trim()))
+      )
       const keepImageStyle = attribute.name === "style" && /^width:\s*(?:100|[2-9]\d)%\s*;?$/i.test(attribute.value)
       const keepImage = element.tagName === "IMG" && ((attribute.name === "src" && safeImageSource(attribute.value)) || attribute.name === "alt" || attribute.name === "data-align" || attribute.name === "data-width" || keepImageStyle)
       if (!keepLink && !keepImage) element.removeAttribute(attribute.name)
     }
     if (element.tagName === "A") {
-      element.setAttribute("target", "_blank")
-      element.setAttribute("rel", "noreferrer")
+      if (element.hasAttribute("data-wiki-title")) {
+        element.removeAttribute("target")
+        element.removeAttribute("rel")
+      } else {
+        element.setAttribute("target", "_blank")
+        element.setAttribute("rel", "noreferrer")
+      }
     }
   }
   if (!documentValue.body.textContent?.trim() && !documentValue.body.querySelector("img, hr")) return ""
   return documentValue.body.innerHTML
 }
 
-export function RichTextEditor({ label, value, onChange, className = "" }: { label: string; value: string; onChange: (value: string) => void; className?: string }) {
+export function wikiTitlesFromRichText(value: string): string[] {
+  if (typeof DOMParser === "undefined") return []
+  const documentValue = new DOMParser().parseFromString(value, "text/html")
+  return [...documentValue.querySelectorAll<HTMLAnchorElement>("a[data-wiki-title]")]
+    .map((anchor) => anchor.dataset.wikiTitle?.trim() ?? "")
+    .filter(Boolean)
+}
+
+type RichTextEditorProps = {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  wikiPageTitles?: string[]
+  className?: string
+}
+
+export function RichTextEditor({ label, value, onChange, wikiPageTitles = [], className = "" }: RichTextEditorProps) {
   const id = useId()
   const editorRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const selectedImageRef = useRef<HTMLImageElement | null>(null)
+  const wikiRangeRef = useRef<Range | null>(null)
   const lastEmittedValueRef = useRef("")
   const [imageSelected, setImageSelected] = useState(false)
   const [imageWidth, setImageWidth] = useState(75)
   const [imageAlign, setImageAlign] = useState<"left" | "center" | "right">("center")
+  const [wikiQuery, setWikiQuery] = useState<string | null>(null)
 
   useEffect(() => {
     const editor = editorRef.current
@@ -63,6 +89,94 @@ export function RichTextEditor({ label, value, onChange, className = "" }: { lab
   function command(name: string, argument?: string) {
     editorRef.current?.focus()
     document.execCommand(name, false, argument)
+    emitCurrentValue()
+  }
+
+  function createWikiAnchor(title: string, label = title): HTMLAnchorElement {
+    const anchor = document.createElement("a")
+    anchor.href = `#wiki:${encodeURIComponent(title)}`
+    anchor.dataset.wikiTitle = title
+    anchor.textContent = label
+    return anchor
+  }
+
+  function placeCaretAfter(node: Node) {
+    const selection = window.getSelection()
+    const range = document.createRange()
+    range.setStartAfter(node)
+    range.collapse(true)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+
+  function convertCompletedWikiLink(): boolean {
+    const editor = editorRef.current
+    const selection = window.getSelection()
+    const textNode = selection?.anchorNode
+    const offset = selection?.anchorOffset ?? 0
+    if (!editor || !textNode || textNode.nodeType !== Node.TEXT_NODE || !editor.contains(textNode)) return false
+    const textBeforeCaret = textNode.textContent?.slice(0, offset) ?? ""
+    const match = /\[\[([^\]\n|]+?)(?:\|([^\]\n]+?))?\]\]$/.exec(textBeforeCaret)
+    if (!match || match.index === undefined) return false
+
+    const title = match[1].trim()
+    const label = match[2]?.trim() || title
+    if (!title) return false
+    const range = document.createRange()
+    range.setStart(textNode, match.index)
+    range.setEnd(textNode, offset)
+    range.deleteContents()
+    const anchor = createWikiAnchor(title, label)
+    const spacer = document.createTextNode("\u00a0")
+    range.insertNode(spacer)
+    range.insertNode(anchor)
+    placeCaretAfter(spacer)
+    setWikiQuery(null)
+    wikiRangeRef.current = null
+    return true
+  }
+
+  function updateWikiSuggestions() {
+    const editor = editorRef.current
+    const selection = window.getSelection()
+    const textNode = selection?.anchorNode
+    const offset = selection?.anchorOffset ?? 0
+    if (!editor || !textNode || textNode.nodeType !== Node.TEXT_NODE || !editor.contains(textNode)) {
+      setWikiQuery(null)
+      wikiRangeRef.current = null
+      return
+    }
+    const textBeforeCaret = textNode.textContent?.slice(0, offset) ?? ""
+    const match = /\[\[([^\]\n]*)$/.exec(textBeforeCaret)
+    if (!match || match.index === undefined) {
+      setWikiQuery(null)
+      wikiRangeRef.current = null
+      return
+    }
+    const range = document.createRange()
+    range.setStart(textNode, match.index)
+    range.setEnd(textNode, offset)
+    wikiRangeRef.current = range.cloneRange()
+    setWikiQuery(match[1])
+  }
+
+  function insertWikiLink(title: string) {
+    const range = wikiRangeRef.current
+    if (!range) return
+    range.deleteContents()
+    const anchor = createWikiAnchor(title)
+    const spacer = document.createTextNode("\u00a0")
+    range.insertNode(spacer)
+    range.insertNode(anchor)
+    placeCaretAfter(spacer)
+    setWikiQuery(null)
+    wikiRangeRef.current = null
+    emitCurrentValue()
+  }
+
+  function handleEditorInput() {
+    convertCompletedWikiLink()
+    updateWikiSuggestions()
     emitCurrentValue()
   }
 
@@ -128,6 +242,9 @@ export function RichTextEditor({ label, value, onChange, className = "" }: { lab
     { label: "Citação", icon: Quote, command: "formatBlock", argument: "BLOCKQUOTE" },
     { label: "Limpar formatação", icon: Eraser, command: "removeFormat" },
   ]
+  const suggestedWikiTitles = wikiQuery === null ? [] : wikiPageTitles
+    .filter((title) => title.toLocaleLowerCase("pt-BR").includes(wikiQuery.trim().toLocaleLowerCase("pt-BR")))
+    .slice(0, 8)
 
   return <div className={`rich-text-field ${className}`}>
     <span id={`${id}-label`}>{label}</span>
@@ -164,9 +281,23 @@ export function RichTextEditor({ label, value, onChange, className = "" }: { lab
             setImageAlign(selectedImage.dataset.align === "left" || selectedImage.dataset.align === "right" ? selectedImage.dataset.align : "center")
           }
         }}
-        onInput={() => emitCurrentValue()}
+        onInput={handleEditorInput}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") setWikiQuery(null)
+          if (event.key === "Enter" && wikiQuery !== null && suggestedWikiTitles[0]) {
+            event.preventDefault()
+            insertWikiLink(suggestedWikiTitles[0])
+          }
+        }}
+        onKeyUp={() => updateWikiSuggestions()}
         onBlur={() => emitCurrentValue(true)}
       />
+      {wikiQuery !== null && <div className="wiki-link-suggestions" role="listbox" aria-label="Páginas para vincular">
+        <header><strong>Vincular página</strong><span>Digite o nome ou escolha abaixo</span></header>
+        {suggestedWikiTitles.length > 0
+          ? suggestedWikiTitles.map((title, index) => <button key={`${title}-${index}`} type="button" role="option" aria-selected={index === 0} onMouseDown={(event) => event.preventDefault()} onClick={() => insertWikiLink(title)}>{title}</button>)
+          : <p>{wikiQuery.trim() ? <>Continue e feche com <kbd>]]</kbd> para criar “{wikiQuery.trim()}”.</> : "Ainda não há outra página nesta área."}</p>}
+      </div>}
     </div>
   </div>
 }

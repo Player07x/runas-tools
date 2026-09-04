@@ -24,6 +24,8 @@ describe("Cronos calculations", () => {
 
   it("rounds movement up and derives synchronization from PS thresholds", () => {
     expect(calculateCronosStats({ strength: 7, dexterity: 8, mind: 7, will: 7, spirit: 7 }, 1, false).movement).toBe(4)
+    expect(calculateCronosStats({ strength: 7, dexterity: 7, mind: 7, will: 7, spirit: 7 }, 1, false, {}, "+1").movement).toBe(6)
+    expect(calculateCronosStats({ strength: 7, dexterity: 7, mind: 7, will: 7, spirit: 7 }, 1, false, {}, "-2").movement).toBe(2)
     expect([0, 1_094, 1_095, 4_380, 17_520, 70_080].map(calculateSynchronization)).toEqual([1, 1, 2, 3, 4, 5])
   })
 

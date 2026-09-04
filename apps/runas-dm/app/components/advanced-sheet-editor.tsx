@@ -149,7 +149,7 @@ function StatisticsSection({ character, update }: { character: Character; update
     </div>
     <div className="tools-derived-grid">
       <DerivedEdit label="Deslocamento" value={`${snapshot.movement} m`} modifier={stats.movementBonus} onModifier={(value) => updateStat(update, "movementBonus", value)} />
-      <DerivedEdit label="Primeiras impressões" value={formatSigned(snapshot.firstImpressions)} modifier={stats.firstImpressionsBonus} onModifier={(value) => updateStat(update, "firstImpressionsBonus", value)} />
+      <DerivedEdit label="Primeiras Impressões" value={formatSigned(snapshot.firstImpressionsBonus)} modifier={stats.firstImpressionsBonus} onModifier={(value) => updateStat(update, "firstImpressionsBonus", value)} />
       <DerivedEdit label="Carga" value={`${formatWeight(stats.currentLoad)} / ${formatWeight(snapshot.loadCapacity)} kg`} modifier={stats.loadBonus} onModifier={(value) => updateStat(update, "loadBonus", value)} />
       <DerivedEdit label="Vontade" value={snapshot.willTest} modifier={stats.willModifier} onModifier={(value) => updateStat(update, "willModifier", value)} />
       <DerivedEdit label="Acaso" value={snapshot.chanceTest} modifier={stats.chanceModifier} onModifier={(value) => updateStat(update, "chanceModifier", value)} />

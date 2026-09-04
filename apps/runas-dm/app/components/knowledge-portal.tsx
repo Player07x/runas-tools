@@ -1,20 +1,47 @@
 "use client"
 
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Archive, BookMarked, CalendarDays, Check, ChevronRight, CircleAlert, Cloud, Filter, FolderPlus, KeyRound, LibraryBig, LockKeyhole, Network, Plus, RefreshCw, Search, Settings2, ShieldCheck, Swords, Trash2, WifiOff, X } from "lucide-react"
 import { cloneCharacter, type BestiaryEntry, type EncounterActor } from "../lib/model"
 import { loadLocalState, saveLocalState } from "../lib/storage"
 import { CAMPAIGN_PAGE_KINDS, CAMPAIGN_STATUSES, WIKI_SECTIONS, createCampaign, createKnowledgeId, createKnowledgePage, mergeKnowledgeWorkspaces, normalizeKnowledgeWorkspace, plainTextFromHtml, wikiLinkTitles, type CampaignRecord, type KnowledgeCategory, type KnowledgePage, type KnowledgePageKind, type KnowledgeWorkspaceState } from "../lib/knowledge-model"
 import { loadKnowledgeWorkspace, saveKnowledgeWorkspace } from "../lib/knowledge-storage"
 import { readObsidianApiKey, readObsidianPreferences, ObsidianDialog, type ObsidianPreferences } from "./obsidian-dialog"
-import { syncPageToObsidian } from "../lib/obsidian-sync"
+import { syncWorkspaceToObsidian, type VaultSyncResult } from "../lib/obsidian-sync"
+import { syncWorkspaceToLocalVault } from "../lib/local-vault"
+import { ExpandableTextarea } from "./expandable-textarea"
 import { KnowledgeEditor } from "./knowledge-editor"
 import { KnowledgeGraph } from "./knowledge-graph"
+import { wikiTitlesFromRichText } from "./rich-text-editor"
 
 type PortalArea = "campaigns" | "wiki"
 type AuthState = "checking" | "locked" | "ready"
 type SyncState = "loading" | "local" | "syncing" | "synced" | "error"
+
+const AUTH_ACTIVITY_KEY = "runas-dm.knowledge-last-activity"
+const AUTH_IDLE_MILLISECONDS = 10 * 60 * 1000
+let cachedKnowledgeAuthState: AuthState = "checking"
+
+function cacheKnowledgeAuthState(value: AuthState): AuthState {
+  cachedKnowledgeAuthState = value
+  return value
+}
+
+function lastAuthenticatedActivity(): number {
+  if (typeof window === "undefined") return 0
+  return Number(sessionStorage.getItem(AUTH_ACTIVITY_KEY)) || 0
+}
+
+function hasRecentAuthentication(): boolean {
+  const lastActivity = lastAuthenticatedActivity()
+  return lastActivity > 0 && Date.now() - lastActivity < AUTH_IDLE_MILLISECONDS
+}
+
+function rememberAuthenticatedActivity(): void {
+  if (typeof window !== "undefined") sessionStorage.setItem(AUTH_ACTIVITY_KEY, String(Date.now()))
+}
 
 function kindLabel(kind: string): string {
   return WIKI_SECTIONS.find((item) => item.id === kind)?.label ?? CAMPAIGN_PAGE_KINDS.find((item) => item.id === kind)?.label ?? kind
@@ -34,8 +61,10 @@ function countLabel(count: number, singular: string, plural: string): string {
 
 export function KnowledgePortal({ area }: { area: PortalArea }) {
   const router = useRouter()
-  const [auth, setAuth] = useState<AuthState>("checking")
-  const [state, setState] = useState<KnowledgeWorkspaceState>(() => ({ version: 1, campaigns: [], categories: [], pages: [], updatedAt: 0 }))
+  // O valor inicial precisa ser idêntico no servidor e na primeira hidratação.
+  // Depois disso, o módulo cliente preserva o estado entre Wiki e Campanhas.
+  const [auth, setAuth] = useState<AuthState>(cachedKnowledgeAuthState)
+  const [state, setState] = useState<KnowledgeWorkspaceState>(() => ({ version: 2, campaigns: [], categories: [], pages: [], updatedAt: 0 }))
   const [syncState, setSyncState] = useState<SyncState>("loading")
   const [authError, setAuthError] = useState("")
   const [token, setToken] = useState("")
@@ -56,21 +85,30 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
   const [obsidianOpen, setObsidianOpen] = useState(false)
   const [obsidianPreferences, setObsidianPreferences] = useState<ObsidianPreferences>(() => readObsidianPreferences())
   const [notice, setNotice] = useState("")
+  const hydratedOnce = useRef(false)
+  const stateRef = useRef(state)
 
   const selectedCampaign = state.campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? null
 
+  useEffect(() => { stateRef.current = state }, [state])
+
   useEffect(() => {
-    setSelectedKind(area === "wiki" ? "chronology" : "mission")
-    setSearch("")
-    setTagFilter("all")
-    setCategoryFilter("all")
-    setStatusFilter("all")
-    setDateFrom("")
-    setDateTo("")
-    setEditing(null)
+    const timeout = window.setTimeout(() => {
+      setSelectedKind(area === "wiki" ? "chronology" : "mission")
+      setSearch("")
+      setTagFilter("all")
+      setCategoryFilter("all")
+      setStatusFilter("all")
+      setDateFrom("")
+      setDateTo("")
+      setEditing(null)
+    }, 0)
+    return () => window.clearTimeout(timeout)
   }, [area])
 
   const hydrate = useCallback(async () => {
+    if (hydratedOnce.current) return
+    hydratedOnce.current = true
     setSyncState("loading")
     const [local, dmState] = await Promise.all([loadKnowledgeWorkspace(), loadLocalState().catch(() => null)])
     if (dmState) setBestiary(dmState.entries)
@@ -92,13 +130,46 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
   useEffect(() => {
     const hostname = window.location.hostname
     const localTimeout = window.setTimeout(() => setIsLocal(hostname === "localhost" || hostname === "127.0.0.1"), 0)
+    if (hasRecentAuthentication()) {
+      const hydrateTimeout = window.setTimeout(() => {
+        setAuth(cacheKnowledgeAuthState("ready"))
+        void hydrate()
+      }, 0)
+      return () => {
+        window.clearTimeout(localTimeout)
+        window.clearTimeout(hydrateTimeout)
+      }
+    }
     void fetch("/api/campaign-auth", { cache: "no-store" }).then(async (response) => {
       if (!response.ok) throw new Error()
       const payload = await response.json() as { authenticated?: boolean }
-      if (payload.authenticated) { setAuth("ready"); await hydrate() } else setAuth("locked")
-    }).catch(() => setAuth("locked"))
+      if (payload.authenticated) { rememberAuthenticatedActivity(); setAuth(cacheKnowledgeAuthState("ready")); await hydrate() } else setAuth(cacheKnowledgeAuthState("locked"))
+    }).catch(() => setAuth(cacheKnowledgeAuthState("locked")))
     return () => window.clearTimeout(localTimeout)
   }, [hydrate])
+
+  useEffect(() => {
+    if (auth !== "ready") return
+    let verificationRunning = false
+    const registerActivity = () => {
+      const idleFor = Date.now() - lastAuthenticatedActivity()
+      rememberAuthenticatedActivity()
+      if (idleFor < AUTH_IDLE_MILLISECONDS || verificationRunning) return
+      verificationRunning = true
+      void fetch("/api/campaign-auth", { cache: "no-store" }).then(async (response) => {
+        if (!response.ok) return
+        const payload = await response.json() as { authenticated?: boolean }
+        if (!payload.authenticated) setAuth(cacheKnowledgeAuthState("locked"))
+      }).finally(() => { verificationRunning = false })
+    }
+    const events: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "touchstart"]
+    events.forEach((event) => window.addEventListener(event, registerActivity, { passive: true }))
+    window.addEventListener("focus", registerActivity)
+    return () => {
+      events.forEach((event) => window.removeEventListener(event, registerActivity))
+      window.removeEventListener("focus", registerActivity)
+    }
+  }, [auth])
 
   useEffect(() => {
     if (auth !== "ready" || !hydrated) return
@@ -114,13 +185,53 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
     return () => window.clearTimeout(timeout)
   }, [auth, hydrated, state])
 
+  useEffect(() => {
+    if (!hydrated || !obsidianPreferences.enabled || !obsidianPreferences.automatic) return
+    let stopped = false
+    let running = false
+    const syncVault = async () => {
+      if (running || stopped || document.visibilityState === "hidden") return
+      const apiKey = readObsidianApiKey()
+      if (obsidianPreferences.mode === "api" && !apiKey) return
+      running = true
+      setSyncState("syncing")
+      try {
+        const result = obsidianPreferences.mode === "folder"
+          ? await syncWorkspaceToLocalVault(stateRef.current, false)
+          : await syncWorkspaceToObsidian(stateRef.current, { baseUrl: obsidianPreferences.baseUrl, rootFolder: obsidianPreferences.rootFolder, apiKey })
+        if (stopped) return
+        stateRef.current = result.state
+        setState(result.state)
+        await saveKnowledgeWorkspace(result.state)
+        setSyncState("synced")
+        if (result.imported) setNotice(`${result.imported} página${result.imported === 1 ? " importada" : "s importadas"} do vault.`)
+      } catch {
+        if (!stopped) setSyncState("local")
+      } finally {
+        running = false
+      }
+    }
+    const refreshOnFocus = () => { if (document.visibilityState === "visible") void syncVault() }
+    void syncVault()
+    const interval = window.setInterval(() => void syncVault(), 30_000)
+    window.addEventListener("focus", refreshOnFocus)
+    document.addEventListener("visibilitychange", refreshOnFocus)
+    return () => {
+      stopped = true
+      window.clearInterval(interval)
+      window.removeEventListener("focus", refreshOnFocus)
+      document.removeEventListener("visibilitychange", refreshOnFocus)
+    }
+  }, [hydrated, obsidianPreferences.automatic, obsidianPreferences.baseUrl, obsidianPreferences.enabled, obsidianPreferences.mode, obsidianPreferences.rootFolder])
+
   async function authenticate(localPreview = false) {
     setAuthError("")
     if (localPreview) {
       try {
         const response = await fetch("/api/campaign-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPreview: true }) })
         if (!response.ok) throw new Error()
-        setAuth("ready")
+        rememberAuthenticatedActivity()
+        setAuth(cacheKnowledgeAuthState("ready"))
         await hydrate()
         return
       } catch {
@@ -131,7 +242,7 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
     try {
       const response = await fetch("/api/campaign-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, password }) })
       if (!response.ok) { setAuthError("Token ou senha incorretos."); return }
-      setToken(""); setPassword(""); setAuth("ready"); await hydrate()
+      setToken(""); setPassword(""); rememberAuthenticatedActivity(); setAuth(cacheKnowledgeAuthState("ready")); await hydrate()
     } catch { setAuthError("Não foi possível acessar o servidor.") }
   }
 
@@ -166,11 +277,17 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
   }
 
   function savePage(page: KnowledgePage) {
-    const next = mutate((current) => ({ ...current, pages: current.pages.some((candidate) => candidate.id === page.id) ? current.pages.map((candidate) => candidate.id === page.id ? page : candidate) : [page, ...current.pages] }))
+    const typedLinks = [...wikiLinkTitles(plainTextFromHtml(page.contentHtml)), ...wikiTitlesFromRichText(page.contentHtml)]
+    const automaticLinks = state.pages.filter((candidate) => candidate.id !== page.id && typedLinks.some((title) => title.toLocaleLowerCase("pt-BR") === candidate.title.toLocaleLowerCase("pt-BR"))).map((candidate) => candidate.id)
+    const readyPage = { ...page, linkedPageIds: [...new Set([...page.linkedPageIds, ...automaticLinks])] }
+    const next = mutate((current) => ({ ...current, pages: current.pages.some((candidate) => candidate.id === readyPage.id) ? current.pages.map((candidate) => candidate.id === readyPage.id ? readyPage : candidate) : [readyPage, ...current.pages] }))
     setEditing(null)
-    if (obsidianPreferences.automatic) {
+    if (obsidianPreferences.enabled && obsidianPreferences.automatic) {
       const apiKey = readObsidianApiKey()
-      if (apiKey) void syncPageToObsidian(page, next, { ...obsidianPreferences, apiKey }).then(() => setNotice(`“${page.title}” sincronizada com o Obsidian.`)).catch(() => setNotice("Página salva. O Obsidian será atualizado quando a API local estiver disponível."))
+      const task: Promise<VaultSyncResult> | null = obsidianPreferences.mode === "folder"
+        ? syncWorkspaceToLocalVault(next, false)
+        : apiKey ? syncWorkspaceToObsidian(next, { baseUrl: obsidianPreferences.baseUrl, rootFolder: obsidianPreferences.rootFolder, apiKey }) : null
+      if (task) void task.then(async (result) => { setState(result.state); await saveKnowledgeWorkspace(result.state); setNotice(`“${readyPage.title}” sincronizada com o vault.`) }).catch(() => setNotice("Página salva localmente. O vault será atualizado quando estiver disponível."))
     }
   }
 
@@ -233,15 +350,15 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
       </section>
     </div>
     {notice && <button className="knowledge-toast" onClick={() => setNotice("")}><Check size={15} /> {notice}<X size={14} /></button>}
-    {editing && <KnowledgeEditor page={editing} pages={scopedPages} categories={scopedCategories} bestiary={bestiary} backlinks={scopedPages.filter((page) => page.linkedPageIds.includes(editing.id) || wikiLinkTitles(plainTextFromHtml(page.contentHtml)).some((title) => title.toLocaleLowerCase("pt-BR") === editing.title.toLocaleLowerCase("pt-BR")))} onSave={savePage} onDelete={removePage} onClose={() => setEditing(null)} onLaunchEncounter={(page) => void launchEncounter(page)} />}
-    {obsidianOpen && <ObsidianDialog state={state} onClose={() => setObsidianOpen(false)} onPreferencesChange={setObsidianPreferences} />}
+    {editing && <KnowledgeEditor page={editing} pages={scopedPages} categories={scopedCategories} bestiary={bestiary} backlinks={scopedPages.filter((page) => page.linkedPageIds.includes(editing.id) || [...wikiLinkTitles(plainTextFromHtml(page.contentHtml)), ...wikiTitlesFromRichText(page.contentHtml)].some((title) => title.toLocaleLowerCase("pt-BR") === editing.title.toLocaleLowerCase("pt-BR")))} onSave={savePage} onDelete={removePage} onClose={() => setEditing(null)} onLaunchEncounter={(page) => void launchEncounter(page)} />}
+    {obsidianOpen && <ObsidianDialog state={state} onClose={() => setObsidianOpen(false)} onPreferencesChange={setObsidianPreferences} onStateChange={(next) => { setState(next); void saveKnowledgeWorkspace(next) }} />}
   </main>
 }
 
 function AccessScreen({ auth, token, password, error, isLocal, onToken, onPassword, onSubmit, onLocal, area }: { auth: AuthState; token: string; password: string; error: string; isLocal: boolean; onToken: (value: string) => void; onPassword: (value: string) => void; onSubmit: () => void; onLocal: () => void; area: PortalArea }) {
   return <main className="knowledge-shell">
     <header className="topbar knowledge-appbar">
-      <a className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></a>
+      <Link className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></Link>
       <KnowledgeNavigation area={area} />
       <span aria-hidden="true" />
     </header>
@@ -272,7 +389,7 @@ function KnowledgeHeader({ area, syncState, onObsidian }: { area: PortalArea; sy
   const sync = syncState === "synced" ? { icon: Cloud, label: "Sincronizado" } : syncState === "syncing" || syncState === "loading" ? { icon: RefreshCw, label: "Sincronizando" } : syncState === "error" ? { icon: CircleAlert, label: "Falha ao salvar" } : { icon: WifiOff, label: "Salvo localmente" }
   const Icon = sync.icon
   return <header className="topbar knowledge-appbar">
-    <a className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></a>
+    <Link className="brand" href="/"><span className="brand-rune">R</span><span><strong>Runas DM</strong><small>Arquivo do mestre</small></span></Link>
     <KnowledgeNavigation area={area} />
     <div className="top-actions knowledge-header-actions"><span className={`knowledge-sync ${syncState}`}><Icon className={syncState === "syncing" || syncState === "loading" ? "spin" : ""} size={14} /> {sync.label}</span><button className="secondary-button" onClick={onObsidian}><Settings2 size={16} /> Obsidian</button></div>
   </header>
@@ -280,15 +397,15 @@ function KnowledgeHeader({ area, syncState, onObsidian }: { area: PortalArea; sy
 
 function KnowledgeNavigation({ area }: { area: PortalArea }) {
   return <nav className="view-switch" aria-label="Áreas do Runas DM">
-    <a href="/"><Archive size={17} /> Bestiário</a>
-    <a href="/?view=encounter"><Swords size={17} /> Mesa</a>
-    <a className={area === "campaigns" ? "active" : ""} href="/campaigns"><BookMarked size={17} /> Campanhas</a>
-    <a className={area === "wiki" ? "active" : ""} href="/wiki"><LibraryBig size={17} /> Wiki</a>
+    <Link href="/"><Archive size={17} /> Bestiário</Link>
+    <Link href="/?view=encounter"><Swords size={17} /> Mesa</Link>
+    <Link className={area === "campaigns" ? "active" : ""} href="/campaigns"><BookMarked size={17} /> Campanhas</Link>
+    <Link className={area === "wiki" ? "active" : ""} href="/wiki"><LibraryBig size={17} /> Wiki</Link>
   </nav>
 }
 
 function CampaignHeading({ campaign, onChange, onDelete }: { campaign: CampaignRecord; onChange: (values: Partial<CampaignRecord>) => void; onDelete: () => void }) {
-  return <div className="campaign-heading"><div><p className="eyebrow">Campanha ativa</p><input className="campaign-title-input" value={campaign.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="Nome da campanha" /><textarea value={campaign.description} onChange={(event) => onChange({ description: event.target.value })} placeholder="Resumo da campanha, tom e objetivo central…" /></div><button className="icon-button danger-icon" title="Excluir campanha" onClick={onDelete}><Trash2 size={17} /></button></div>
+  return <div className="campaign-heading"><div><p className="eyebrow">Campanha ativa</p><input className="campaign-title-input" value={campaign.title} onChange={(event) => onChange({ title: event.target.value })} aria-label="Nome da campanha" /><ExpandableTextarea resizeKey={campaign.id} value={campaign.description} onChange={(event) => onChange({ description: event.target.value })} placeholder="Resumo da campanha, tom e objetivo central…" /></div><button className="icon-button danger-icon" title="Excluir campanha" onClick={onDelete}><Trash2 size={17} /></button></div>
 }
 
 function PageGrid({ pages, categories, onOpen, onCreate }: { pages: KnowledgePage[]; categories: KnowledgeCategory[]; onOpen: (page: KnowledgePage) => void; onCreate: () => void }) {

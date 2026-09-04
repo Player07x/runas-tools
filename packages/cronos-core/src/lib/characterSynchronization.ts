@@ -15,6 +15,7 @@ export function synchronizeCronosCharacter(character: CronosCharacter): CronosCh
       sanity: normalized.stats.sanityBonus,
       movement: normalized.stats.movementBonus,
     },
+    info.sizeModifier,
   )
   return {
     ...normalized,

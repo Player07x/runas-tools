@@ -459,8 +459,8 @@ export function CharacterStats({ attributes, info, stats, skills, abilities, onA
           <div className="grid grid-cols-2 divide-x divide-border border-t border-border">
             <label className="flex min-w-0 flex-col items-center px-1 py-2">
               <span className="text-[0.62rem] text-muted-foreground">Bônus</span>
-              <output aria-label={`Bônus de Primeiras Impressões: ${formatSignedInteger(snapshot.firstImpressions)}`} className="flex h-8 w-full items-center justify-center text-base font-semibold tabular-nums text-foreground">
-                {formatSignedInteger(snapshot.firstImpressions)}
+              <output aria-label={`Bônus de Primeiras Impressões: ${formatSignedInteger(snapshot.firstImpressionsBonus)}`} className="flex h-8 w-full items-center justify-center text-base font-semibold tabular-nums text-foreground">
+                {formatSignedInteger(snapshot.firstImpressionsBonus)}
               </output>
             </label>
             <label className="flex min-w-0 flex-col items-center px-1 py-2">

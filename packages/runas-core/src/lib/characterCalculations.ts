@@ -93,6 +93,20 @@ export function calculateLoadBase(
   return String(Math.trunc(result))
 }
 
+/**
+ * Aplica o Modificador de Tamanho do Livro Azul ao deslocamento.
+ * MT +1 equivale a 1,5x; valores positivos seguintes multiplicam pelo
+ * próprio MT; valores negativos reduzem o deslocamento sem deixá-lo abaixo de 1.
+ */
+export function applySizeModifierToMovement(movementValue: number, sizeModifierValue: string | number): number {
+  const movement = Math.max(0, Number.isFinite(movementValue) ? movementValue : 0)
+  const parsed = typeof sizeModifierValue === "number" ? sizeModifierValue : parseNumber(sizeModifierValue)
+  const mt = Math.trunc(parsed ?? 0)
+  if (mt > 0) return movement * (mt === 1 ? 1.5 : mt)
+  if (mt < 0) return Math.max(1, movement + mt)
+  return movement
+}
+
 export function calculateSizeModifier(sizeValue: string, bonusValue: string): string {
   const size = parseNumber(sizeValue)
   if (size === null || size <= 0) return ""

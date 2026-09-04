@@ -182,7 +182,7 @@ export function characterToMarkdown(character: Character): string {
   lines.push(`- Acaso: ${statSnapshot.chanceTest}; Mod.: ${stats.chanceModifier >= 0 ? "+" : ""}${stats.chanceModifier}`)
   lines.push(`- Percepção: ${statSnapshot.perceptionTest}; Mod.: ${stats.perceptionModifier >= 0 ? "+" : ""}${stats.perceptionModifier}`)
   lines.push(`- Deslocamento: ${statSnapshot.movement} m; Mod.: ${stats.movementBonus >= 0 ? "+" : ""}${stats.movementBonus}`)
-  lines.push(`- Primeiras Impressões: ${statSnapshot.firstImpressions >= 0 ? "+" : ""}${statSnapshot.firstImpressions}; Mod.: ${stats.firstImpressionsBonus >= 0 ? "+" : ""}${stats.firstImpressionsBonus}`)
+  lines.push(`- Bônus de Primeiras Impressões: ${statSnapshot.firstImpressionsBonus >= 0 ? "+" : ""}${statSnapshot.firstImpressionsBonus}; Teste base: ${statSnapshot.firstImpressions}`)
   if (statSnapshot.overweightLevel > 0) {
     lines.push(`- Sobrepeso ${statSnapshot.overweightLevel}: -${statSnapshot.physicalPenalty} Físico, -${statSnapshot.movementPenalty} Deslocamento`)
     if (statSnapshot.overweightWarnings.length > 0) {

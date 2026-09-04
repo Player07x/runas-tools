@@ -11,6 +11,7 @@ import {
   type KnowledgeCategory,
   type KnowledgePage,
 } from "../lib/knowledge-model"
+import { ExpandableTextarea } from "./expandable-textarea"
 import { RichTextEditor } from "./rich-text-editor"
 
 function kindLabel(kind: string): string {
@@ -41,6 +42,7 @@ export function KnowledgeEditor({
   onLaunchEncounter: (page: KnowledgePage) => void
 }) {
   const [draft, setDraft] = useState<KnowledgePage>(() => structuredClone(page))
+  const [tagText, setTagText] = useState(() => page.tags.join(", "))
   const [relationSearch, setRelationSearch] = useState("")
   const relatedPages = useMemo(
     () => pages.filter((candidate) => candidate.id !== draft.id && (
@@ -90,11 +92,11 @@ export function KnowledgeEditor({
   }
 
   function save() {
-    onSave({ ...draft, updatedAt: Date.now() })
+    onSave({ ...draft, tags: parseList(tagText), updatedAt: Date.now() })
   }
 
   function saveAndLaunchEncounter() {
-    const ready = { ...draft, updatedAt: Date.now() }
+    const ready = { ...draft, tags: parseList(tagText), updatedAt: Date.now() }
     onSave(ready)
     onLaunchEncounter(ready)
   }
@@ -126,14 +128,15 @@ export function KnowledgeEditor({
             <label><span>Tipo</span><select value={draft.kind} onChange={(event) => patch({ kind: event.target.value as KnowledgePage["kind"] })}>{draft.scope === "wiki" ? WIKI_SECTIONS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>) : CAMPAIGN_PAGE_KINDS.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
             <label><span>Data</span><input type="date" value={draft.date} onChange={(event) => patch({ date: event.target.value })} /></label>
             {hasStatus && <label><span>Status</span><select value={draft.status} onChange={(event) => patch({ status: event.target.value as KnowledgePage["status"] })}>{CAMPAIGN_STATUSES.map((status) => <option key={status}>{status}</option>)}</select></label>}
-            {!isEncounter && <label className="wide"><span>Resumo</span><textarea value={draft.summary} onChange={(event) => patch({ summary: event.target.value })} placeholder="Uma visão rápida para encontrar esta página depois." /></label>}
-            <label><span>Tags</span><input value={draft.tags.join(", ")} onChange={(event) => patch({ tags: parseList(event.target.value) })} placeholder="emboscada, floresta, nível alto" /></label>
+            {!isEncounter && <label className="wide"><span>Resumo</span><ExpandableTextarea resizeKey={draft.id} value={draft.summary} onChange={(event) => patch({ summary: event.target.value })} placeholder="Uma visão rápida para encontrar esta página depois." /></label>}
+            <label><span>Tags</span><input value={tagText} onChange={(event) => setTagText(event.target.value)} placeholder="emboscada, floresta, nível alto" /></label>
           </div>
 
           {isEncounter ? <>
             <label className="encounter-notes-field">
               <span>Notas do mestre</span>
-              <textarea
+              <ExpandableTextarea
+                resizeKey={draft.id}
                 value={draft.summary}
                 onChange={(event) => patch({ summary: event.target.value })}
                 placeholder="Anote somente o necessário para reconhecer e conduzir este encontro."
@@ -170,7 +173,7 @@ export function KnowledgeEditor({
                 })}</div>
               {draft.encounterCreatures.length > 0 && <button className="primary-button encounter-launch" onClick={saveAndLaunchEncounter}><ExternalLink size={16} /> Salvar e abrir na Mesa</button>}
             </section>
-          </> : <RichTextEditor label="Conteúdo da página" value={draft.contentHtml} onChange={(contentHtml) => patch({ contentHtml })} className="knowledge-rich-editor" />}
+          </> : <RichTextEditor label="Conteúdo da página" value={draft.contentHtml} onChange={(contentHtml) => patch({ contentHtml })} wikiPageTitles={pages.filter((candidate) => candidate.id !== draft.id).map((candidate) => candidate.title)} className="knowledge-rich-editor" />}
         </main>
 
         <aside>

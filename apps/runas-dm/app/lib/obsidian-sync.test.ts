@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { normalizeKnowledgeWorkspace, type KnowledgePage } from "./knowledge-model"
-import { obsidianPathForPage, pageToMarkdown } from "./obsidian-sync"
+import { mergeObsidianNotes, obsidianPathForPage, pageObsidianFingerprint, pageToMarkdown, synchronizeWorkspaceWithVault, type VaultAdapter } from "./obsidian-sync"
 
 describe("Obsidian export", () => {
   const state = normalizeKnowledgeWorkspace({
@@ -39,7 +39,7 @@ describe("Obsidian export", () => {
   })
 
   it("gera caminhos relativos ao vault", () => {
-    expect(obsidianPathForPage(state.pages[0], state, "Ordem x Caos")).toBe("Ordem x Caos/Campanhas/A Queda de Zotera/Missao/Portoes do Norte.md")
+    expect(obsidianPathForPage(state.pages[0], state, "Ordem x Caos")).toBe("Ordem x Caos/Portoes do Norte.md")
   })
 
   it("preserva metadados, vínculos e fichas do encontro no Markdown", () => {
@@ -63,5 +63,49 @@ describe("Obsidian export", () => {
     expect(markdown).toContain("Atacar quando o grupo cruzar o rio.")
     expect(markdown).not.toContain("Texto antigo")
     expect(markdown).toContain("3× Lobo Rúnico")
+  })
+
+  it("importa Markdown comum do vault sem alterar o conteúdo nem o caminho", () => {
+    const markdown = "# Castelo de Zotera\n\nUm arquivo antigo que precisa continuar intacto.\n\nVeja [[Portões do Norte]].\n"
+    const merged = mergeObsidianNotes(state, [{ path: "Lore/Castelo de Zotera.md", markdown, createdAt: 5, modifiedAt: 10 }])
+    const page = merged.state.pages.find((candidate) => candidate.title === "Castelo de Zotera")
+    expect(page).toMatchObject({ scope: "wiki", kind: "chronology", obsidianPath: "Lore/Castelo de Zotera.md", obsidianSourceMarkdown: markdown })
+    expect(page?.linkedPageIds).toContain("page-1")
+    expect(pageToMarkdown(page!, merged.state)).toBe(markdown)
+  })
+
+  it("lê antes de gravar, cria páginas na raiz e preserva colisões", async () => {
+    const files = new Map<string, string>([["Portoes do Norte.md", "# Documento pessoal\n\nNão substituir sem cópia.\n"]])
+    const adapter: VaultAdapter = {
+      listMarkdownFiles: async () => [...files.keys()].filter((path) => path.endsWith(".md")),
+      readNote: async (path) => ({ path, markdown: files.get(path)!, createdAt: 1, modifiedAt: 2 }),
+      writeText: async (path, content) => { files.set(path, content) },
+      writeBinary: async () => undefined,
+    }
+    const result = await synchronizeWorkspaceWithVault(state, adapter)
+    expect(files.get("Portoes do Norte.md")).toBe("# Documento pessoal\n\nNão substituir sem cópia.\n")
+    expect([...files.keys()]).toContain("Portoes do Norte (page-1).md")
+    expect(result.state.pages.some((page) => page.title === "Documento pessoal")).toBe(true)
+  })
+
+  it("cria backup e cópia de conflito quando site e vault mudaram", async () => {
+    const local = structuredClone(state)
+    const page = local.pages[0]
+    page.obsidianPath = "Portoes.md"
+    page.obsidianSourceMarkdown = "# Versão inicial\n"
+    page.obsidianFingerprint = pageObsidianFingerprint(page, local)
+    page.contentHtml = "<p>Alteração local importante.</p>"
+    page.updatedAt = 100
+    const files = new Map<string, string>([["Portoes.md", "# Alteração feita no Obsidian\n"]])
+    const adapter: VaultAdapter = {
+      listMarkdownFiles: async () => ["Portoes.md"],
+      readNote: async (path) => ({ path, markdown: files.get(path)!, createdAt: 1, modifiedAt: 50 }),
+      writeText: async (path, content) => { files.set(path, content) },
+      writeBinary: async () => undefined,
+    }
+    const result = await synchronizeWorkspaceWithVault(local, adapter)
+    expect(result.backups).toBe(1)
+    expect([...files.keys()].some((path) => path.startsWith("Assets/Runas DM Backups/Portoes-"))).toBe(true)
+    expect(result.state.pages.some((candidate) => candidate.title.includes("cópia local em conflito"))).toBe(true)
   })
 })

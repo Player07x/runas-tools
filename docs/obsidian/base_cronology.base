@@ -1,0 +1,21 @@
+properties:
+  file.name:
+    displayName: Nome
+views:
+  - type: table
+    name: Cronologia
+    filters:
+      or:
+        - file.folder == "Cronologia/Acontecimentos Globais"
+        - file.folder == "Cronologia/Acontecimentos Regionais"
+    order:
+      - Ano (Início)
+      - Ano (Fim)
+      - file.name
+    sort:
+      - property: file.name
+        direction: ASC
+      - property: Ano (Fim)
+        direction: ASC
+    columnSize:
+      note.Ano (Início): 129

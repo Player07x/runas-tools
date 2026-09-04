@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { normalizeKnowledgeWorkspace, type KnowledgePage } from "./knowledge-model"
-import { mergeObsidianNotes, obsidianPathForPage, pageObsidianFingerprint, pageToMarkdown, synchronizeWorkspaceWithVault, type VaultAdapter } from "./obsidian-sync"
+import { isIgnoredVaultPath, mergeObsidianNotes, obsidianPathForPage, pageObsidianFingerprint, pageToMarkdown, synchronizeWorkspaceWithVault, type VaultAdapter } from "./obsidian-sync"
 
 describe("Obsidian export", () => {
   const state = normalizeKnowledgeWorkspace({
@@ -42,6 +42,16 @@ describe("Obsidian export", () => {
     expect(obsidianPathForPage(state.pages[0], state, "Ordem x Caos")).toBe("Ordem x Caos/Portoes do Norte.md")
   })
 
+  it("organiza páginas da wiki por seção e categoria primária", () => {
+    const wiki = state.pages[1] as KnowledgePage
+    const organized = {
+      ...state,
+      categories: [...state.categories, { id: "wiki-region", scope: "wiki" as const, campaignId: null, name: "Regiões", parentId: null }],
+      pages: [{ ...wiki, categoryIds: ["wiki-region"] }],
+    }
+    expect(obsidianPathForPage(organized.pages[0], organized, "")).toBe("Geografia/Regiões/Zotera.md")
+  })
+
   it("preserva metadados, vínculos e fichas do encontro no Markdown", () => {
     const markdown = pageToMarkdown(state.pages[0] as KnowledgePage, state)
     expect(markdown).toContain('status: "Em Progresso"')
@@ -72,6 +82,21 @@ describe("Obsidian export", () => {
     expect(page).toMatchObject({ scope: "wiki", kind: "chronology", obsidianPath: "Lore/Castelo de Zotera.md", obsidianSourceMarkdown: markdown })
     expect(page?.linkedPageIds).toContain("page-1")
     expect(pageToMarkdown(page!, merged.state)).toBe(markdown)
+  })
+
+  it("deduz seção e categoria pelas pastas padronizadas", () => {
+    const markdown = "# Cidade do Destino\n\nUma cidade de [[Runilis]].\n"
+    const merged = mergeObsidianNotes(normalizeKnowledgeWorkspace({}), [{ path: "Geografia/Assentamentos/Cidade do Destino.md", markdown, createdAt: 5, modifiedAt: 10 }])
+    const page = merged.state.pages[0]
+    const category = merged.state.categories.find((item) => page.categoryIds.includes(item.id))
+    expect(page.kind).toBe("geography")
+    expect(category?.name).toBe("Assentamentos")
+  })
+
+  it("ignora áreas particulares sem confundir categorias da wiki", () => {
+    expect(isIgnoredVaultPath("Campanhas/Anotações/Sessão.md")).toBe(true)
+    expect(isIgnoredVaultPath("Ordem x Caos/Templates/Modelo.md")).toBe(true)
+    expect(isIgnoredVaultPath("Geografia/Campanhas/Cidade.md")).toBe(false)
   })
 
   it("lê antes de gravar, cria páginas na raiz e preserva colisões", async () => {

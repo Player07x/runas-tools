@@ -1,4 +1,4 @@
-import { parseMarkdownFrontmatter, synchronizeWorkspaceWithVault, type VaultAdapter, type VaultSyncResult } from "./obsidian-sync"
+import { IGNORED_VAULT_FOLDERS, WIKI_VAULT_FOLDERS, parseMarkdownFrontmatter, synchronizeWorkspaceWithVault, type VaultAdapter, type VaultSyncResult } from "./obsidian-sync"
 import type { KnowledgeWorkspaceState } from "./knowledge-model"
 
 const DATABASE_NAME = "runas-dm-local-vault"
@@ -92,12 +92,14 @@ async function fileExists(handle: DirectoryHandle, path: string): Promise<boolea
 export async function prepareLocalVault(handle: DirectoryHandle): Promise<void> {
   if (!await ensureWritePermission(handle, true)) throw new Error("Permissão de escrita no vault não foi concedida.")
   await directoryAt(handle, "Assets", true)
+  await directoryAt(handle, "Bases", true)
+  for (const folder of WIKI_VAULT_FOLDERS) await directoryAt(handle, folder, true)
   await directoryAt(handle, ".obsidian", true)
   if (!await fileExists(handle, ".obsidian/app.json")) {
     await writeFile(handle, ".obsidian/app.json", JSON.stringify({ newFileLocation: "root", attachmentFolderPath: "Assets" }, null, 2))
   }
   if (!await fileExists(handle, "LEIA-ME Runas DM.md")) {
-    await writeFile(handle, "LEIA-ME Runas DM.md", "---\nrunas_system: true\n---\n\n# Vault do Runas DM\n\nAs notas de Wiki e Campanha ficam nesta raiz. Anexos ficam em `Assets`.\n")
+    await writeFile(handle, "LEIA-ME Runas DM.md", "---\nrunas_system: true\n---\n\n# Vault do Runas DM\n\nA Wiki usa Cronologia, Geografia, Personagens, Fauna, Monstros e Itens. A primeira categoria define a subpasta; as demais ficam no frontmatter. Anexos ficam em `Assets` e dados auxiliares em `Bases`.\n")
   }
 }
 
@@ -114,10 +116,22 @@ async function listMarkdownFiles(handle: DirectoryHandle, path = ""): Promise<st
   const directory = path ? await directoryAt(handle, path, false) : handle
   const files: string[] = []
   for await (const entry of directory.values()) {
-    if (entry.name === ".obsidian" || entry.name === ".trash" || entry.name === "Assets") continue
+    if (!path && IGNORED_VAULT_FOLDERS.some((folder) => folder.localeCompare(entry.name, "pt-BR", { sensitivity: "base" }) === 0)) continue
     const childPath = [path, entry.name].filter(Boolean).join("/")
     if (entry.kind === "directory") files.push(...await listMarkdownFiles(handle, childPath))
     else if (entry.name.toLocaleLowerCase("pt-BR").endsWith(".md")) files.push(childPath)
+  }
+  return files
+}
+
+async function listAllFiles(handle: DirectoryHandle, path: string): Promise<string[]> {
+  let directory: DirectoryHandle
+  try { directory = await directoryAt(handle, path, false) } catch { return [] }
+  const files: string[] = []
+  for await (const entry of directory.values()) {
+    const childPath = [path, entry.name].filter(Boolean).join("/")
+    if (entry.kind === "directory") files.push(...await listAllFiles(handle, childPath))
+    else files.push(childPath)
   }
   return files
 }
@@ -130,6 +144,10 @@ function createLocalVaultAdapter(handle: DirectoryHandle): VaultAdapter {
       const markdown = await file.text()
       return { path, markdown, frontmatter: parseMarkdownFrontmatter(markdown).frontmatter, createdAt: file.lastModified, modifiedAt: file.lastModified }
     },
+    async readBinary(path) {
+      try { return await (await fileAt(handle, path, false)).getFile() } catch { return null }
+    },
+    listAssetFiles: () => listAllFiles(handle, "Assets"),
     writeText: (path, content) => writeFile(handle, path, content),
     writeBinary: (path, content) => writeFile(handle, path, content),
   }

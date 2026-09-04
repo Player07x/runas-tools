@@ -1,5 +1,9 @@
 import { CAMPAIGN_PAGE_KINDS, CAMPAIGN_STATUSES, WIKI_SECTIONS, createCampaign, createKnowledgeId, normalizeKnowledgeWorkspace, wikiLinkTitles, type CampaignRecord, type KnowledgeCategory, type KnowledgePage, type KnowledgePageKind, type KnowledgeWorkspaceState } from "./knowledge-model"
 import { createTextZip, downloadBlob, safeFilename } from "./export"
+import { cacheVaultAsset } from "./vault-assets"
+
+export const WIKI_VAULT_FOLDERS = WIKI_SECTIONS.map((section) => section.label)
+export const IGNORED_VAULT_FOLDERS = [".obsidian", ".trash", "Assets", "Bases", "Templates", "Notas", "Histórias", "Historias", "Campanhas"]
 
 export interface ObsidianConnection {
   baseUrl: string
@@ -19,6 +23,8 @@ export interface VaultNote {
 export interface VaultAdapter {
   listMarkdownFiles(rootFolder: string): Promise<string[]>
   readNote(path: string): Promise<VaultNote>
+  readBinary?(path: string): Promise<Blob | null>
+  listAssetFiles?(rootFolder: string): Promise<string[]>
   writeText(path: string, content: string): Promise<void>
   writeBinary(path: string, content: Blob): Promise<void>
 }
@@ -49,6 +55,10 @@ function filePart(value: string, fallback: string): string {
   return safeFilename(value, fallback).replace(/_/g, " ")
 }
 
+function folderPart(value: string, fallback: string): string {
+  return value.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, " ").replace(/\s+/g, " ").replace(/[. ]+$/, "") || fallback
+}
+
 function normalizePath(value: string): string {
   return value.replaceAll("\\", "/").split("/").map((part) => part.trim()).filter((part) => part && part !== "." && part !== "..").join("/")
 }
@@ -74,11 +84,31 @@ function normalizedLabel(value: string): string {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase("pt-BR")
 }
 
-function kindFromValue(value: unknown, scope: "wiki" | "campaign"): KnowledgePageKind {
+export function isIgnoredVaultPath(path: string): boolean {
+  const parts = normalizePath(path).split("/")
+  const sectionIndex = parts.findIndex((part) => normalizedLabel(part) === "cronologia geral" || WIKI_SECTIONS.some((section) => normalizedLabel(section.label) === normalizedLabel(part)))
+  const ignoredIndex = parts.findIndex((part) => IGNORED_VAULT_FOLDERS.some((folder) => normalizedLabel(folder) === normalizedLabel(part)))
+  return ignoredIndex >= 0 && (sectionIndex < 0 || ignoredIndex < sectionIndex)
+}
+
+function kindFromValue(value: unknown, scope: "wiki" | "campaign", fallback?: KnowledgePageKind): KnowledgePageKind {
   const candidate = normalizedLabel(text(value))
   const options = scope === "wiki" ? WIKI_SECTIONS : CAMPAIGN_PAGE_KINDS
   return options.find((item) => normalizedLabel(item.id) === candidate || normalizedLabel(item.label) === candidate)?.id
+    ?? fallback
     ?? (scope === "wiki" ? "chronology" : "gm-note")
+}
+
+function wikiLocation(path: string): { kind: KnowledgePageKind; category: string } | null {
+  const parts = normalizePath(path).split("/")
+  const index = parts.findIndex((part) => {
+    const label = normalizedLabel(part)
+    return label === "cronologia geral" || WIKI_SECTIONS.some((section) => normalizedLabel(section.label) === label)
+  })
+  if (index < 0) return null
+  const folder = normalizedLabel(parts[index]) === "cronologia geral" ? "Cronologia" : parts[index]
+  const section = WIKI_SECTIONS.find((candidate) => normalizedLabel(candidate.label) === normalizedLabel(folder))
+  return section ? { kind: section.id, category: parts.length > index + 2 ? parts[index + 1] : "" } : null
 }
 
 function campaignFor(page: KnowledgePage, campaigns: CampaignRecord[]): CampaignRecord | undefined {
@@ -223,10 +253,14 @@ export function pageToMarkdown(page: KnowledgePage, state: KnowledgeWorkspaceSta
   return `${frontmatter}\n\n# ${page.title}\n\n${page.summary ? `${page.kind === "encounter" ? "## Notas do mestre\n\n" : ""}${page.summary}\n\n` : ""}${body}${relations}${encounter}\n`
 }
 
-/** Páginas novas ficam diretamente na raiz escolhida; escopo e campanha vivem no frontmatter. */
-export function obsidianPathForPage(page: KnowledgePage, _state: KnowledgeWorkspaceState, rootFolder = ""): string {
+/** Wiki usa pasta por seção e, quando presente, a primeira categoria como subpasta. */
+export function obsidianPathForPage(page: KnowledgePage, state: KnowledgeWorkspaceState, rootFolder = ""): string {
   if (page.obsidianPath) return normalizePath(page.obsidianPath)
-  return pathInsideRoot(`${filePart(page.title, "Página sem nome")}.md`, rootFolder)
+  const filename = `${filePart(page.title, "Página sem nome")}.md`
+  if (page.scope === "campaign") return pathInsideRoot(filename, rootFolder)
+  const section = WIKI_SECTIONS.find((candidate) => candidate.id === page.kind)?.label ?? "Cronologia"
+  const primaryCategory = state.categories.find((category) => page.categoryIds.includes(category.id) && category.scope === "wiki")
+  return pathInsideRoot(joinVaultPath(section, primaryCategory ? folderPart(primaryCategory.name, "Categoria") : "", filename), rootFolder)
 }
 
 export function exportKnowledgeZip(state: KnowledgeWorkspaceState): void {
@@ -237,7 +271,7 @@ export function exportKnowledgeZip(state: KnowledgeWorkspaceState): void {
     used.add(normalizedLabel(name))
     return { name, content: pageToMarkdown(page, state) }
   })
-  files.push({ name: "LEIA-ME Runas DM.md", content: "---\nrunas_system: true\n---\n\n# Arquivo Runas DM\n\nAs páginas ficam na raiz do vault, os anexos em `Assets` e os vínculos usam `[[Página]]`.\n" })
+  files.push({ name: "LEIA-ME Runas DM.md", content: "---\nrunas_system: true\n---\n\n# Arquivo Runas DM\n\nA Wiki usa as pastas Cronologia, Geografia, Personagens, Fauna, Monstros e Itens. A primeira categoria define a subpasta; categorias adicionais ficam no frontmatter. Anexos ficam em `Assets`.\n" })
   const zip = createTextZip(files)
   const buffer = new ArrayBuffer(zip.byteLength)
   new Uint8Array(buffer).set(zip)
@@ -321,6 +355,7 @@ function noteToPage(note: VaultNote, state: KnowledgeWorkspaceState, fallback?: 
   const frontmatter = { ...parsed.frontmatter, ...(note.frontmatter ?? {}) }
   const campaignTitle = text(frontmatter.campanha)
   const scope: "wiki" | "campaign" = text(frontmatter.runas_scope) === "campaign" || Boolean(campaignTitle) ? "campaign" : "wiki"
+  const location = scope === "wiki" ? wikiLocation(note.path) : null
   const campaign = scope === "campaign" ? ensureCampaign(state.campaigns, text(frontmatter.runas_campaign_id), campaignTitle, note.createdAt, note.modifiedAt) : null
   const title = text(frontmatter.runas_title) || text(frontmatter.title) || titleFromMarkdown(parsed.body, note.path)
   const summary = text(frontmatter.runas_summary)
@@ -329,7 +364,7 @@ function noteToPage(note: VaultNote, state: KnowledgeWorkspaceState, fallback?: 
     id: text(frontmatter.runas_id) || fallback?.id || createKnowledgeId("page"),
     scope,
     campaignId: campaign?.id ?? null,
-    kind: kindFromValue(frontmatter.runas_kind ?? frontmatter.tipo, scope),
+    kind: kindFromValue(frontmatter.runas_kind ?? frontmatter.tipo, scope, location?.kind),
     title,
     summary: summary || content.split(/\n\s*\n/).find((block) => !/^\s*(#|[-*+]\s)/.test(block))?.replace(/\s+/g, " ").slice(0, 280) || "",
     contentHtml: markdownToHtml(content),
@@ -347,12 +382,13 @@ function noteToPage(note: VaultNote, state: KnowledgeWorkspaceState, fallback?: 
     createdAt: Number(frontmatter.runas_created_at) || fallback?.createdAt || note.createdAt,
     updatedAt: Number(frontmatter.runas_updated_at) || note.modifiedAt,
   }
-  page.categoryIds = ensureCategories(state.categories, stringArray(frontmatter.categorias), scope, page.campaignId)
+  page.categoryIds = ensureCategories(state.categories, [...new Set([...stringArray(frontmatter.categorias), ...(location?.category ? [location.category] : [])])], scope, page.campaignId)
   return page
 }
 
 export function mergeObsidianNotes(localState: KnowledgeWorkspaceState, notes: VaultNote[]): { state: KnowledgeWorkspaceState; imported: number } {
   const state = normalizeKnowledgeWorkspace(structuredClone(localState))
+  state.pages = state.pages.filter((page) => !page.obsidianPath || !isIgnoredVaultPath(page.obsidianPath))
   const importedPages: { pageId: string; markdown: string }[] = []
   let imported = 0
   for (const note of notes) {
@@ -360,7 +396,14 @@ export function mergeObsidianNotes(localState: KnowledgeWorkspaceState, notes: V
     const noteFrontmatter = { ...parsed.frontmatter, ...(note.frontmatter ?? {}) }
     if (noteFrontmatter.runas_system === true) continue
     const id = text(noteFrontmatter.runas_id)
-    const existingIndex = state.pages.findIndex((page) => (id && page.id === id) || normalizedLabel(page.obsidianPath) === normalizedLabel(note.path))
+    let existingIndex = state.pages.findIndex((page) => (id && page.id === id) || normalizedLabel(page.obsidianPath) === normalizedLabel(note.path))
+    if (existingIndex < 0 && !id) {
+      const title = text(noteFrontmatter.runas_title) || text(noteFrontmatter.title) || titleFromMarkdown(parsed.body, note.path)
+      const campaignTitle = text(noteFrontmatter.campanha)
+      const scope = text(noteFrontmatter.runas_scope) === "campaign" || Boolean(campaignTitle) ? "campaign" : "wiki"
+      const matches = state.pages.map((page, index) => ({ page, index })).filter(({ page }) => page.scope === scope && normalizedLabel(page.title) === normalizedLabel(title))
+      if (matches.length === 1) existingIndex = matches[0].index
+    }
     const existing = existingIndex >= 0 ? state.pages[existingIndex] : undefined
     const remote = noteToPage(note, state, existing)
     let adoptedRemote = !existing
@@ -426,9 +469,25 @@ async function listObsidianDirectory(path: string, connection: ObsidianConnectio
     const clean = entry.replace(/\/$/, "")
     const fullPath = joinVaultPath(path, clean)
     if (entry.endsWith("/")) {
-      if ([".obsidian", ".trash", "Assets"].includes(clean)) continue
+      if (normalizedLabel(path) === normalizedLabel(rootPath(connection.rootFolder)) && IGNORED_VAULT_FOLDERS.some((folder) => normalizedLabel(folder) === normalizedLabel(clean))) continue
       result.push(...await listObsidianDirectory(fullPath, connection))
     } else if (entry.toLocaleLowerCase("pt-BR").endsWith(".md")) result.push(fullPath)
+  }
+  return result
+}
+
+async function listObsidianAssetDirectory(path: string, connection: ObsidianConnection): Promise<string[]> {
+  const response = await requestObsidian(`/vault/${path ? `${encodedVaultPath(path)}/` : ""}`, connection)
+  if (response.status === 404) return []
+  if (!response.ok) throw new Error(`Falha ao listar anexos do vault (${response.status}).`)
+  const payload = await response.json() as { files?: unknown }
+  const entries = Array.isArray(payload.files) ? payload.files.filter((item): item is string => typeof item === "string") : []
+  const result: string[] = []
+  for (const entry of entries) {
+    const clean = entry.replace(/\/$/, "")
+    const fullPath = joinVaultPath(path, clean)
+    if (entry.endsWith("/")) result.push(...await listObsidianAssetDirectory(fullPath, connection))
+    else result.push(fullPath)
   }
   return result
 }
@@ -442,6 +501,11 @@ export function createObsidianAdapter(connection: ObsidianConnection): VaultAdap
       const payload = await response.json() as { content?: unknown; frontmatter?: unknown; stat?: { ctime?: unknown; mtime?: unknown } }
       return { path, markdown: text(payload.content), frontmatter: payload.frontmatter && typeof payload.frontmatter === "object" ? payload.frontmatter as Record<string, unknown> : undefined, createdAt: Number(payload.stat?.ctime) || Date.now(), modifiedAt: Number(payload.stat?.mtime) || Date.now() }
     },
+    async readBinary(path) {
+      const response = await requestObsidian(`/vault/${encodedVaultPath(path)}`, connection, { headers: headers(connection, "*/*") })
+      return response.ok ? response.blob() : null
+    },
+    listAssetFiles: (rootFolder) => listObsidianAssetDirectory(pathInsideRoot("Assets", rootFolder), connection),
     async writeText(path, content) {
       const response = await requestObsidian(`/vault/${encodedVaultPath(path)}`, connection, { method: "PUT", headers: { ...headers(connection), "Content-Type": "text/markdown; charset=utf-8" }, body: content })
       if (!response.ok) throw new Error(`Falha ao escrever ${path} (${response.status}).`)
@@ -451,6 +515,48 @@ export function createObsidianAdapter(connection: ObsidianConnection): VaultAdap
       if (!response.ok) throw new Error(`Falha ao escrever ${path} (${response.status}).`)
     },
   }
+}
+
+async function cacheEmbeddedVaultImages(state: KnowledgeWorkspaceState, adapter: VaultAdapter, rootFolder: string): Promise<KnowledgeWorkspaceState> {
+  if (!adapter.readBinary || typeof DOMParser === "undefined") return state
+  const assetPaths = adapter.listAssetFiles ? await adapter.listAssetFiles(rootFolder).catch(() => []) : []
+  const assetsByName = new Map<string, string[]>()
+  for (const path of assetPaths) {
+    const name = normalizedLabel(path.split("/").pop() ?? "")
+    assetsByName.set(name, [...(assetsByName.get(name) ?? []), path])
+  }
+  for (const page of state.pages) {
+    if (!page.contentHtml.includes("data-obsidian-embed") && !page.contentHtml.includes("data-obsidian-path")) continue
+    const documentValue = new DOMParser().parseFromString(page.contentHtml, "text/html")
+    const embeds = [...documentValue.body.querySelectorAll<HTMLElement>("[data-obsidian-embed]")]
+    const images = [...documentValue.body.querySelectorAll<HTMLImageElement>("img[data-obsidian-path]")]
+    for (const element of [...embeds, ...images]) {
+      const raw = (element instanceof HTMLImageElement ? element.dataset.obsidianPath : element.dataset.obsidianEmbed)?.trim() ?? ""
+      const target = raw.split("|")[0].split("#")[0].trim()
+      if (!/\.(?:avif|gif|jpe?g|png|svg|webp)$/i.test(target)) continue
+      const basenameMatches = assetsByName.get(normalizedLabel(target.split("/").pop() ?? "")) ?? []
+      const candidates = target.includes("/") ? [pathInsideRoot(target, rootFolder)] : [pathInsideRoot(`Assets/${target}`, rootFolder), ...basenameMatches, pathInsideRoot(target, rootFolder)]
+      let content: Blob | null = null
+      for (const candidate of candidates) {
+        content = await adapter.readBinary(candidate)
+        if (content) break
+      }
+      if (!content) continue
+      await cacheVaultAsset(raw, content).catch(() => undefined)
+      if (!(element instanceof HTMLImageElement)) {
+        const image = documentValue.createElement("img")
+        image.alt = target.split("/").pop()?.replace(/\.[^.]+$/, "") ?? "Imagem"
+        image.dataset.obsidianPath = raw
+        image.dataset.width = "75"
+        image.dataset.align = "center"
+        image.style.width = "75%"
+        element.replaceWith(image)
+      }
+    }
+    page.contentHtml = documentValue.body.innerHTML
+    page.obsidianFingerprint = pageObsidianFingerprint(page, state)
+  }
+  return state
 }
 
 async function pageWithVaultAttachments(page: KnowledgePage, adapter: VaultAdapter, rootFolder: string): Promise<KnowledgePage> {
@@ -464,6 +570,7 @@ async function pageWithVaultAttachments(page: KnowledgePage, adapter: VaultAdapt
     const extension = blob.type === "image/png" ? "png" : blob.type === "image/webp" ? "webp" : blob.type === "image/gif" ? "gif" : "jpg"
     const path = pathInsideRoot(`Assets/${filePart(page.title, "Imagem")}-${page.id.slice(-8)}-${index + 1}.${extension}`, rootFolder)
     await adapter.writeBinary(path, blob)
+    await cacheVaultAsset(path, blob)
     image.removeAttribute("src")
     image.setAttribute("data-obsidian-path", path)
   }
@@ -486,7 +593,7 @@ export async function synchronizeWorkspaceWithVault(stateValue: KnowledgeWorkspa
   const paths = await adapter.listMarkdownFiles(rootFolder)
   const notes = await Promise.all(paths.map((path) => adapter.readNote(path)))
   const merged = mergeObsidianNotes(stateValue, notes)
-  let state = merged.state
+  let state = await cacheEmbeddedVaultImages(merged.state, adapter, rootFolder)
   const existingByPath = new Map(notes.map((note) => [normalizedLabel(note.path), note]))
   let exported = 0
   let backups = 0
@@ -529,7 +636,7 @@ export async function importWorkspaceFromObsidian(state: KnowledgeWorkspaceState
   const paths = await adapter.listMarkdownFiles(connection.rootFolder)
   const notes = await Promise.all(paths.map((path) => adapter.readNote(path)))
   const merged = mergeObsidianNotes(state, notes)
-  return { state: merged.state, imported: merged.imported, exported: 0, backups: 0 }
+  return { state: await cacheEmbeddedVaultImages(merged.state, adapter, connection.rootFolder), imported: merged.imported, exported: 0, backups: 0 }
 }
 
 export async function syncWorkspaceToObsidian(state: KnowledgeWorkspaceState, connection: ObsidianConnection, onProgress?: (done: number, total: number) => void): Promise<VaultSyncResult> {

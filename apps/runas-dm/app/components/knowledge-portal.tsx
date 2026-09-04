@@ -22,13 +22,6 @@ type SyncState = "loading" | "local" | "syncing" | "synced" | "error"
 
 const AUTH_ACTIVITY_KEY = "runas-dm.knowledge-last-activity"
 const AUTH_IDLE_MILLISECONDS = 10 * 60 * 1000
-let cachedKnowledgeAuthState: AuthState = "checking"
-
-function cacheKnowledgeAuthState(value: AuthState): AuthState {
-  cachedKnowledgeAuthState = value
-  return value
-}
-
 function lastAuthenticatedActivity(): number {
   if (typeof window === "undefined") return 0
   return Number(sessionStorage.getItem(AUTH_ACTIVITY_KEY)) || 0
@@ -63,7 +56,9 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
   const router = useRouter()
   // O valor inicial precisa ser idêntico no servidor e na primeira hidratação.
   // Depois disso, o módulo cliente preserva o estado entre Wiki e Campanhas.
-  const [auth, setAuth] = useState<AuthState>(cachedKnowledgeAuthState)
+  // O servidor e a primeira hidratação sempre começam iguais. O estado em memória
+  // só é consultado no efeito; assim uma navegação não invalida os eventos do menu.
+  const [auth, setAuth] = useState<AuthState>("checking")
   const [state, setState] = useState<KnowledgeWorkspaceState>(() => ({ version: 2, campaigns: [], categories: [], pages: [], updatedAt: 0 }))
   const [syncState, setSyncState] = useState<SyncState>("loading")
   const [authError, setAuthError] = useState("")
@@ -132,7 +127,7 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
     const localTimeout = window.setTimeout(() => setIsLocal(hostname === "localhost" || hostname === "127.0.0.1"), 0)
     if (hasRecentAuthentication()) {
       const hydrateTimeout = window.setTimeout(() => {
-        setAuth(cacheKnowledgeAuthState("ready"))
+        setAuth("ready")
         void hydrate()
       }, 0)
       return () => {
@@ -143,8 +138,8 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
     void fetch("/api/campaign-auth", { cache: "no-store" }).then(async (response) => {
       if (!response.ok) throw new Error()
       const payload = await response.json() as { authenticated?: boolean }
-      if (payload.authenticated) { rememberAuthenticatedActivity(); setAuth(cacheKnowledgeAuthState("ready")); await hydrate() } else setAuth(cacheKnowledgeAuthState("locked"))
-    }).catch(() => setAuth(cacheKnowledgeAuthState("locked")))
+      if (payload.authenticated) { rememberAuthenticatedActivity(); setAuth("ready"); await hydrate() } else setAuth("locked")
+    }).catch(() => setAuth("locked"))
     return () => window.clearTimeout(localTimeout)
   }, [hydrate])
 
@@ -159,7 +154,7 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
       void fetch("/api/campaign-auth", { cache: "no-store" }).then(async (response) => {
         if (!response.ok) return
         const payload = await response.json() as { authenticated?: boolean }
-        if (!payload.authenticated) setAuth(cacheKnowledgeAuthState("locked"))
+        if (!payload.authenticated) setAuth("locked")
       }).finally(() => { verificationRunning = false })
     }
     const events: (keyof WindowEventMap)[] = ["pointerdown", "keydown", "touchstart"]
@@ -231,7 +226,7 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
         const response = await fetch("/api/campaign-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ localPreview: true }) })
         if (!response.ok) throw new Error()
         rememberAuthenticatedActivity()
-        setAuth(cacheKnowledgeAuthState("ready"))
+        setAuth("ready")
         await hydrate()
         return
       } catch {
@@ -242,7 +237,7 @@ export function KnowledgePortal({ area }: { area: PortalArea }) {
     try {
       const response = await fetch("/api/campaign-auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, password }) })
       if (!response.ok) { setAuthError("Token ou senha incorretos."); return }
-      setToken(""); setPassword(""); rememberAuthenticatedActivity(); setAuth(cacheKnowledgeAuthState("ready")); await hydrate()
+      setToken(""); setPassword(""); rememberAuthenticatedActivity(); setAuth("ready"); await hydrate()
     } catch { setAuthError("Não foi possível acessar o servidor.") }
   }
 

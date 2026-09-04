@@ -2,11 +2,12 @@
 
 import { useEffect, useId, useRef, useState } from "react"
 import { AlignCenter, AlignLeft, AlignRight, Bold, Eraser, Heading2, ImagePlus, Italic, Link2, List, ListOrdered, Quote, Underline, Unlink } from "lucide-react"
+import { readCachedVaultAsset } from "../lib/vault-assets"
 
 const allowedTags = new Set(["P", "DIV", "BR", "STRONG", "B", "EM", "I", "U", "UL", "OL", "LI", "H1", "H2", "H3", "BLOCKQUOTE", "A", "IMG", "HR", "CODE", "PRE"])
 
 function safeImageSource(value: string): boolean {
-  return value.startsWith("data:image/") || value.startsWith("https://") || value.startsWith("http://127.0.0.1") || value.startsWith("http://localhost")
+  return value.startsWith("data:image/") || value.startsWith("blob:") || value.startsWith("https://") || value.startsWith("http://127.0.0.1") || value.startsWith("http://localhost")
 }
 
 export function sanitizeRichText(value: string): string {
@@ -23,7 +24,7 @@ export function sanitizeRichText(value: string): string {
         || (attribute.name === "data-wiki-title" && Boolean(attribute.value.trim()))
       )
       const keepImageStyle = attribute.name === "style" && /^width:\s*(?:100|[2-9]\d)%\s*;?$/i.test(attribute.value)
-      const keepImage = element.tagName === "IMG" && ((attribute.name === "src" && safeImageSource(attribute.value)) || attribute.name === "alt" || attribute.name === "data-align" || attribute.name === "data-width" || keepImageStyle)
+      const keepImage = element.tagName === "IMG" && ((attribute.name === "src" && safeImageSource(attribute.value)) || attribute.name === "alt" || attribute.name === "data-align" || attribute.name === "data-width" || attribute.name === "data-obsidian-path" || keepImageStyle)
       if (!keepLink && !keepImage) element.removeAttribute(attribute.name)
     }
     if (element.tagName === "A") {
@@ -63,6 +64,7 @@ export function RichTextEditor({ label, value, onChange, wikiPageTitles = [], cl
   const selectedImageRef = useRef<HTMLImageElement | null>(null)
   const wikiRangeRef = useRef<Range | null>(null)
   const lastEmittedValueRef = useRef("")
+  const vaultImageUrlsRef = useRef<string[]>([])
   const [imageSelected, setImageSelected] = useState(false)
   const [imageWidth, setImageWidth] = useState(75)
   const [imageAlign, setImageAlign] = useState<"left" | "center" | "right">("center")
@@ -72,17 +74,45 @@ export function RichTextEditor({ label, value, onChange, wikiPageTitles = [], cl
     const editor = editorRef.current
     if (!editor) return
     const safe = sanitizeRichText(value)
-    if (safe === lastEmittedValueRef.current) return
-    if (editor.innerHTML !== safe) editor.innerHTML = safe
-    lastEmittedValueRef.current = safe
+    if (safe !== lastEmittedValueRef.current) {
+      vaultImageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+      vaultImageUrlsRef.current = []
+      if (editor.innerHTML !== safe) editor.innerHTML = safe
+      lastEmittedValueRef.current = safe
+    }
+    let cancelled = false
+    const images = [...editor.querySelectorAll<HTMLImageElement>("img[data-obsidian-path]")]
+    void Promise.all(images.map(async (image) => {
+      const path = image.dataset.obsidianPath?.trim()
+      if (!path || (image.src && !image.src.startsWith(window.location.origin))) return
+      const content = await readCachedVaultAsset(path)
+      if (!content || cancelled) return
+      const url = URL.createObjectURL(content)
+      vaultImageUrlsRef.current.push(url)
+      image.src = url
+    }))
+    return () => {
+      cancelled = true
+    }
   }, [value])
+
+  useEffect(() => () => {
+    vaultImageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    vaultImageUrlsRef.current = []
+  }, [])
 
   function emitCurrentValue(normalizeDom = false) {
     const editor = editorRef.current
     if (!editor) return
-    const safe = sanitizeRichText(editor.innerHTML)
+    const serializable = editor.cloneNode(true) as HTMLDivElement
+    serializable.querySelectorAll<HTMLImageElement>("img[data-obsidian-path]").forEach((image) => image.removeAttribute("src"))
+    const safe = sanitizeRichText(serializable.innerHTML)
     lastEmittedValueRef.current = safe
-    if (normalizeDom && editor.innerHTML !== safe) editor.innerHTML = safe
+    if (normalizeDom && sanitizeRichText(editor.innerHTML) !== safe) {
+      // URLs blob são apenas uma projeção local da imagem em cache e não entram no estado/D1.
+      const current = editor.innerHTML
+      if (!current.includes("blob:")) editor.innerHTML = safe
+    }
     onChange(safe)
   }
 

@@ -7,7 +7,7 @@ import { readCachedVaultAsset } from "../lib/vault-assets"
 const allowedTags = new Set(["P", "DIV", "BR", "STRONG", "B", "EM", "I", "U", "UL", "OL", "LI", "H1", "H2", "H3", "BLOCKQUOTE", "A", "IMG", "HR", "CODE", "PRE"])
 
 function safeImageSource(value: string): boolean {
-  return value.startsWith("data:image/") || value.startsWith("blob:") || value.startsWith("https://") || value.startsWith("http://127.0.0.1") || value.startsWith("http://localhost")
+  return value.startsWith("data:image/") || value.startsWith("blob:") || value.startsWith("https://")
 }
 
 export function sanitizeRichText(value: string): string {

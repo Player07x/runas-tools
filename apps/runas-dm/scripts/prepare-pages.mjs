@@ -35,7 +35,28 @@ await rm(join(projectRoot, ".wrangler", "deploy"), { force: true, recursive: tru
 
 await writeFile(
   join(pagesDir, "_worker.js"),
-  'export { default } from "./_worker/index.js";\n',
+  `import application from "./_worker/index.js";
+
+const securityHeaders = {
+  "Content-Security-Policy": "default-src 'self'; base-uri 'self'; connect-src 'self' https://127.0.0.1:* https://localhost:*; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob: https:; manifest-src 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:; upgrade-insecure-requests",
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+};
+
+export default {
+  async fetch(request, env, context) {
+    const response = await application.fetch(request, env, context);
+    const headers = new Headers(response.headers);
+    for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+  },
+};
+`,
   "utf8",
 )
 

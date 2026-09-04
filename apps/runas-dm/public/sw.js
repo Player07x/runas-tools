@@ -1,4 +1,4 @@
-const CACHE_NAME = "runas-dm-shell-v4"
+const CACHE_NAME = "runas-dm-shell-v5"
 const APP_SHELL = ["/", "/campaigns", "/wiki", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/runas-red-tree-bg.webp"]
 
 function isCacheableUrl(url) {
